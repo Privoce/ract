@@ -14,7 +14,7 @@ pub enum WasmLogs {
 impl Display for WasmLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WasmLogs::Welcome => f.write_str("🥳 Welcome to use gpiler wasm!"),
+            WasmLogs::Welcome => f.write_str("🥳 Welcome to use ract wasm!"),
             WasmLogs::Desc => f.write_str(DESC),
             WasmLogs::Package => f.write_str("📦 wasm is being packaged"),
             WasmLogs::Start => f.write_str("🚀 wasm is being started"),
@@ -35,5 +35,5 @@ const DESC: &str = r#"
 🔸 Now only support makepad wasm
 🔸 You can directly run in makepad project
 🔸 If the project is in rust workspace, use -p to point target project
-🔸 Or you can run `gpiler wasm` to build and start
+🔸 Or you can run `ract wasm` to build and start
 "#;

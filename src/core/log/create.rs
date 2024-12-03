@@ -18,7 +18,7 @@ impl Display for CreateLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CreateLogs::Welcome => {
-                f.write_str("❤️ WELOCME TO GENUI, gpiler is a build tool for you!")
+                f.write_str("❤️ WELOCME TO GENUI, ract is a build tool for you!")
             }
             CreateLogs::Confirm => f.write_str("🎉 Your project has been created successfully!"),
             CreateLogs::Workspace => f.write_str("🚀 Create a new workspace project successfully!"),

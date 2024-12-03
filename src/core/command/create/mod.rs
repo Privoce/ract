@@ -22,7 +22,7 @@ use super::check::current_states;
 /// This command will create a new project at the specified path
 /// ## Create a new project at the current directory
 /// ```shell
-/// gpiler create
+/// ract create
 /// ```
 #[derive(Args, Debug)]
 pub struct CreateArgs {
@@ -44,7 +44,7 @@ impl CreateArgs {
                 TerminalLogger::new(&format!("🔸 Current states:\n {}", tool)).info();
                 let is_ok = tool.is_ok();
                 if !is_ok {
-                    TerminalLogger::new("🔸 Current toolchain is not supported! You should use `gpiler install` to install toolchain or use `gpiler config` to set env").warning();
+                    TerminalLogger::new("🔸 Current toolchain is not supported! You should use `ract install` to install toolchain or use `ract config` to set env").warning();
                     exit(2);
                 }
                 self.create_project().map_or_else(
@@ -149,7 +149,7 @@ impl CreateArgs {
 
         let description = Text::new("Project description:")
             .with_default(
-                "This project is created by gpiler. Repo: https://github.com/Privoce/GenUI",
+                "This project is created by ract. Repo: https://github.com/Privoce/GenUI",
             )
             .prompt_skippable()
             .unwrap();

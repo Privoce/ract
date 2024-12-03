@@ -13,7 +13,7 @@ pub enum ConfigLogs {
 impl Display for ConfigLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConfigLogs::Welcome => f.write_str("🥳 Welcome to use gpiler config!"),
+            ConfigLogs::Welcome => f.write_str("🥳 Welcome to use ract config!"),
             ConfigLogs::Desc => f.write_str(DESC),
             ConfigLogs::Confirm => f.write_str("🎉 Config finish!"),
             ConfigLogs::EnvFail => f.write_str("🚫 Config env fail!"),

@@ -22,7 +22,7 @@ pub enum InstallLogs {
 impl Display for InstallLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstallLogs::Welcome => f.write_str("🥳 Welcome to use gpiler Install!"),
+            InstallLogs::Welcome => f.write_str("🥳 Welcome to use ract Install!"),
             InstallLogs::Rustc => f.write_str("✅ Rustc has been installed successfully!"),
             InstallLogs::Cargo => f.write_str("✅ Cargo has been installed successfully!"),
             InstallLogs::Git => f.write_str("✅ Git has been installed successfully!"),

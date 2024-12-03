@@ -20,7 +20,7 @@ pub enum PackageLogs {
 impl Display for PackageLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PackageLogs::Welcome => f.write_str("🥳 Welcome to use gpiler packager!"),
+            PackageLogs::Welcome => f.write_str("🥳 Welcome to use ract packager!"),
             PackageLogs::Desc => f.write_str(DESC),
             PackageLogs::Installed => {
                 f.write_str("✅ cargo-packager has been installed successfully!")
@@ -50,13 +50,13 @@ impl PackageLogs {
 }
 
 const DESC: &str = r#"
-🔸 gpiler will check `cargo-packager` is installed or not
-🔸 gpiler will help you install `cargo-packager`
+🔸 ract will check `cargo-packager` is installed or not
+🔸 ract will help you install `cargo-packager`
 🔸 about configuration: https://docs.crabnebula.dev/packager/
 "#;
 
 const INIT_MSG: &str = r#"
-🔸 init: gpiler will help you init an easy config for packaging
-🔸 skip: gpiler will directly run package by configurations
+🔸 init: ract will help you init an easy config for packaging
+🔸 skip: ract will directly run package by configurations
 ❗️ If you want to define more details, please modify the Packager.toml yourself
 "#;

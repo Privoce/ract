@@ -92,7 +92,7 @@ fn config_env_toml() -> Result<(), Error> {
                 TerminalLogger::new(&format!("🔸 {} = {}", key, value)).info();
             }
         } else {
-            return Err("dependencies not found, please check the env.toml and ensure the format! Or you can run `gpiler init` then run `gpiler install` and select `default` to rebuild".to_string().into());
+            return Err("dependencies not found, please check the env.toml and ensure the format! Or you can run `ract init` then run `ract install` and select `default` to rebuild".to_string().into());
         }
     } else {
         if let Some(dependencies) = dependencies {
@@ -117,7 +117,7 @@ fn config_env_toml() -> Result<(), Error> {
             // write back
             fs::write(chain_env_toml.as_path(), content.to_string().as_str())?;
         } else {
-            return Err("dependencies not found, please check the env.toml and ensure the format! Or you can run `gpiler init` then run `gpiler install` and select `default` to rebuild".to_string().into());
+            return Err("dependencies not found, please check the env.toml and ensure the format! Or you can run `ract init` then run `ract install` and select `default` to rebuild".to_string().into());
         }
     }
 

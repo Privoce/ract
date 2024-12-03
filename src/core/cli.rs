@@ -4,10 +4,10 @@ use super::command::{check, config, init, install, Commands, run, package};
 
 #[derive(Parser)]
 #[command(
-    name = "gpiler",
-    about = "A build tool for Rust front-end framework GenUI",
-    version = "0.1.0",
-    author = "syf20020816@outlook.com"
+    name = "ract",
+    about = "Ract is a conversational CLI tool written in Rust, providing an all-in-one solution for integrating dependencies, setting up environments, generating project templates, running, and packaging projects with frameworks like GenUI and Makepad. Simplify your development workflow with minimal arguments and intuitive dialogs. 🚀",
+    version = "0.0.1",
+    author = "Will SHENG<syf20020816@outlook.com>"
 )]
 pub struct Cli {
     #[command(subcommand)]

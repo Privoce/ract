@@ -15,7 +15,7 @@ where
     P: AsRef<Path>,
 {
     TerminalLogger::new(&format!(
-        "🛠️ gpiler is creating a new Makepad project `{}` in: {}",
+        "🛠️ ract is creating a new Makepad project `{}` in: {}",
         info.name,
         path.as_ref().display()
     ))
@@ -38,7 +38,7 @@ where
                     // [handle the Cargo.toml] --------------------------------------------------------------------
                     info.write_makepad_cargo_toml(path.as_path())?;
                     // [write a signature file] -------------------------------------------------------------------
-                    fs::write(path.join(".gpiler"), "makepad")?;
+                    fs::write(path.join(".ract"), "makepad")?;
                     // [create default files: lib.rs, app.rs] -----------------------------------------------------
                     create_lib_rs(path.as_path())?;
                     create_main_rs(path.as_path(), &info.name)?;

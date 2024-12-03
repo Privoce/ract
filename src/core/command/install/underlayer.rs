@@ -90,7 +90,7 @@ where
                         InstallLogs::Confirm("makepad_studio".to_string())
                             .terminal()
                             .success();
-                        TerminalLogger::new("ℹ️ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `gpiler run` to open the makepad studio")
+                        TerminalLogger::new("ℹ️ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio")
                             .info();
                         Ok(())
                     } else {

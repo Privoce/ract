@@ -45,18 +45,18 @@ impl WasmArgs {
             // do makepad run wasm
             makepad::run(path.as_path(), project, port)
         } else {
-            // get current dir path and check has .gpiler file
-            let gpiler_path = path.join(".gpiler");
-            if !gpiler_path.exists() {
+            // get current dir path and check has .ract file
+            let ract_path = path.join(".ract");
+            if !ract_path.exists() {
                 ProjectLogs::Error(
-        "Please make sure your project root has a `.gpiler` file to point the project kind"
+        "Please make sure your project root has a `.ract` file to point the project kind"
             .to_string(),
     )
     .terminal()
     .error();
-                Err(FsError::FileNotFound(gpiler_path).into())
+                Err(FsError::FileNotFound(ract_path).into())
             } else {
-                run_wasm(path, gpiler_path, port)
+                run_wasm(path, ract_path, port)
             }
         }
         .map_err(|e| {
@@ -66,11 +66,11 @@ impl WasmArgs {
     }
 }
 
-fn run_wasm<P>(path: P, gpiler_path: P, port: u16) -> Result<(), Error>
+fn run_wasm<P>(path: P, ract_path: P, port: u16) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    let content = fs::read(gpiler_path.as_ref())?;
+    let content = fs::read(ract_path.as_ref())?;
     // get project name from Cargo.toml
     let cargo_toml = fs::read(path.as_ref().join("Cargo.toml"))?
         .parse::<DocumentMut>()

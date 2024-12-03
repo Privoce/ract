@@ -33,13 +33,13 @@ impl From<ProjectLogs> for RunLogs {
 const STUDIO_DESC: &str = r#"
 🔸 Currently `studio` is only for Makepad
 🔸 WASM and GUI are supported
-🔸 Default Studio: Which is the studio in gpiler env.toml
+🔸 Default Studio: Which is the studio in ract env.toml
 "#;
 
 const PROJECT_DESC: &str = r#"
 🔸 Now you can run makepad and gen_ui (Comming Soon) project
-❗️ Please make sure your project root has a `.gpiler` file to point the project kind
-🔸 If you do not know `.gpiler` file, please run `gpiler book` to search (Comming Soon)
+❗️ Please make sure your project root has a `.ract` file to point the project kind
+🔸 If you do not know `.ract` file, please run `ract book` to search (Comming Soon)
 "#;
 
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl StudioLogs {
 impl Display for StudioLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StudioLogs::Welcome => f.write_str("🥳 Welcome to use gpiler studio!"),
+            StudioLogs::Welcome => f.write_str("🥳 Welcome to use ract studio!"),
             StudioLogs::Gui => f.write_str("🚀 Start to run the studio in desktop"),
 
             StudioLogs::Stop => f.write_str("🛑 Stop the studio ..."),
@@ -84,7 +84,7 @@ pub enum ProjectLogs {
 impl Display for ProjectLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProjectLogs::Welcome => f.write_str("🥳 Welcome to use gpiler project runner!"),
+            ProjectLogs::Welcome => f.write_str("🥳 Welcome to use ract project runner!"),
             ProjectLogs::Start => f.write_str("🚀 Start to run the project ..."),
             ProjectLogs::Stop => f.write_str("🛑 Stop the project ..."),
             ProjectLogs::Error(t) => f.write_fmt(format_args!("❌ Run the project failed: {}", t)),

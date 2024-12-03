@@ -49,7 +49,7 @@ impl ProjectInfo {
         // [write project info] -----------------------------------------------------------------------------------
         let _ = self.write_project_info(&mut toml);
         // [write dependencies] -----------------------------------------------------------------------------------
-        // read dependencies from gpiler chain
+        // read dependencies from ract chain
         let env_toml = real_chain_env_toml()?;
         let mut makepad_path = PathBuf::from_str(
             env_toml["dependencies"]["makepad-widgets"]

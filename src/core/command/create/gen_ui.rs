@@ -21,7 +21,7 @@ where
     match path.as_ref().canonicalize() {
         Ok(path) => {
             TerminalLogger::new(&format!(
-                "🛠️ gpiler is creating a new GenUI project `{}` in: {}",
+                "🛠️ ract is creating a new GenUI project `{}` in: {}",
                 info.name,
                 path.display()
             ))
@@ -51,8 +51,8 @@ where
             let content = DEFAULT_CARGO_TOML_CONTENT.replace("{$ui_name}", name);
             let _ = fs::write(cargo_toml.as_path(), &content)?;
 
-            // write .gpiler
-            let _ = fs::write(workspace_path.join(".gpiler").as_path(), "gen_ui")?;
+            // write .ract
+            let _ = fs::write(workspace_path.join(".ract").as_path(), "gen_ui")?;
             // if git is true, init git repository
             if git {
                 git_init(workspace_path.as_path())?;

@@ -12,8 +12,8 @@ pub enum InitLogs {
 impl Display for InitLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InitLogs::Init => f.write_str("🚀 Start to init gpiler..."),
-            InitLogs::Confirm => f.write_str("🎉 Init gpiler successfully!"),
+            InitLogs::Init => f.write_str("🚀 Start to init ract..."),
+            InitLogs::Confirm => f.write_str("🎉 Init ract successfully!"),
             InitLogs::Chain => f.write_str("✅ Chain init successfully!"),
         }
     }
