@@ -15,6 +15,7 @@ With **minimal arguments** and an **intuitive dialog-based interface**, Ract sup
 ---
 
 ## 📖 Table of Contents
+0. [Config](#️-config)
 1. [Usage](#usage)  
    - [init](#init)  
    - [check](#check)  
@@ -26,8 +27,40 @@ With **minimal arguments** and an **intuitive dialog-based interface**, Ract sup
    - [wasm](#wasm)  
    - [pkg](#pkg)  
 2. [Features](#features)
-
+3. [Video for Usage](https://www.bilibili.com/video/BV1SdnoeWEkT?vd_source=9c2ae08297163e79152407c969f04717&p=4&spm_id_from=333.788.videopod.episodes)
 ---
+
+## 🛠️ Config
+
+> [!NOTE]
+> Your computer may prompt security questions, please select Allow
+
+You can configure ract as a global command in the following way：
+
+### Macos | Linux
+
+```shell
+# copy download ract to /usr/local/bin
+sudo cp /path/to/download/ract /usr/local/bin/ract/ract
+
+# add permission
+sudo chmod 755 /usr/local/bin/ract
+sudo chmod 755 /usr/local/bin/ract/ract
+
+# confirm permission
+sudo chown -R $(whoami) /usr/local/bin/ract
+
+# echo to .zshrc
+echo 'export PATH="/usr/local/bin/ract:$PATH"' >> ~/.zshrc
+
+source ~/.zshrc
+# get version
+ract --version
+```
+
+### Windows
+
+put `path/to/ract` into System Env
 
 ## 🚀 Usage
 
