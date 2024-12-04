@@ -16,17 +16,17 @@ With **minimal arguments** and an **intuitive dialog-based interface**, Ract sup
 
 ## 📖 Table of Contents
 0. [Config](#️-config)
-1. [Usage](#usage)  
-   - [init](#init)  
-   - [check](#check)  
-   - [install](#install)  
-   - [config](#config)  
-   - [create](#create)
-   - [run](#run)  
-   - [studio](#studio)  
-   - [wasm](#wasm)  
-   - [pkg](#pkg)  
-2. [Features](#features)
+1. [Usage](#-usage)  
+   - [init](#init---initialize-ract)  
+   - [check](#check---check-toolchain)  
+   - [install](#install---install-toolchain)  
+   - [config](#config---configure-cli)  
+   - [create](#create---create-a-genui-or-makepad-project)
+   - [run](#run---run-a-project)  
+   - [studio](#studio---launch-makepad-studio)  
+   - [wasm](#wasm---run-wasm-project-in-browser)  
+   - [pkg](#pkg---package-a-project)  
+2. [Features](#-features)
 3. [Video for Usage](https://www.bilibili.com/video/BV1SdnoeWEkT?vd_source=9c2ae08297163e79152407c969f04717&p=4&spm_id_from=333.788.videopod.episodes)
 ---
 
