@@ -12,11 +12,11 @@ keys = ["makepad", "genui", "cli"]
 clap = { version = "4.5.21", features = ["derive"] }
 colored = "2.1.0"
 inquire = "0.7.5"
-gen_utils = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/utils", default-features = false, features = [
+gen_utils = { path = "../../../gen_ui/GenUI/gen/utils", default-features = false, features = [
     "compiler",
 ] }
 toml_edit = "0.22.19"
 which = "7.0.0"
 chrono = "0.4.38"
-makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
+makepad_gen_plugin = { path = "../../../gen_ui/GenUI/gen/generator/makepad" }
 log = "0.4.22"
