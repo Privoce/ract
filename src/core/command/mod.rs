@@ -8,13 +8,12 @@ pub mod config;
 pub mod init;
 /// install the tool chain
 pub mod install;
+/// package project
+pub mod package;
 /// run the current project
 pub mod run;
 /// run wasm project
 pub mod wasm;
-/// package project
-pub mod package;
-
 
 use clap::Subcommand;
 use create::CreateArgs;
@@ -22,22 +21,22 @@ use wasm::WasmArgs;
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Create a new project [CreateArgs]
+    /// Ract will build a **Makepad** or **GenUI** project template based on the configuration entered by the user
     Create(CreateArgs),
-    /// Check toolchain
+    /// Check if required tools and dependencies are installed. Options include: [Basic, Underlayer, All]
     Check,
-    /// Install toolchain
+    /// Install required tools and dependencies for development.  
     Install,
-    /// Run the current project
+    /// Run **Makepad** or **GenUI** projects.
     Run,
-    /// Init or reset the cli
+    /// Initialize or reset the CLI. Ract will generate: [.env, chain/env.toml, chain/]
     Init,
-    /// do config for the cli
+    /// Set or update environment variables and CLI configurations.  
     Config,
-    /// makepad studio
+    /// Start Makepad Studio for GUI projects.
     Studio,
-    /// run wasm project
+    /// Build and run a WASM project directly from the CLI.
     Wasm(WasmArgs),
-    /// package project
+    /// Package a project using `cargo-packager`. (Currently only supports Makepad projects)
     Pkg,
 }

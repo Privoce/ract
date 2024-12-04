@@ -1,11 +1,12 @@
 use std::{
     path::{Path, PathBuf},
-    process::{exit, Command},
+    process::{exit, Command, Stdio},
     str::FromStr,
 };
 
-use gen_utils::error::Error;
+use gen_utils::{common::stream_terminal, error::Error};
 use inquire::{Confirm, MultiSelect};
+use which::which;
 
 use crate::core::{
     entry::Tools,
@@ -78,7 +79,7 @@ where
     P: AsRef<Path>,
 {
     // cargo install makepad-studio
-    if check_cargo_makepad(path.as_ref()).unwrap_or_default() {
+    if check_cargo_makepad() {
         return Command::new("cargo")
             .args(&["install", "makepad-studio"])
             .current_dir(path)
@@ -111,7 +112,7 @@ where
     P: AsRef<Path>,
 {
     // cargo makepad android install-toolchain
-    if check_cargo_makepad(path.as_ref()).unwrap_or_default() {
+    if check_cargo_makepad() {
         return Command::new("cargo")
             .args(&["makepad", "android", "install-toolchain"])
             .current_dir(path)
@@ -147,7 +148,7 @@ where
     // xcode-select --install
     // cargo makepad apple ios install-toolchain
     if check_xcode_select().unwrap_or_default() {
-        if check_cargo_makepad(path.as_ref()).unwrap_or_default() {
+        if check_cargo_makepad() {
             return Command::new("cargo")
             .args(&["makepad", "apple", "ios", "install-toolchain"])
             .current_dir(path)
@@ -211,64 +212,43 @@ where
     P: AsRef<Path>,
 {
     // cargo makepad wasm install-toolchain
-    if check_cargo_makepad(path.as_ref()).unwrap_or_default() {
-        return Command::new("cargo")
+    if check_cargo_makepad() {
+        let mut child = Command::new("cargo")
             .args(&["makepad", "wasm", "install-toolchain"])
             .current_dir(path)
-            .output()
-            .map_or_else(
-                |e| Err(e.to_string().into()),
-                |out| {
-                    if out.status.success() {
-                        InstallLogs::Confirm("wasm_build".to_string())
-                            .terminal()
-                            .success();
-                        TerminalLogger::new("ℹ️ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project")
-                            .info();
-                        Ok(())
-                    } else {
-                        Err(InstallLogs::InstallErr("wasm_build".to_string())
-                            .to_string()
-                            .into())
-                    }
-                },
-            );
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| e.to_string())?;
+
+        return stream_terminal(
+            &mut child,
+            |line| TerminalLogger::new(&line).info(),
+            |line| TerminalLogger::new(&line).warning(),
+        ).map_or_else(
+            |e| Err(e),
+            |status| {
+                if status.success() {
+                    InstallLogs::Confirm("wasm_build".to_string())
+                    .terminal()
+                    .success();
+                TerminalLogger::new("ℹ️ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project")
+                    .info();
+                    Ok(())
+                } else {
+                    Err(InstallLogs::InstallErr("wasm_build".to_string())
+                    .to_string()
+                    .into())
+                }
+            },
+        );
     } else {
-        TerminalLogger::new("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad").error();
-        exit(2);
+        return Err("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad".to_string().into());
     }
 }
 
-fn check_cargo_makepad<P>(path: P) -> Result<bool, Error>
-where
-    P: AsRef<Path>,
-{
-    // use cargo makepad -h
-    Command::new("cargo")
-        .args(&["makepad", "-h"])
-        .current_dir(path)
-        .output()
-        .map_or_else(
-            |_| {
-                InstallLogs::UnInstalled("cargo_makepad".to_string())
-                    .terminal()
-                    .warning();
-                Ok(false)
-            },
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Installed("cargo_makepad".to_string())
-                        .terminal()
-                        .success();
-                    Ok(true)
-                } else {
-                    InstallLogs::UnInstalled("cargo_makepad".to_string())
-                        .terminal()
-                        .warning();
-                    Ok(false)
-                }
-            },
-        )
+fn check_cargo_makepad() -> bool {
+    which("cargo-makepad").is_ok()
 }
 
 fn install_cargo_makepad<P>(path: P) -> Result<(), Error>
@@ -279,29 +259,38 @@ where
     InstallLogs::Install("cargo_makepad".to_string())
         .terminal()
         .info();
-    Command::new("cargo")
-        .args(&["install", "--path", "./tools/cargo_makepad"])
+    let mut child = Command::new("cargo")
+        .args(&["install", "--path", "./makepad/tools/cargo_makepad"])
         .current_dir(path)
-        .output()
-        .map_or_else(
-            |e| Err(e.to_string().into()),
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Confirm("cargo_makepad".to_string())
-                        .terminal()
-                        .success();
-                    TerminalLogger::new(
-                        "ℹ️ You can use `cargo makepad -h` to see the help information",
-                    )
-                    .info();
-                    Ok(())
-                } else {
-                    Err(InstallLogs::InstallErr("cargo_makepad".to_string())
-                        .to_string()
-                        .into())
-                }
-            },
-        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    stream_terminal(
+        &mut child,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                InstallLogs::Confirm("cargo_makepad".to_string())
+                    .terminal()
+                    .success();
+                TerminalLogger::new(
+                    "ℹ️ You can use `cargo makepad -h` to see the help information",
+                )
+                .info();
+                Ok(())
+            } else {
+                Err(InstallLogs::InstallErr("cargo_makepad".to_string())
+                    .to_string()
+                    .into())
+            }
+        },
+    )
 }
 
 fn update_makepad<P>(install: bool, path: P) -> Result<(), Error>
@@ -311,7 +300,7 @@ where
     // check makepad
     if install {
         // if makepad is ok, ask user to update
-        if check_cargo_makepad(path.as_ref()).unwrap_or_default() {
+        if check_cargo_makepad() {
             return Confirm::new("Do you want to update makepad?")
                 .with_default(false)
                 .prompt()

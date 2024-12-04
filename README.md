@@ -20,6 +20,7 @@ With **minimal arguments** and an **intuitive dialog-based interface**, Ract sup
    - [check](#check)  
    - [install](#install)  
    - [config](#config)  
+   - [create](#create)
    - [run](#run)  
    - [studio](#studio)  
    - [wasm](#wasm)  
@@ -120,6 +121,28 @@ Interactive dialog example:
 
 ---
 
+### `create` - Create a GenUI or Makepad Project
+
+Ract will build a **Makepad** or **GenUI** project template based on the configuration entered by the user
+
+**create will help you check current env states**
+
+```bash
+ract create
+```
+Interactive dialog example:  
+```plaintext
+❤️ WELOCME TO GENUI, ract is a build tool for you!
+
+> Which project you want to create? makepad
+> Project name: test1
+> Authors name: John
+> ...
+🎉 Your project has been created successfully!
+```
+
+---
+
 ### `run` - Run a Project  
 Run **Makepad** or **GenUI** projects.  
 
@@ -130,7 +153,7 @@ ract run
 ---
 
 ### `studio` - Launch Makepad Studio  
-Start Makepad Studio for GUI or WASM projects.  
+Start Makepad Studio for GUI projects.  
 
 ```bash
 ract studio
@@ -191,7 +214,7 @@ Interactive dialog example:
 - **Watcher**: Monitor changes for automatic reload.  
 - **Logger**: Advanced logging system for debugging.  
 - **Cross-platform Packaging**: Simplify builds for multiple platforms.  
-- **Documentation**: Include a comprehensive book for learning Ract.  
+- **Documentation**: Include a comprehensive book for learning Makepad and GenUI.  
 
 ---
 

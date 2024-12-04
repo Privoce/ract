@@ -62,14 +62,6 @@ impl CreateArgs {
                 exit(2);
             }
         }
-
-        // show info in the terminal: Create a new {target} project at {path}
-        // if self.confirm_create() {
-        //     let _ = self.create_gen_project(info, underlayer, git);
-        // } else {
-        //     // redo the project info
-        //     return self.run();
-        // }
     }
     fn create_project(&self) -> Result<(), Error> {
         match self.path.canonicalize() {

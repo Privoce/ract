@@ -98,12 +98,15 @@ where
                 .as_str()
                 .unwrap()
                 .to_string();
-            let authors = cargo_toml["package"]["authors"].as_array().map(|authors| {
-                authors
-                    .iter()
-                    .map(|author| author.as_str().unwrap().to_string())
-                    .collect::<Vec<String>>()
+            let authors = cargo_toml["package"].get("authors").and_then(|authors| {
+                authors.as_array().map(|authors| {
+                    authors
+                        .iter()
+                        .map(|author| author.as_str().unwrap().to_string())
+                        .collect::<Vec<String>>()
+                })
             });
+
             let desc = cargo_toml["package"]["description"]
                 .as_str()
                 .map(|s| s.to_string());
