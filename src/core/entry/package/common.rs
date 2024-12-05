@@ -3,7 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use toml_edit::{value, Formatted, InlineTable, Value};
+use gen_utils::common::fs::path_to_str;
+use toml_edit::{Formatted, InlineTable, Value};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
@@ -11,12 +12,12 @@ pub struct Position {
     pub y: u32,
 }
 
-impl Into<Value> for &Position {
-    fn into(self) -> Value {
+impl From<&Position> for Value {
+    fn from(position: &Position) -> Self {
         let mut v = InlineTable::new();
 
-        v.insert("x", Value::Integer(Formatted::new(self.x as i64)));
-        v.insert("y", Value::Integer(Formatted::new(self.y as i64)));
+        v.insert("x", Value::Integer(Formatted::new(position.x as i64)));
+        v.insert("y", Value::Integer(Formatted::new(position.y as i64)));
 
         Value::InlineTable(v)
     }
@@ -24,7 +25,7 @@ impl Into<Value> for &Position {
 
 impl Display for Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
@@ -34,12 +35,12 @@ pub struct Size {
     pub height: u32,
 }
 
-impl Into<Value> for &Size {
-    fn into(self) -> Value {
+impl From<&Size> for Value {
+    fn from(size: &Size) -> Self {
         let mut v = InlineTable::new();
 
-        v.insert("width", Value::Integer(Formatted::new(self.width as i64)));
-        v.insert("height", Value::Integer(Formatted::new(self.height as i64)));
+        v.insert("width", Value::Integer(Formatted::new(size.width as i64)));
+        v.insert("height", Value::Integer(Formatted::new(size.height as i64)));
 
         Value::InlineTable(v)
     }
@@ -47,7 +48,7 @@ impl Into<Value> for &Size {
 
 impl Display for Size {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
@@ -72,10 +73,10 @@ pub enum BundleTypeRole {
     None,
 }
 
-impl Into<Value> for &BundleTypeRole {
-    fn into(self) -> Value {
+impl From<&BundleTypeRole> for Value {
+    fn from(b_ty: &BundleTypeRole) -> Self {
         Value::String(Formatted::new(
-            match self {
+            match b_ty {
                 BundleTypeRole::Editor => "editor",
                 BundleTypeRole::Viewer => "viewer",
                 BundleTypeRole::Shell => "shell",
@@ -89,7 +90,7 @@ impl Into<Value> for &BundleTypeRole {
 
 impl Display for BundleTypeRole {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
@@ -122,25 +123,28 @@ pub enum PackageFormat {
     Pacman,
 }
 
-impl Into<Value> for &PackageFormat {
-    fn into(self) -> Value {
-        Value::String(Formatted::new(match self {
-            PackageFormat::All => "all",
-            PackageFormat::Default => "default",
-            PackageFormat::App => "app",
-            PackageFormat::Dmg => "dmg",
-            PackageFormat::Wix => "wix",
-            PackageFormat::Nsis => "nsis",
-            PackageFormat::Deb => "deb",
-            PackageFormat::AppImage => "appimage",
-            PackageFormat::Pacman => "pacman",
-        }.to_string()))
+impl From<&PackageFormat> for Value {
+    fn from(p_f: &PackageFormat) -> Self {
+        Value::String(Formatted::new(
+            match p_f {
+                PackageFormat::All => "all",
+                PackageFormat::Default => "default",
+                PackageFormat::App => "app",
+                PackageFormat::Dmg => "dmg",
+                PackageFormat::Wix => "wix",
+                PackageFormat::Nsis => "nsis",
+                PackageFormat::Deb => "deb",
+                PackageFormat::AppImage => "appimage",
+                PackageFormat::Pacman => "pacman",
+            }
+            .to_string(),
+        ))
     }
 }
 
 impl Display for PackageFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
@@ -164,20 +168,20 @@ impl Resource {
 
 impl Display for Resource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
-impl Into<Value> for &Resource {
-    fn into(self) -> Value {
-        match self {
+impl From<&Resource> for Value {
+    fn from(resource: &Resource) -> Self {
+        match resource {
             Resource::String(s) => Value::String(Formatted::new(s.to_string())),
             Resource::Obj { src, target } => {
                 let mut v = InlineTable::new();
 
                 v.insert(
                     "src",
-                    Value::String(Formatted::new(src.display().to_string())),
+                    Value::String(Formatted::new(path_to_str(src))),
                 );
                 v.insert("target", Value::String(Formatted::new(target.to_string())));
 

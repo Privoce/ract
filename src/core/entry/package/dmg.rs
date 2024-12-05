@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Table};
+use toml_edit::{value, Item, Table};
 
 use super::{Position, Size};
 
@@ -22,34 +22,34 @@ pub struct DmgConfig {
 
 impl Display for DmgConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_toml_table().to_string().as_str())
+        f.write_str(Item::from(self).to_string().as_str())
     }
 }
 
-impl DmgConfig {
-    pub fn to_toml_table(&self) -> Table {
+impl From<&DmgConfig> for Item {
+    fn from(v: &DmgConfig) -> Self {
         let mut table = Table::new();
 
-        if let Some(app_folder_position) = self.app_folder_position.as_ref() {
+        if let Some(app_folder_position) = v.app_folder_position.as_ref() {
             table.insert("app-folder-position", value(app_folder_position));
         }
 
-        if let Some(app_position) = self.app_position.as_ref() {
+        if let Some(app_position) = v.app_position.as_ref() {
             table.insert("app-position", value(app_position));
         }
 
-        if let Some(background) = self.background.as_ref() {
+        if let Some(background) = v.background.as_ref() {
             table.insert("background", value(background));
         }
 
-        if let Some(window_position) = self.window_position.as_ref() {
+        if let Some(window_position) = v.window_position.as_ref() {
             table.insert("window-position", value(window_position));
         }
 
-        if let Some(window_size) = self.window_size.as_ref() {
+        if let Some(window_size) = v.window_size.as_ref() {
             table.insert("window-size", value(window_size));
         }
         table.set_implicit(false);
-        table
+        toml_edit::Item::Table(table)
     }
 }

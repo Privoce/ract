@@ -24,11 +24,11 @@ impl Display for FileAssociation {
     }
 }
 
-impl Into<Value> for &FileAssociation {
-    fn into(self) -> Value {
+impl From<&FileAssociation> for Value {
+    fn from(v: &FileAssociation) -> Self {
         let mut table = InlineTable::new();
 
-        if let Some(description) = self.description.as_ref() {
+        if let Some(description) = v.description.as_ref() {
             table.insert(
                 "description",
                 Value::String(Formatted::new(description.to_string())),
@@ -36,24 +36,23 @@ impl Into<Value> for &FileAssociation {
         }
 
         let mut exts = Array::new();
-        for ext in &self.extensions {
+        for ext in &v.extensions {
             exts.push(Value::String(Formatted::new(ext.to_string())));
         }
         table.insert("ext", Value::Array(exts));
 
-        if let Some(mime_type) = self.mime_type.as_ref() {
+        if let Some(mime_type) = v.mime_type.as_ref() {
             table.insert(
                 "mime-type",
                 Value::String(Formatted::new(mime_type.to_string())),
             );
         }
 
-        if let Some(name) = self.name.as_ref() {
+        if let Some(name) = v.name.as_ref() {
             table.insert("name", Value::String(Formatted::new(name.to_string())));
         }
 
-        table.insert("role", Value::String(Formatted::new(self.role.to_string())));
-
-        table.into()
+        table.insert("role", Value::String(Formatted::new(v.role.to_string())));
+        Value::InlineTable(table)
     }
 }

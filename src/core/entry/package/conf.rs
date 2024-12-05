@@ -5,7 +5,8 @@ use std::{
     str::FromStr,
 };
 
-use toml_edit::{value, Array, DocumentMut, Item, Table};
+use gen_utils::common::{fs::path_to_str, ToToml};
+use toml_edit::{value, Array, DocumentMut, Table};
 
 use crate::core::log::LogLevel;
 
@@ -98,6 +99,12 @@ pub struct Conf {
     pub resources: Option<Vec<Resource>>,
 }
 
+impl ToToml for Conf {
+    fn to_toml(&self) -> DocumentMut {
+        DocumentMut::from(self.to_toml_table())
+    }
+}
+
 impl Conf {
     pub fn new(
         name: String,
@@ -165,7 +172,7 @@ impl Conf {
         self.before_packaging_command = Some(command.replace("${cmd}", "before-packaging"));
         // [resources] -----------------------------------------------------------------------------
         let src_path_pre =
-            PathBuf::from_str(format!("{}/resources", self.out_dir.display()).as_str()).unwrap();
+            PathBuf::from_str(format!("{}/resources", path_to_str(self.out_dir.as_path())).as_str()).unwrap();
         let project_name = self.name.to_string();
         self.resources = Some(vec![
             Resource::new_obj(src_path_pre.join("makepad_widgets"), "makepad_widgets"),
@@ -173,7 +180,7 @@ impl Conf {
         ]);
         // [platforms] -----------------------------------------------------------------------------
         self.deb = Some(DebianConfig {
-            depends: Some(vec![format!("{}/depends_deb.txt", self.out_dir.display())]),
+            depends: Some(vec![format!("{}/depends_deb.txt", path_to_str(self.out_dir.as_path()))]),
             desktop_template: Some(format!("./packaging/{}.desktop", &self.name)),
             files: None,
             priority: None,
@@ -228,14 +235,14 @@ impl Conf {
             table.insert("authors", value(authors_val));
         }
         if let Some(license) = self.license_file.as_ref() {
-            table.insert("license-file", value(license.display().to_string()));
+            table.insert("license-file", value(path_to_str(license)));
         }
-        table.insert("out-dir", value(self.out_dir.display().to_string()));
+        table.insert("out-dir", value(path_to_str(&self.out_dir)));
         table.insert("enabled", value(self.enabled));
         if let Some(icons) = self.icons.as_ref() {
             let mut icons_val = Array::new();
             for icon in icons {
-                icons_val.push(icon.display().to_string());
+                icons_val.push(path_to_str(icon));
             }
             table.insert("icons", value(icons_val));
         }
@@ -258,32 +265,32 @@ impl Conf {
             table.insert("log-level", value(log_level.to_string()));
         }
         if let Some(license) = self.license_file.as_ref() {
-            table.insert("license-file", value(license.display().to_string()));
+            table.insert("license-file", value(path_to_str(license)));
         }
         if let Some(copyright) = self.copyright.as_ref() {
             table.insert("copyright", value(copyright));
         }
         // [platforms] -----------------------------------------------------------------------------
         if let Some(deb) = self.deb.as_ref() {
-            table.insert("deb", Item::Table(deb.to_toml_table()));
+            table.insert("deb", deb.into());
         }
         if let Some(dmg) = self.dmg.as_ref() {
-            table.insert("dmg", Item::Table(dmg.to_toml_table()));
+            table.insert("dmg", dmg.into());
         }
         if let Some(macos) = self.macos.as_ref() {
-            table.insert("macos", Item::Table(macos.to_toml_table()));
+            table.insert("macos", macos.into());
         }
         if let Some(nsis) = self.nsis.as_ref() {
-            table.insert("nsis", Item::Table(nsis.to_toml_table()));
+            table.insert("nsis", nsis.into());
         }
         if let Some(pacman) = self.pacman.as_ref() {
-            table.insert("pacman", Item::Table(pacman.to_toml_table()));
+            table.insert("pacman", pacman.into());
         }
         if let Some(windows) = self.windows.as_ref() {
-            table.insert("windows", Item::Table(windows.to_toml_table()));
+            table.insert("windows", windows.into());
         }
         if let Some(wix) = self.wix.as_ref() {
-            table.insert("wix", Item::Table(wix.to_toml_table()));
+            table.insert("wix", wix.into());
         }
         // [commands] -------------------------------------------------------------------------------
         if let Some(before_each_package_command) = self.before_each_package_command.as_ref() {
@@ -340,7 +347,7 @@ impl Conf {
 
 impl Display for Conf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(DocumentMut::from(self.to_toml_table()).to_string().as_str())
+        f.write_str(self.to_toml().to_string().as_str())
     }
 }
 
@@ -350,3 +357,25 @@ cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
     --binary-name ${name} \
     --path-to-binary ./target/release/${name}
 "#;
+
+#[cfg(test)]
+mod test_conf{
+    use std::str::FromStr;
+
+    use super::Conf;
+
+    #[test]
+    fn to_toml(){
+        let mut conf = Conf::new(
+            "test".to_string(),
+            "0.1.0".to_string(),
+            "Test".to_string(),
+            "com.test".to_string(),
+            Some(vec!["test".to_string()]),
+            Some(std::path::PathBuf::from_str("./LICENSE").unwrap())
+        );
+        let _ = conf.makepad("./test");
+
+        println!("{}", conf.to_string());
+    }
+}

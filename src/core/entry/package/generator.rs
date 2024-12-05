@@ -4,7 +4,7 @@ use std::{
 };
 
 use gen_utils::{
-    common::{fs, stream_terminal},
+    common::{fs, stream_terminal, ToToml},
     error::Error,
 };
 
@@ -29,7 +29,7 @@ impl PackageGenerator {
     /// generate the packaging project for makepad
     pub fn makepad(&self, conf: PackageConf) -> Result<(), Error> {
         // [Packager.toml] -------------------------------------------------------------------
-        let _ = fs::write(self.path.join("Packager.toml"), &conf.to_string())?;
+        let _ = conf.write(self.path.join("Packager.toml"))?;
         // git clone --branch ract  https://github.com/syf20020816/robius-packaging-commands.git command
         let mut child = Command::new("git")
             .args(&[

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use toml_edit::{value, Table};
+use toml_edit::{value, Item, Table};
 
 use super::PackageConf;
 
@@ -30,42 +30,44 @@ pub struct MacOsConfig {
 
 impl Display for MacOsConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_toml_table().to_string().as_str())
+        f.write_str(Item::from(self).to_string().as_str())
     }
 }
 
-impl MacOsConfig {
-    pub fn to_toml_table(&self) -> Table {
+impl From<&MacOsConfig> for Item {
+    fn from(v: &MacOsConfig) -> Self {
         let mut table = Table::new();
-        if let Some(entitlements) = self.entitlements.as_ref() {
+        if let Some(entitlements) = v.entitlements.as_ref() {
             table.insert("entitlements", value(entitlements));
         }
-        if let Some(exception_domain) = self.exception_domain.as_ref() {
+        if let Some(exception_domain) = v.exception_domain.as_ref() {
             table.insert("exception-domain", value(exception_domain));
         }
-        if let Some(frameworks) = self.frameworks.as_ref() {
+        if let Some(frameworks) = v.frameworks.as_ref() {
             let mut arr = toml_edit::Array::default();
             for f in frameworks {
                 arr.push(f);
             }
             table.insert("frameworks", value(arr));
         }
-        if let Some(info_plist_path) = self.info_plist_path.as_ref() {
+        if let Some(info_plist_path) = v.info_plist_path.as_ref() {
             table.insert("info-plist-path", value(info_plist_path));
         }
-        if let Some(minimum_system_version) = self.minimum_system_version.as_ref() {
+        if let Some(minimum_system_version) = v.minimum_system_version.as_ref() {
             table.insert("minimum-system-version", value(minimum_system_version));
         }
-        if let Some(provider_short_name) = self.provider_short_name.as_ref() {
+        if let Some(provider_short_name) = v.provider_short_name.as_ref() {
             table.insert("provider-short-name", value(provider_short_name));
         }
-        if let Some(signing_identity) = self.signing_identity.as_ref() {
+        if let Some(signing_identity) = v.signing_identity.as_ref() {
             table.insert("signing-identity", value(signing_identity));
         }
         table.set_implicit(false);
-        table
+        toml_edit::Item::Table(table)
     }
+}
 
+impl MacOsConfig {
     /// the entitlements file for macos
     /// see: https://developer.apple.com/documentation/bundleresources/entitlements
     pub fn to_entitlements() -> String {

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Array, Table};
+use toml_edit::{value, Array, Item, Table};
 
 /// # PacmanConfig
 ///
@@ -24,15 +24,14 @@ pub struct PacmanConfig {
 
 impl Display for PacmanConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_toml_table().to_string().as_str())
+        f.write_str(Item::from(self).to_string().as_str())
     }
 }
-
-impl PacmanConfig {
-    pub fn to_toml_table(&self) -> Table {
+impl From<&PacmanConfig> for Item {
+    fn from(v: &PacmanConfig) -> Self {
         let mut table = Table::new();
 
-        if let Some(conflicts) = self.conflicts.as_ref() {
+        if let Some(conflicts) = v.conflicts.as_ref() {
             let mut arr = Array::new();
             for c in conflicts {
                 arr.push(c);
@@ -40,7 +39,7 @@ impl PacmanConfig {
             table.insert("conflicts", value(arr));
         }
 
-        if let Some(depends) = self.depends.as_ref() {
+        if let Some(depends) = v.depends.as_ref() {
             let mut arr = Array::new();
             for d in depends {
                 arr.push(d);
@@ -48,11 +47,11 @@ impl PacmanConfig {
             table.insert("depends", value(arr));
         }
 
-        if let Some(files) = self.files.as_ref() {
+        if let Some(files) = v.files.as_ref() {
             table.insert("files", value(files));
         }
 
-        if let Some(provides) = self.provides.as_ref() {
+        if let Some(provides) = v.provides.as_ref() {
             let mut arr = Array::new();
             for p in provides {
                 arr.push(p);
@@ -60,7 +59,7 @@ impl PacmanConfig {
             table.insert("provides", value(arr));
         }
 
-        if let Some(replaces) = self.replaces.as_ref() {
+        if let Some(replaces) = v.replaces.as_ref() {
             let mut arr = Array::new();
             for r in replaces {
                 arr.push(r);
@@ -68,7 +67,7 @@ impl PacmanConfig {
             table.insert("replaces", value(arr));
         }
 
-        if let Some(source) = self.source.as_ref() {
+        if let Some(source) = v.source.as_ref() {
             let mut arr = Array::new();
             for s in source {
                 arr.push(s);
@@ -76,6 +75,6 @@ impl PacmanConfig {
             table.insert("source", value(arr));
         }
         table.set_implicit(false);
-        table
+        Item::Table(table)
     }
 }

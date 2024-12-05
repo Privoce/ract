@@ -23,7 +23,7 @@ where
             TerminalLogger::new(&format!(
                 "🛠️ ract is creating a new GenUI project `{}` in: {}",
                 info.name,
-                path.display()
+                fs::path_to_str(path.as_path())
             ))
             .info();
             // create a rust workspace project

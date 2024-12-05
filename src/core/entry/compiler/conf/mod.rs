@@ -1,0 +1,108 @@
+mod compiler;
+
+pub use compiler::CompilerConf;
+use std::{fmt::Display, path::PathBuf, str::FromStr};
+
+use gen_utils::{common::fs, error::Error};
+
+use toml_edit::DocumentMut;
+
+use super::{target::CompileUnderlayer, CompileTarget};
+
+/// Compiler Config for gen_ui.toml
+/// ```toml
+/// [compiler]
+/// // see [CompileTarget]
+/// [makepad]
+/// // see [MakepadConfig]
+/// ```
+#[derive(Debug)]
+pub struct Conf {
+    pub compiler: CompilerConf,
+    /// underlayer for makepad (current support)
+    pub underlayer: CompileUnderlayer,
+}
+
+// get content and from toml path
+impl TryFrom<&PathBuf> for Conf {
+    type Error = Error;
+
+    fn try_from(value: &PathBuf) -> Result<Self, Self::Error> {
+        fs::read(value)?.parse()
+    }
+}
+
+impl FromStr for Conf {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // convert to DocumentMut
+        let toml = s.parse::<DocumentMut>().map_err(|e| e.to_string())?;
+        // [compiler] ------------------------------------------------------------------------------------------------
+        let compiler = toml.get("compiler").map_or_else(
+            || Ok(CompilerConf::default()),
+            |table| CompilerConf::try_from(table),
+        )?;
+
+        let underlayer = CompileUnderlayer::try_from((&toml, compiler.target))?;
+
+        Ok(Self {
+            compiler,
+            underlayer,
+        })
+    }
+}
+
+impl TryFrom<(PathBuf, CompileTarget)> for Conf {
+    type Error = Error;
+
+    fn try_from(value: (PathBuf, CompileTarget)) -> Result<Self, Self::Error> {
+        let compiler = CompilerConf::default();
+
+        Ok(Self {
+            compiler,
+            underlayer: value.try_into()?,
+        })
+    }
+}
+
+impl Display for Conf {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}\n{}", self.compiler, self.underlayer))
+    }
+}
+
+#[cfg(test)]
+mod test_conf {
+    use super::*;
+
+    #[test]
+    fn test_compiler_conf() {
+        let toml = r#"
+            [compiler]
+            target = "makepad"
+            logo = true
+            log_level = "info"
+            [makepad]
+            root = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
+        "#;
+        let toml2 = r#"
+            [compiler]
+            target = "makepad"
+            logo = false
+            log_level = "error"
+            excludes = ["Cargo.toml"]
+
+            [makepad]
+            root = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
+            entry = "hello"
+            [makepad.wasm]
+            fresh = true
+        "#;
+        let conf = toml.parse::<Conf>().unwrap();
+        let conf2 = toml2.parse::<Conf>().unwrap();
+
+        dbg!(conf);
+        dbg!(conf2);
+    }
+}

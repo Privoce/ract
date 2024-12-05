@@ -17,7 +17,7 @@ where
     TerminalLogger::new(&format!(
         "🛠️ ract is creating a new Makepad project `{}` in: {}",
         info.name,
-        path.as_ref().display()
+        fs::path_to_str(path.as_ref())
     ))
     .info();
     // create a default makepad project

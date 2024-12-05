@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Formatted, Value};
+use toml_edit::{Formatted, Value};
 
 /// # AppCategory
 /// "Business" | "DeveloperTool" | "Education" | "Entertainment" | "Finance" | "Game" |
@@ -59,14 +59,14 @@ pub enum AppCategory {
 
 impl Display for AppCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
-impl Into<Value> for &AppCategory {
-    fn into(self) -> Value {
+impl From<&AppCategory> for Value {
+    fn from(app_category: &AppCategory) -> Self {
         Value::String(Formatted::new(
-            match self {
+            match app_category {
                 AppCategory::Business => "Business",
                 AppCategory::DeveloperTool => "DeveloperTool",
                 AppCategory::Education => "Education",

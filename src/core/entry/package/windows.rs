@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Table};
+use toml_edit::{value, Item, Table};
 
 /// # WindowsConfig
 ///
@@ -31,28 +31,28 @@ pub struct WindowsConfig {
 
 impl Display for WindowsConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_toml_table().to_string().as_str())
+        f.write_str(Item::from(self).to_string().as_str())
     }
 }
 
-impl WindowsConfig {
-    pub fn to_toml_table(&self) -> Table {
+impl From<&WindowsConfig> for Item {
+    fn from(v: &WindowsConfig) -> Self {
         let mut table = Table::new();
-        table.insert("allow-downgrades", value(self.allow_downgrades));
-        if let Some(certificate_thumbprint) = self.certificate_thumbprint.as_ref() {
+        table.insert("allow-downgrades", value(v.allow_downgrades));
+        if let Some(certificate_thumbprint) = v.certificate_thumbprint.as_ref() {
             table.insert("certificate-thumbprint", value(certificate_thumbprint));
         }
-        if let Some(digest_algorithm) = self.digest_algorithm.as_ref() {
+        if let Some(digest_algorithm) = v.digest_algorithm.as_ref() {
             table.insert("digest-algorithm", value(digest_algorithm));
         }
-        if let Some(sign_command) = self.sign_command.as_ref() {
+        if let Some(sign_command) = v.sign_command.as_ref() {
             table.insert("sign-command", value(sign_command));
         }
-        if let Some(timestamp_url) = self.timestamp_url.as_ref() {
+        if let Some(timestamp_url) = v.timestamp_url.as_ref() {
             table.insert("timestamp-url", value(timestamp_url));
         }
-        table.insert("tsp", value(self.tsp));
+        table.insert("tsp", value(v.tsp));
         table.set_implicit(false);
-        table
+        Item::Table(table)
     }
 }

@@ -17,7 +17,7 @@ use toml_edit::DocumentMut;
 
 use crate::core::env::real_chain_env_toml;
 
-use super::CompilerConfigToml;
+use super::GenUIConf;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
 pub enum CompileTarget {
@@ -34,7 +34,7 @@ impl CompileTarget {
     where
         P: AsRef<Path>,
     {
-        let toml = CompilerConfigToml::try_from((path.as_ref().to_path_buf(), *self))?;
+        let toml = GenUIConf::try_from((path.as_ref().to_path_buf(), *self))?;
         fs::write(path.as_ref().join("gen_ui.toml"), &toml.to_string())
     }
 }

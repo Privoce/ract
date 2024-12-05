@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Formatted, Table, Value};
+use toml_edit::{value, Formatted, Item, Table, Value};
 
 /// # NsisConfig
 ///
@@ -40,59 +40,58 @@ pub struct NsisConfig {
     pub template: Option<String>,
 }
 
-impl NsisConfig {
-    pub fn to_toml_table(&self) -> Table {
+impl From<&NsisConfig> for Item {
+    fn from(v: &NsisConfig) -> Self {
         let mut table = Table::new();
-        if let Some(appdata_paths) = self.appdata_paths.as_ref() {
+        if let Some(appdata_paths) = v.appdata_paths.as_ref() {
             let mut arr = toml_edit::Array::default();
             for a in appdata_paths {
                 arr.push(a);
             }
             table.insert("appdata-paths", value(arr));
         }
-        if let Some(compression) = self.compression.as_ref() {
+        if let Some(compression) = v.compression.as_ref() {
             table.insert("compression", value(compression));
         }
-        if let Some(custom_language_files) = self.custom_language_files.as_ref() {
+        if let Some(custom_language_files) = v.custom_language_files.as_ref() {
             table.insert("custom-language-files", value(custom_language_files));
         }
         table.insert(
             "display-language-selector",
-            value(self.display_language_selector),
+            value(v.display_language_selector),
         );
-        if let Some(header_image) = self.header_image.as_ref() {
+        if let Some(header_image) = v.header_image.as_ref() {
             table.insert("header-image", value(header_image));
         }
-        if let Some(installer_icon) = self.installer_icon.as_ref() {
+        if let Some(installer_icon) = v.installer_icon.as_ref() {
             table.insert("installer-icon", value(installer_icon));
         }
-        if let Some(install_mode) = self.install_mode.as_ref() {
+        if let Some(install_mode) = v.install_mode.as_ref() {
             table.insert("install-mode", value(install_mode));
         }
-        if let Some(languages) = self.languages.as_ref() {
+        if let Some(languages) = v.languages.as_ref() {
             let mut arr = toml_edit::Array::default();
             for l in languages {
                 arr.push(l);
             }
             table.insert("languages", value(arr));
         }
-        if let Some(preinstall_section) = self.preinstall_section.as_ref() {
+        if let Some(preinstall_section) = v.preinstall_section.as_ref() {
             table.insert("preinstall-section", value(preinstall_section));
         }
-        if let Some(sidebar_image) = self.sidebar_image.as_ref() {
+        if let Some(sidebar_image) = v.sidebar_image.as_ref() {
             table.insert("sidebar-image", value(sidebar_image));
         }
-        if let Some(template) = self.template.as_ref() {
+        if let Some(template) = v.template.as_ref() {
             table.insert("template", value(template));
         }
         table.set_implicit(false);
-        table
+        toml_edit::Item::Table(table)
     }
 }
-
 impl Display for NsisConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_toml_table().to_string().as_str())
+        f.write_str(Item::from(self).to_string().as_str())
     }
 }
 
@@ -113,10 +112,10 @@ pub enum NSISInstallerMode {
     Both,
 }
 
-impl Into<Value> for &NSISInstallerMode {
-    fn into(self) -> Value {
+impl From<&NSISInstallerMode> for Value {
+    fn from(value: &NSISInstallerMode) -> Self {
         Value::String(Formatted::new(
-            match self {
+            match value {
                 NSISInstallerMode::CurrentUser => "currentUser",
                 NSISInstallerMode::PerMachine => "perMachine",
                 NSISInstallerMode::Both => "both",
@@ -159,10 +158,10 @@ impl Display for NsisCompression {
     }
 }
 
-impl Into<Value> for &NsisCompression {
-    fn into(self) -> Value {
+impl From<&NsisCompression> for Value {
+    fn from(value: &NsisCompression) -> Self {
         Value::String(Formatted::new(
-            match self {
+            match value {
                 NsisCompression::LZMA => "lzma",
                 NsisCompression::Zlib => "zlib",
                 NsisCompression::Bzip2 => "bzip2",

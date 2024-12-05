@@ -1,6 +1,7 @@
 use std::{fmt::Display, path::PathBuf};
 
-use toml_edit::{value, Formatted, InlineTable, Value};
+use gen_utils::common::fs::path_to_str;
+use toml_edit::{Formatted, InlineTable, Value};
 
 pub struct Binary {
     pub main: bool,
@@ -9,20 +10,20 @@ pub struct Binary {
 
 impl Display for Binary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(value(self).to_string().as_str())
+        f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
-impl Into<Value> for &Binary {
-    fn into(self) -> Value {
+impl From<&Binary> for Value {
+    fn from(binary: &Binary) -> Self {
         let mut v = InlineTable::new();
 
-        v.insert("main", Value::Boolean(Formatted::new(self.main)));
+        v.insert("main", Value::Boolean(Formatted::new(binary.main)));
         v.insert(
             "path",
-            Value::String(Formatted::new(self.path.display().to_string())),
+            Value::String(Formatted::new(path_to_str(&binary.path))),
         );
 
-        v.into()
+        Value::InlineTable(v)
     }
 }
