@@ -13,7 +13,7 @@ use gen_utils::{
 use makepad_gen_plugin::compiler::{
     Config as MakepadConfig, CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
 };
-use toml_edit::DocumentMut;
+use toml_edit::{DocumentMut, Formatted, Item, Value};
 
 use crate::core::env::real_chain_env_toml;
 
@@ -52,9 +52,18 @@ impl FromStr for CompileTarget {
 
 impl Display for CompileTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CompileTarget::Makepad => f.write_str("makepad"),
-        }
+        f.write_str(Value::from(self).to_string().as_str())
+    }
+}
+
+impl From<&CompileTarget> for Value {
+    fn from(value: &CompileTarget) -> Self {
+        Value::String(Formatted::new(
+            match value {
+                CompileTarget::Makepad => "makepad",
+            }
+            .to_string(),
+        ))
     }
 }
 
@@ -126,5 +135,11 @@ impl CompileUnderlayer {
 impl Display for CompileUnderlayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.target.to_string())
+    }
+}
+
+impl From<&CompileUnderlayer> for Item {
+    fn from(value: &CompileUnderlayer) -> Self {
+        (&*value.target).to_item()
     }
 }

@@ -3,9 +3,12 @@ mod compiler;
 pub use compiler::CompilerConf;
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 
-use gen_utils::{common::fs, error::Error};
+use gen_utils::{
+    common::{fs, ToToml},
+    error::Error,
+};
 
-use toml_edit::DocumentMut;
+use toml_edit::{DocumentMut, Item, Table};
 
 use super::{target::CompileUnderlayer, CompileTarget};
 
@@ -21,6 +24,22 @@ pub struct Conf {
     pub compiler: CompilerConf,
     /// underlayer for makepad (current support)
     pub underlayer: CompileUnderlayer,
+}
+
+impl ToToml for Conf {
+    fn to_toml(&self) -> DocumentMut {
+        let mut table = Table::new();
+
+        table.insert("compiler", (&self.compiler).into());
+        // underlayer is a table which only has one node
+        if let Item::Table(underlayer) = Item::from(&self.underlayer) {
+            let (k, v) = underlayer.into_iter().next().unwrap();
+            table.insert(&k, v);
+        }
+
+        table.set_implicit(false);
+        DocumentMut::from(table)
+    }
 }
 
 // get content and from toml path
@@ -68,7 +87,7 @@ impl TryFrom<(PathBuf, CompileTarget)> for Conf {
 
 impl Display for Conf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}\n{}", self.compiler, self.underlayer))
+        f.write_str(self.to_toml().to_string().as_str())
     }
 }
 
@@ -96,13 +115,15 @@ mod test_conf {
             [makepad]
             root = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
             entry = "hello"
+            [makepad.dependencies]
+            makepad_widgets = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
             [makepad.wasm]
             fresh = true
         "#;
         let conf = toml.parse::<Conf>().unwrap();
         let conf2 = toml2.parse::<Conf>().unwrap();
 
-        dbg!(conf);
-        dbg!(conf2);
+        println!("{}", conf);
+        println!("{}", conf2);
     }
 }

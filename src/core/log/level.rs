@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use gen_utils::error::{ConvertError, Error};
+use toml_edit::{Formatted, Value};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum LogLevel {
@@ -35,13 +36,22 @@ impl FromStr for LogLevel {
 
 impl Display for LogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LogLevel::Info => f.write_str("info"),
-            LogLevel::Debug => f.write_str("debug"),
-            LogLevel::Error => f.write_str("error"),
-            LogLevel::Warn => f.write_str("warn"),
-            LogLevel::Trace => f.write_str("trace"),
-            LogLevel::Off => f.write_str("off"),
-        }
+        f.write_str(Value::from(self).to_string().as_str())
+    }
+}
+
+impl From<&LogLevel> for Value {
+    fn from(value: &LogLevel) -> Self {
+        Value::String(Formatted::new(
+            match value {
+                LogLevel::Info => "info",
+                LogLevel::Debug => "debug",
+                LogLevel::Error => "error",
+                LogLevel::Warn => "warn",
+                LogLevel::Trace => "trace",
+                LogLevel::Off => "off",
+            }
+            .to_string(),
+        ))
     }
 }

@@ -1,9 +1,12 @@
 use std::fmt::Display;
 
-use gen_utils::{common::ToToml, error::{ConvertError, Error}};
-use toml_edit::Item;
+use gen_utils::error::{ConvertError, Error};
+use toml_edit::{value, Item, Table};
 
-use crate::core::{entry::{compiler::excludes::Excludes, CompileTarget}, log::LogLevel};
+use crate::core::{
+    entry::{compiler::excludes::Excludes, CompileTarget},
+    log::LogLevel,
+};
 
 /// Compiler Config
 /// ```toml
@@ -18,10 +21,6 @@ pub struct CompilerConf {
     pub logo: bool,
     pub log_level: LogLevel,
     pub excludes: Excludes,
-}
-
-impl CompilerConf {
-    
 }
 
 impl Default for CompilerConf {
@@ -62,7 +61,7 @@ impl TryFrom<&Item> for CompilerConf {
                 target,
                 logo,
                 log_level,
-                excludes
+                excludes,
             });
         }
 
@@ -76,9 +75,17 @@ impl TryFrom<&Item> for CompilerConf {
 
 impl Display for CompilerConf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("[compiler]\n")?;
-        f.write_fmt(format_args!("target = \"{}\"\n", self.target))?;
-        f.write_fmt(format_args!("logo = {}\n", self.logo))?;
-        f.write_fmt(format_args!("log_level = \"{}\"\n", self.log_level))
+        f.write_str(Item::from(self).to_string().as_str())
+    }
+}
+
+impl From<&CompilerConf> for Item {
+    fn from(conf: &CompilerConf) -> Self {
+        let mut table = Table::new();
+        table.insert("target", Item::Value((&conf.target).into()));
+        table.insert("logo", value(conf.logo));
+        table.insert("log_level", Item::Value((&conf.log_level).into()));
+        table.insert("excludes", Item::Value((&conf.excludes).into()));
+        Item::Table(table)
     }
 }
