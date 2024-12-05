@@ -23,7 +23,7 @@
 
 #### Issues
 
-##### Makepad Wasm
+##### Makepad Wasm (Fixed)
 
 ```
 Uncaught SyntaxError: unexpected token: '{'
@@ -37,7 +37,7 @@ use {WasmWebGL} from './makepad_platform/web_gl.js'
 
 #### Issues
 
-##### Makepad Wasm
+##### Makepad Wasm (Fixed)
 
 ```
 Uncaught SyntaxError: unexpected token: '{'
