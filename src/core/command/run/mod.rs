@@ -39,7 +39,7 @@ where
 
     match content.as_str() {
         "makepad" => makepad::origin::run(path.as_ref()),
-        "gen_ui" => gen_ui::run(),
+        "gen_ui" => gen_ui::run(path.as_ref()),
         _ => Err(ProjectLogs::Error("Invalid project kind".to_string())
             .to_string()
             .into()),
