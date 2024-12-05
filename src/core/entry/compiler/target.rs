@@ -6,7 +6,7 @@ use std::{
 
 use clap::ValueEnum;
 use gen_utils::{
-    common::{fs, DepType, RustDependence},
+    common::{DepType, RustDependence, ToToml},
     compiler::UnderlayerConfImpl,
     error::{Error, ParseError},
 };
@@ -35,7 +35,7 @@ impl CompileTarget {
         P: AsRef<Path>,
     {
         let toml = GenUIConf::try_from((path.as_ref().to_path_buf(), *self))?;
-        fs::write(path.as_ref().join("gen_ui.toml"), &toml.to_string())
+        toml.write(path.as_ref().join("gen_ui.toml"))
     }
 }
 

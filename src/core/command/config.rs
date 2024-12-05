@@ -61,7 +61,7 @@ fn config_env() -> Result<(), Error> {
         let path = PathBuf::from_str(&path).unwrap();
         if fs::exists(path.as_path()) {
             // write to .env file
-            fs::write(path.as_path(), path.as_path().to_str().unwrap())?;
+            fs::write(env_path.as_path(), path.as_path().to_str().unwrap())?;
             return Ok(());
         } else {
             return Err(FsError::FileNotFound(path).into());
