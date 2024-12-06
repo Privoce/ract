@@ -1,6 +1,9 @@
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 
-use gen_utils::common::{fs, ToToml};
+use gen_utils::{
+    common::{fs, ToToml},
+    error::{Error, ParseError, ParseType},
+};
 use toml_edit::{value, Array, DocumentMut, Formatted, InlineTable, Value};
 
 use crate::core::entry::{FrameworkType, ProjectInfo};
@@ -86,6 +89,75 @@ impl Display for RactToml {
     }
 }
 
+impl TryFrom<&DocumentMut> for RactToml {
+    type Error = Error;
+
+    fn try_from(value: &DocumentMut) -> Result<Self, Self::Error> {
+        let target = value.get("target").map_or_else(
+            || Err(ParseError::new("can not get target in toml", ParseType::Toml).into()),
+            |v| {
+                v.as_str().map_or_else(
+                    || Err(ParseError::new("target must be a string", ParseType::Toml).into()),
+                    |s| FrameworkType::from_str(s),
+                )
+            },
+        )?;
+
+        let members = if let Some(v) = value.get("members") {
+            let member = v.as_array().map_or_else(
+                || {
+                    Err(Error::Parse(ParseError::new(
+                        "members must be a array",
+                        ParseType::Toml,
+                    )))
+                },
+                |arr| {
+                    let mut members = vec![];
+                    for item in arr.iter() {
+                        members.push(Member::try_from(item)?);
+                    }
+                    Ok(members)
+                },
+            )?;
+
+            Some(member)
+        } else {
+            None
+        };
+
+        let compiles = if let Some(v) = value.get("compiles") {
+            let compiles = v.as_array().map_or_else(
+                || {
+                    Err(Error::Parse(ParseError::new(
+                        "compiles must be a array",
+                        ParseType::Toml,
+                    )))
+                },
+                |arr| {
+                    let mut compiles = vec![];
+                    for item in arr.iter() {
+                        compiles.push(item.as_integer().map_or_else(
+                            || Err(Error::from("compiles must be a integer")),
+                            |i| Ok(i as usize),
+                        )?);
+                    }
+                    Ok(compiles)
+                },
+            )?;
+
+            Some(compiles)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            target,
+            members,
+            compiles,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Member {
     /// path of the source project which required to compile
@@ -118,5 +190,71 @@ impl From<(&ProjectInfo, usize)> for Member {
             source: PathBuf::from(&info.name),
             target: PathBuf::from(format!("src_gen_{}", index)),
         }
+    }
+}
+
+impl TryFrom<&Value> for Member {
+    type Error = Error;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        let table = value
+            .as_inline_table()
+            .ok_or_else(|| Error::from("Member must be a inline table".to_string()))?;
+
+        let source = table.get("source").map_or_else(
+            || Err(Error::from("can not get source in member".to_string())),
+            |v| {
+                v.as_str().map_or_else(
+                    || Err(Error::from("source must be a string".to_string())),
+                    |s| Ok(PathBuf::from(s)),
+                )
+            },
+        )?;
+
+        let target = table.get("target").map_or_else(
+            || Err(Error::from("can not get target in member".to_string())),
+            |v| {
+                v.as_str().map_or_else(
+                    || Err(Error::from("target must be a string".to_string())),
+                    |s| Ok(PathBuf::from(s)),
+                )
+            },
+        )?;
+
+        Ok(Self { source, target })
+    }
+}
+
+#[cfg(test)]
+mod test_ract {
+    use toml_edit::DocumentMut;
+
+    use crate::core::entry::RactToml;
+
+    #[test]
+    fn makepad() {
+        let input = r#"
+        target = "makepad"
+        "#;
+
+        let toml = input.parse::<DocumentMut>().unwrap();
+        let ract = RactToml::try_from(&toml).unwrap();
+        println!("{}", ract);
+    }
+
+    #[test]
+    fn gen_ui() {
+        let input = r#"
+        target = "gen_ui"
+        members = [
+            { source = "./hello", target = "./hello_makepad" },
+            { source = "./world", target = "./world_makepad" },
+        ]
+        compiles = [0, 1]
+        "#;
+
+        let toml = input.parse::<DocumentMut>().unwrap();
+        let ract = RactToml::try_from(&toml).unwrap();
+        println!("{}", ract);
     }
 }

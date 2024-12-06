@@ -5,13 +5,15 @@
 - [ ] Packager for GenUI
 - [ ] Compiler for GenUI
 - [ ] Logger for GenUI
+------ v0.0.2
 - [ ] i18n
 - [ ] A better way for packaging settings (visualization)
 - [ ] Cross Platforms Packaging
-- [ ] Book for Makepad
+- [ ] Book for Makepad|GenUI
 - [ ] Create Workspace (makepad, genui)
 - [ ] Package For Worksapce
 - [ ] powerful .ract file (toml)
 - [ ] Multi Compiler threads
 - [ ] Cloud for ract
 - [ ] GUI for ract
+- [ ] GenUI App Browser(app store)
