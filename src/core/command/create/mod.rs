@@ -8,7 +8,7 @@ use std::{
 
 use crate::core::{
     constant::DEFAULT_GITIGNORE,
-    entry::{CompileTarget, ProjectInfo},
+    entry::{CompileTarget, ProjectInfo, ProjectPackageType},
     log::{CreateLogs, TerminalLogger},
 };
 
@@ -64,39 +64,45 @@ impl CreateArgs {
         }
     }
     fn create_project(&self) -> Result<(), Error> {
-        match self.path.canonicalize() {
-            Ok(path) => {
-                return Select::new(
-                    "Which project you want to create?",
-                    vec!["makepad", "gen_ui"],
-                )
-                .with_starting_cursor(1)
-                .prompt()
-                .map_or_else(
-                    |e| Err(e.to_string().into()),
-                    |option| {
-                        // first get the project info
-                        let info = self.get_info();
-                        let git = self.init_git();
-                        if self.confirm_create() {
-                            match option {
-                                "makepad" => makepad::create(path.as_path(), info, git),
-                                "gen_ui" => {
-                                    // set project path, target underlayer ...
-                                    let underlayer = self.get_underlayer();
-                                    gen_ui::create(path.as_path(), info, underlayer, git)
-                                }
-                                _ => Err("Invalid project type".to_string().into()),
-                            }
-                        } else {
-                            Err("You cancel the project creation".to_string().into())
-                        }
-                    },
-                );
-            }
-            Err(e) => Err(e.to_string().into()),
-        }
+        ProjectPackageType::new()?;
+
+
+        Ok(())
+        // match self.path.canonicalize() {
+        //     Ok(path) => {
+        //         return Select::new(
+        //             "Which framework template do you want to create?",
+        //             vec!["makepad", "gen_ui"],
+        //         )
+        //         .with_starting_cursor(1)
+        //         .prompt()
+        //         .map_or_else(
+        //             |e| Err(e.to_string().into()),
+        //             |option| {
+        //                 // first get the project info
+        //                 let info = self.get_info();
+        //                 let git = self.init_git();
+        //                 if self.confirm_create() {
+        //                     match option {
+        //                         "makepad" => makepad::create(path.as_path(), info, git),
+        //                         "gen_ui" => {
+        //                             // set project path, target underlayer ...
+        //                             let underlayer = self.get_underlayer();
+        //                             gen_ui::create(path.as_path(), info, underlayer, git)
+        //                         }
+        //                         _ => Err("Invalid project type".to_string().into()),
+        //                     }
+        //                 } else {
+        //                     Err("You cancel the project creation".to_string().into())
+        //                 }
+        //             },
+        //         );
+        //     }
+        //     Err(e) => Err(e.to_string().into()),
+        // }
     }
+
+   
 
     fn init_git(&self) -> bool {
         Confirm::new("Init as a git repository?")

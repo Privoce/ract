@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
+use crate::core::entry::ProjectType;
+
 /// # RactToml
 /// each project has a .ract file to point the project kind and help ract to compile the project
+///
+/// **try support makepad and gen_ui**
 /// ## Example
 /// ```toml
 /// target = "gen_ui"
@@ -10,9 +14,9 @@ use std::path::PathBuf;
 /// ]
 /// compiles = [0]
 /// ```
-pub struct RactToml{
+pub struct RactToml {
     /// target of the project
-    pub target: Target,
+    pub target: ProjectType,
     /// members of the project
     pub members: Option<Vec<Member>>,
     /// projects to compile, if not set, compile the first project in the members
@@ -22,16 +26,25 @@ pub struct RactToml{
     pub compiles: Option<Vec<usize>>,
 }
 
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum Target{
-    #[default]
-    GenUI,
-    Makepad
+impl RactToml {
+    pub fn makepad() -> Self {
+        Self {
+            target: ProjectType::Makepad,
+            members: None,
+            compiles: None,
+        }
+    }
+    pub fn gen_ui() -> Self {
+        Self {
+            target: ProjectType::GenUI,
+            members: None,
+            compiles: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct Member{
+pub struct Member {
     /// path of the source project which required to compile
     pub source: PathBuf,
     /// path of the project which after compiled

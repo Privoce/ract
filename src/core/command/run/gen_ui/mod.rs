@@ -8,7 +8,7 @@ where
 {
     let path = target_path(path);
     // [generate compiler service] -----------------------------------------------------------------------
-    let compilerpiler = Compiler::new()
+    // let compilerpiler = Compiler::new()
 
     Ok(())
 }

@@ -55,6 +55,7 @@ impl Display for BasicTools {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum UnderlayerTools {
     Makepad(MakepadTools),
