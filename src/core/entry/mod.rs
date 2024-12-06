@@ -3,7 +3,7 @@ mod config;
 mod create;
 mod tool;
 mod compiler;
-mod project_type;
+mod framwork;
 
 mod package;
 
@@ -13,4 +13,4 @@ pub use create::*;
 pub use tool::*;
 pub use compiler::*;
 pub use package::*;
-pub use project_type::ProjectType;
+pub use framwork::FrameworkType;

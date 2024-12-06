@@ -9,3 +9,9 @@
 - [ ] A better way for packaging settings (visualization)
 - [ ] Cross Platforms Packaging
 - [ ] Book for Makepad
+- [ ] Create Workspace (makepad, genui)
+- [ ] Package For Worksapce
+- [ ] powerful .ract file (toml)
+- [ ] Multi Compiler threads
+- [ ] Cloud for ract
+- [ ] GUI for ract

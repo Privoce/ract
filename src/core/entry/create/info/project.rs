@@ -9,6 +9,7 @@ use gen_utils::{
     compiler::{Author, License},
     error::{Error, ParseError, ParseType},
 };
+use inquire::{Confirm, Select, Text};
 use toml_edit::{value, Array, DocumentMut};
 
 use crate::core::env::real_chain_env_toml;
@@ -28,6 +29,70 @@ pub struct ProjectInfo {
 }
 
 impl ProjectInfo {
+    pub fn new() -> ProjectInfo {
+        let name = Text::new("Project name:")
+            .with_placeholder("Your project name use snake_case")
+            .prompt()
+            .expect("Failed to get project name");
+
+        let authors = Text::new("Authors name:")
+            .with_placeholder("format: name <email> and use `,` to separate multiple authors")
+            .prompt_skippable()
+            .expect("Failed to get author name")
+            .filter(|s| !s.is_empty());
+
+        let description = Text::new("Project description:")
+            .with_default("This project is created by ract. Repo: https://github.com/Privoce/GenUI")
+            .prompt_skippable()
+            .unwrap();
+
+        let license = Select::new("Choose LICENSE:", License::options())
+            .prompt()
+            .expect("Failed to get license");
+
+        let version = Text::new("Version:")
+            .with_default("0.1.0")
+            .with_placeholder("0.1.0")
+            .prompt()
+            .unwrap();
+
+        let keywords = Text::new("Keywords:")
+            .with_help_message("You can input multiple keywords, or press Enter to skip")
+            .with_default("front_end, ui")
+            .with_placeholder("gen_ui, front_end, ui")
+            .prompt()
+            .unwrap();
+
+        if
+        // confirm the project information
+        Confirm::new("Do you confirm the project information?")
+            .with_default(true)
+            .with_help_message(
+                "If you confirm, the project will be created with the above information",
+            )
+            .prompt()
+            .expect("Failed to confirm project information")
+        {
+            let authors = authors.map(|authors| {
+                authors
+                    .split(',')
+                    .map(|author| author.parse().unwrap())
+                    .collect()
+            });
+
+            return ProjectInfo {
+                name,
+                version,
+                authors,
+                description,
+                license: license.parse().unwrap(),
+                keywords: keywords.split(',').map(|x| x.trim().to_string()).collect(),
+            };
+        } else {
+            return Self::new();
+        }
+    }
+
     pub fn write_gen_ui_cargo_toml<P>(&self, path: P) -> Result<(), Error>
     where
         P: AsRef<Path>,

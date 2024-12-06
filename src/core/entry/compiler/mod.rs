@@ -10,4 +10,4 @@ mod ract_toml;
 pub use target::CompileTarget;
 pub use conf::Conf as GenUIConf;
 pub use service::Compiler;
-pub use ract_toml::RactToml;
+pub use ract_toml::{RactToml, Member};

@@ -4,11 +4,12 @@ mod makepad;
 use std::{
     path::{Path, PathBuf},
     process::exit,
+    str::FromStr,
 };
 
 use crate::core::{
     constant::DEFAULT_GITIGNORE,
-    entry::{CompileTarget, ProjectInfo, ProjectPackageType},
+    entry::{CompileTarget, FrameworkType, ProjectInfo, ProjectPackageType, RactToml},
     log::{CreateLogs, TerminalLogger},
 };
 
@@ -64,9 +65,24 @@ impl CreateArgs {
         }
     }
     fn create_project(&self) -> Result<(), Error> {
-        ProjectPackageType::new()?;
+        // [select framework] ---------------------------------------------------------
+        let framwork = Select::new(
+            "Which framework template do you want to create?",
+            FrameworkType::options(),
+        )
+        .with_starting_cursor(0)
+        .prompt()
+        .unwrap();
+        let framework = FrameworkType::from_str(&framwork)?;
+        // [get project info] ---------------------------------------------------------
+        let project = ProjectPackageType::new(framework)?;
 
+        let ract_toml = match framework {
+            FrameworkType::GenUI => RactToml::gen_ui(project.members().unwrap()),
+            FrameworkType::Makepad => RactToml::makepad(),
+        };
 
+        println!("{}", ract_toml);
         Ok(())
         // match self.path.canonicalize() {
         //     Ok(path) => {
@@ -102,8 +118,6 @@ impl CreateArgs {
         // }
     }
 
-   
-
     fn init_git(&self) -> bool {
         Confirm::new("Init as a git repository?")
             .with_default(true)
@@ -131,72 +145,6 @@ impl CreateArgs {
         underlayer.map_or(CompileTarget::Makepad, |underlayer| {
             underlayer.parse().unwrap()
         })
-    }
-
-    fn get_info(&self) -> ProjectInfo {
-        let name = Text::new("Project name:")
-            .with_placeholder("Your project name use snake_case")
-            .prompt()
-            .expect("Failed to get project name");
-
-        let authors = Text::new("Authors name:")
-            .with_placeholder("format: name <email> and use `,` to separate multiple authors")
-            .prompt_skippable()
-            .expect("Failed to get author name")
-            .filter(|s| !s.is_empty());
-
-        let description = Text::new("Project description:")
-            .with_default(
-                "This project is created by ract. Repo: https://github.com/Privoce/GenUI",
-            )
-            .prompt_skippable()
-            .unwrap();
-
-        let license = Select::new("Choose LICENSE:", License::options())
-            .prompt()
-            .expect("Failed to get license");
-
-        let version = Text::new("Version:")
-            .with_default("0.1.0")
-            .with_placeholder("0.1.0")
-            .prompt()
-            .unwrap();
-
-        let keywords = Text::new("Keywords:")
-            .with_help_message("You can input multiple keywords, or press Enter to skip")
-            .with_default("front_end, ui")
-            .with_placeholder("gen_ui, front_end, ui")
-            .prompt()
-            .unwrap();
-
-        if
-        // confirm the project information
-        Confirm::new("Do you confirm the project information?")
-            .with_default(true)
-            .with_help_message(
-                "If you confirm, the project will be created with the above information",
-            )
-            .prompt()
-            .expect("Failed to confirm project information")
-        {
-            let authors = authors.map(|authors| {
-                authors
-                    .split(',')
-                    .map(|author| author.parse().unwrap())
-                    .collect()
-            });
-
-            return ProjectInfo {
-                name,
-                version,
-                authors,
-                description,
-                license: license.parse().unwrap(),
-                keywords: keywords.split(',').map(|x| x.trim().to_string()).collect(),
-            };
-        } else {
-            return self.get_info();
-        }
     }
 }
 
