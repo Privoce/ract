@@ -11,7 +11,7 @@ use toml_edit::{value, Array, DocumentMut, Table};
 use crate::core::log::LogLevel;
 
 use super::{
-    generator::PackageGenerator, AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation,
+    PackageGenerator, AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation,
     MacOsConfig, NsisConfig, PackageFormat, PacmanConfig, Position, Resource, Size, WindowsConfig,
     WixConfig,
 };

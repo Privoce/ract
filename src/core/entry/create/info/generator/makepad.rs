@@ -4,23 +4,12 @@ use gen_utils::{common::fs, error::Error};
 
 use crate::core::{
     constant::{MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
-    entry::ProjectInfo,
+    entry::{ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
+    util,
 };
 
-use super::{ProjectInfoType, WorkspaceInfo};
-
-pub fn create<P>(path: P, info: &ProjectInfoType) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-{
-    match info {
-        ProjectInfoType::Workspace(workspace_info) => create_workspace(path, workspace_info),
-        ProjectInfoType::Project(project_info) => crate_project(path, project_info),
-    }
-}
-
-fn create_workspace<P>(path: P, info: &WorkspaceInfo) -> Result<(), Error>
+pub fn create_workspace<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -30,12 +19,17 @@ where
         fs::path_to_str(path.as_ref())
     ))
     .info();
+    // [rust workspace path] -------------------------------------------------------
+    let path = path.as_ref().join(info.name.as_str());
+    // [workspace Cargo.toml] ------------------------------------------------------
+    let cargo_toml = info.workspace_members_toml().to_string();
+    let _ = util::create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
 
     Ok(())
 }
 
 /// create a default makepad project
-fn crate_project<P>(path: P, info: &ProjectInfo) -> Result<(), Error>
+pub fn crate_project<P>(path: P, info: &ProjectInfo) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {

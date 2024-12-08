@@ -8,21 +8,30 @@ use gen_utils::{
     error::Error,
 };
 
-use crate::core::log::TerminalLogger;
+use crate::core::{entry::FrameworkType, log::TerminalLogger};
 
 use super::{MacOsConfig, PackageConf};
 
-pub struct PackageGenerator {
+/// A generator for packaging project
+/// This generator will generate the packaging project and resources for makepad or others
+pub struct Generator {
     path: PathBuf,
 }
 
-impl PackageGenerator {
+impl Generator {
     pub fn new<P>(path: P) -> Self
     where
         P: AsRef<Path>,
     {
         Self {
             path: path.as_ref().to_path_buf(),
+        }
+    }
+
+    pub fn generate(&self, target: FrameworkType, conf: PackageConf) -> Result<(), Error> {
+        match target {
+            FrameworkType::GenUI => unimplemented!("GenUI packaging is not supported yet"),
+            FrameworkType::Makepad => self.makepad(conf),
         }
     }
 

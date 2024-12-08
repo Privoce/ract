@@ -1,5 +1,5 @@
-mod gen_ui;
-mod makepad;
+// mod gen_ui;
+// mod makepad;
 
 use std::{
     path::{Path, PathBuf},
@@ -81,15 +81,13 @@ impl CreateArgs {
                 .unwrap();
                 let framework = FrameworkType::from_str(&framwork)?;
                 // [get project info] ---------------------------------------------------------
-                let project = ProjectInfoType::new(framework)?;
-                // [do create] -----------------------------------------------------------------
-                project.create(path.as_path(), framework)?;
-                // [init git repository] ----------------------------------------------------------------------
-                if self.init_git() {
-                    git_init(path.as_path())?;
-                }
-
-                Ok(())
+                let project_info_type = ProjectInfoType::new(framework)?;
+                // [get generate] -------------------------------------------------------------
+                let mut generator = project_info_type.create(path.as_path(), framework);
+                // [init git repository] ------------------------------------------------------
+                generator.git = self.init_git();
+                // [do create] ----------------------------------------------------------------
+                generator.generate()
             }
             Err(e) => Err(e.to_string().into()),
         }

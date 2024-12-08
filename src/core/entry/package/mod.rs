@@ -27,3 +27,4 @@ pub use nsis::NsisConfig;
 pub use pacman::PacmanConfig;
 pub use windows::WindowsConfig;
 pub use wix::WixConfig;
+pub use generator::Generator as PackageGenerator;

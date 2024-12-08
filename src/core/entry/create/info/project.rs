@@ -18,7 +18,7 @@ use crate::core::util::real_chain_env_toml;
 /// use in ui project.Cargo.toml
 /// ## Convert to toml format and write into Cargo.toml file
 /// use toml_edit crate to convert to toml format
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProjectInfo {
     pub name: String,
     pub version: String,

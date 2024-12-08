@@ -36,33 +36,6 @@ where
     }
 }
 
-fn create_rust_workspace<P>(path: P, name: &str, git: bool) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-{
-    // use name as workspace project name
-    let workspace_path = path.as_ref().join(name);
-    // create workspace project
-    match std::fs::create_dir(workspace_path.as_path()) {
-        Ok(_) => {
-            // create Cargo.toml
-            let cargo_toml = workspace_path.join("Cargo.toml");
-            // write default Cargo.toml content
-            let content = DEFAULT_CARGO_TOML_CONTENT.replace("{$ui_name}", name);
-            let _ = fs::write(cargo_toml.as_path(), &content)?;
-
-            // write .ract
-            let _ = fs::write(workspace_path.join(".ract").as_path(), "gen_ui")?;
-            // if git is true, init git repository
-            if git {
-                git_init(workspace_path.as_path())?;
-            }
-            CreateLogs::Workspace.terminal().success();
-            Ok(())
-        }
-        Err(e) => Err(e.to_string().into()),
-    }
-}
 
 // create GenUI project depend on project info
 fn create_gen_ui_project<P>(

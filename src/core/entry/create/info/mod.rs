@@ -1,10 +1,10 @@
-mod gen_ui;
-mod makepad;
+
 mod project;
 mod workspace;
+mod generator;
 
+pub use generator::Generator as ProjectGenerator;
 use std::path::Path;
-
 use gen_utils::error::Error;
 use inquire::Select;
 pub use project::ProjectInfo;
@@ -12,6 +12,7 @@ pub use workspace::WorkspaceInfo;
 
 use crate::core::entry::{FrameworkType, Member, RactToml};
 
+#[derive(Debug, Clone)]
 pub enum ProjectInfoType {
     Workspace(WorkspaceInfo),
     Project(ProjectInfo),
@@ -19,21 +20,11 @@ pub enum ProjectInfoType {
 
 impl ProjectInfoType {
     /// create a new project
-    pub fn create<P>(&self, path: P, framework: FrameworkType) -> Result<(), Error>
+    pub fn create<P>(&self, path: P, framework: FrameworkType) -> ProjectGenerator
     where
         P: AsRef<Path>,
     {
-        dbg!(path.as_ref());
-        // [ract.toml] -----------------------------------------------------------------
-        let ract_toml = match framework {
-            FrameworkType::GenUI => RactToml::gen_ui(self.members().unwrap()),
-            FrameworkType::Makepad => RactToml::makepad(),
-        };
-
-        match framework {
-            FrameworkType::Makepad => makepad::create(path, self),
-            FrameworkType::GenUI => gen_ui::create(path, self),
-        }
+        ProjectGenerator::new(path, self.clone(), framework)
     }
     pub fn new(framework: FrameworkType) -> Result<Self, Error> {
         // only makepad need to select project type
