@@ -15,7 +15,7 @@ use makepad_gen_plugin::compiler::{
 };
 use toml_edit::{DocumentMut, Formatted, Item, Value};
 
-use crate::core::env::real_chain_env_toml;
+use crate::core::util::real_chain_env_toml;
 
 use super::GenUIConf;
 

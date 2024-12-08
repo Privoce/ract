@@ -12,7 +12,7 @@ use gen_utils::{
 use inquire::{Confirm, Select, Text};
 use toml_edit::{value, Array, DocumentMut};
 
-use crate::core::env::real_chain_env_toml;
+use crate::core::util::real_chain_env_toml;
 
 /// # Project Info for GenUI project
 /// use in ui project.Cargo.toml

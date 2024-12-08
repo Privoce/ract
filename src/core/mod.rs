@@ -1,7 +1,7 @@
 mod cli;
 mod command;
 mod entry;
-pub mod env;
+pub mod util;
 mod log;
 // default constants or templates
 mod compiler;

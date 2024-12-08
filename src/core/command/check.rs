@@ -10,7 +10,7 @@ use which::which;
 
 use crate::core::{
     entry::{Checks, CompileTarget, Tools, UnderlayerTools},
-    env::real_chain_env_path,
+    util::real_chain_env_path,
     log::{CheckLogs, TerminalLogger},
 };
 

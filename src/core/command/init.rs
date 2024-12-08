@@ -7,7 +7,7 @@ use gen_utils::{
 
 use crate::core::{
     constant::DEFAULT_ENV_TOML,
-    env::{chain_env_path, chain_path, env_path, gen_components_path, makepad_widgets_path},
+    util::{chain_env_path, chain_path, env_path, gen_components_path, makepad_widgets_path},
     log::InitLogs,
 };
 

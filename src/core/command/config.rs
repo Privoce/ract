@@ -9,7 +9,7 @@ use toml_edit::{value, DocumentMut};
 
 use crate::core::{
     entry::Configs,
-    env::{env_path, match_chain_value, real_chain_env_path},
+    util::{env_path, match_chain_value, real_chain_env_path},
     log::{ConfigLogs, TerminalLogger},
 };
 

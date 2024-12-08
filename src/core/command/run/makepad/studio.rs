@@ -9,7 +9,7 @@ use inquire::{Confirm, Text};
 
 use crate::core::{
     command::check::current_states,
-    env::real_chain_env_toml,
+    util::real_chain_env_toml,
     log::{InstallLogs, StudioLogs, TerminalLogger},
 };
 

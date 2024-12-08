@@ -1,19 +1,40 @@
+mod gen_ui;
+mod makepad;
 mod project;
 mod workspace;
+
+use std::path::Path;
 
 use gen_utils::error::Error;
 use inquire::Select;
 pub use project::ProjectInfo;
 pub use workspace::WorkspaceInfo;
 
-use crate::core::entry::{FrameworkType, Member};
+use crate::core::entry::{FrameworkType, Member, RactToml};
 
-pub enum ProjectPackageType {
+pub enum ProjectInfoType {
     Workspace(WorkspaceInfo),
     Project(ProjectInfo),
 }
 
-impl ProjectPackageType {
+impl ProjectInfoType {
+    /// create a new project
+    pub fn create<P>(&self, path: P, framework: FrameworkType) -> Result<(), Error>
+    where
+        P: AsRef<Path>,
+    {
+        dbg!(path.as_ref());
+        // [ract.toml] -----------------------------------------------------------------
+        let ract_toml = match framework {
+            FrameworkType::GenUI => RactToml::gen_ui(self.members().unwrap()),
+            FrameworkType::Makepad => RactToml::makepad(),
+        };
+
+        match framework {
+            FrameworkType::Makepad => makepad::create(path, self),
+            FrameworkType::GenUI => gen_ui::create(path, self),
+        }
+    }
     pub fn new(framework: FrameworkType) -> Result<Self, Error> {
         // only makepad need to select project type
         let project_type = if let FrameworkType::Makepad = framework {
@@ -26,10 +47,10 @@ impl ProjectPackageType {
             "workspace"
         };
 
-        // [create project] -----------------------------------------------------------
-        Self::create_project(project_type)
+        // [project info] -----------------------------------------------------------
+        Self::project_info(project_type)
     }
-    pub fn create_project(ty: &str) -> Result<Self, Error> {
+    pub fn project_info(ty: &str) -> Result<Self, Error> {
         match ty {
             "workspace" => Ok(WorkspaceInfo::new().into()),
             "project" => Ok(ProjectInfo::new().into()),
@@ -37,7 +58,7 @@ impl ProjectPackageType {
         }
     }
     pub fn members(&self) -> Option<Vec<Member>> {
-        if let ProjectPackageType::Workspace(info) = self {
+        if let ProjectInfoType::Workspace(info) = self {
             return Some(
                 info.members
                     .iter()
@@ -48,20 +69,19 @@ impl ProjectPackageType {
         }
         None
     }
-
     pub fn options() -> Vec<&'static str> {
         vec!["workspace", "project"]
     }
 }
 
-impl From<WorkspaceInfo> for ProjectPackageType {
+impl From<WorkspaceInfo> for ProjectInfoType {
     fn from(info: WorkspaceInfo) -> Self {
-        ProjectPackageType::Workspace(info)
+        ProjectInfoType::Workspace(info)
     }
 }
 
-impl From<ProjectInfo> for ProjectPackageType {
+impl From<ProjectInfo> for ProjectInfoType {
     fn from(info: ProjectInfo) -> Self {
-        ProjectPackageType::Project(info)
+        ProjectInfoType::Project(info)
     }
 }

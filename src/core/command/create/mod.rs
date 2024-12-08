@@ -9,12 +9,16 @@ use std::{
 
 use crate::core::{
     constant::DEFAULT_GITIGNORE,
-    entry::{CompileTarget, FrameworkType, ProjectInfo, ProjectPackageType, RactToml},
+    entry::{CompileTarget, FrameworkType, ProjectInfo, ProjectInfoType, RactToml},
     log::{CreateLogs, TerminalLogger},
 };
 
 use clap::Args;
-use gen_utils::{common::fs, compiler::License, error::Error};
+use gen_utils::{
+    common::{fs, ToToml},
+    compiler::License,
+    error::Error,
+};
 use inquire::{Confirm, Select, Text};
 
 use super::check::current_states;
@@ -65,57 +69,30 @@ impl CreateArgs {
         }
     }
     fn create_project(&self) -> Result<(), Error> {
-        // [select framework] ---------------------------------------------------------
-        let framwork = Select::new(
-            "Which framework template do you want to create?",
-            FrameworkType::options(),
-        )
-        .with_starting_cursor(0)
-        .prompt()
-        .unwrap();
-        let framework = FrameworkType::from_str(&framwork)?;
-        // [get project info] ---------------------------------------------------------
-        let project = ProjectPackageType::new(framework)?;
+        match self.path.canonicalize() {
+            Ok(path) => {
+                // [select framework] ---------------------------------------------------------
+                let framwork = Select::new(
+                    "Which framework template do you want to create?",
+                    FrameworkType::options(),
+                )
+                .with_starting_cursor(0)
+                .prompt()
+                .unwrap();
+                let framework = FrameworkType::from_str(&framwork)?;
+                // [get project info] ---------------------------------------------------------
+                let project = ProjectInfoType::new(framework)?;
+                // [do create] -----------------------------------------------------------------
+                project.create(path.as_path(), framework)?;
+                // [init git repository] ----------------------------------------------------------------------
+                if self.init_git() {
+                    git_init(path.as_path())?;
+                }
 
-        let ract_toml = match framework {
-            FrameworkType::GenUI => RactToml::gen_ui(project.members().unwrap()),
-            FrameworkType::Makepad => RactToml::makepad(),
-        };
-
-        println!("{}", ract_toml);
-        Ok(())
-        // match self.path.canonicalize() {
-        //     Ok(path) => {
-        //         return Select::new(
-        //             "Which framework template do you want to create?",
-        //             vec!["makepad", "gen_ui"],
-        //         )
-        //         .with_starting_cursor(1)
-        //         .prompt()
-        //         .map_or_else(
-        //             |e| Err(e.to_string().into()),
-        //             |option| {
-        //                 // first get the project info
-        //                 let info = self.get_info();
-        //                 let git = self.init_git();
-        //                 if self.confirm_create() {
-        //                     match option {
-        //                         "makepad" => makepad::create(path.as_path(), info, git),
-        //                         "gen_ui" => {
-        //                             // set project path, target underlayer ...
-        //                             let underlayer = self.get_underlayer();
-        //                             gen_ui::create(path.as_path(), info, underlayer, git)
-        //                         }
-        //                         _ => Err("Invalid project type".to_string().into()),
-        //                     }
-        //                 } else {
-        //                     Err("You cancel the project creation".to_string().into())
-        //                 }
-        //             },
-        //         );
-        //     }
-        //     Err(e) => Err(e.to_string().into()),
-        // }
+                Ok(())
+            }
+            Err(e) => Err(e.to_string().into()),
+        }
     }
 
     fn init_git(&self) -> bool {

@@ -46,8 +46,4 @@ impl WorkspaceInfo {
 
         workspace
     }
-    /// `.ract` file content in workspace
-    pub fn ract_toml(&self) -> RactToml{
-        RactToml::makepad()
-    }
 }
