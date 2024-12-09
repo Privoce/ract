@@ -2,22 +2,23 @@ use std::path::{Path, PathBuf};
 
 use gen_utils::{compiler, error::Error};
 
-pub fn run<P>(path: P) -> Result<(), Error>
+use crate::core::entry::{Compiler, RactToml};
+
+pub fn run<P>(path: P, ract_toml: &RactToml) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    let path = target_path(path);
-    // [generate compiler service] -----------------------------------------------------------------------
-    // let compilerpiler = Compiler::new()
+    if let Some(compiles) = ract_toml.compiles() {
+        // TODO!(multi thread compiler) now use single compiler
+        let member = compiles[0];
+        // [generate compiler service] -----------------------------------------------------------------------
+        let compilerpiler = Compiler::new(path.as_ref(), member);
 
-    Ok(())
-}
 
-fn target_path<P>(path: P) -> PathBuf
-where
-    P: AsRef<Path>,
-{
-    let path = path.as_ref().to_path_buf();
-    let last = path.iter().last().unwrap();
-    path.join(last)
+
+        dbg!(compiles);
+        Ok(())
+    } else {
+        Err("can not get compile members from .ract".to_string().into())
+    }
 }

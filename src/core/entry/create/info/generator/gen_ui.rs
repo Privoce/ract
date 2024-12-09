@@ -1,14 +1,15 @@
 use std::path::{Path, PathBuf};
 
-use gen_utils::{common::{fs, ToToml}, error::Error};
+use gen_utils::{
+    common::{fs, ToToml},
+    error::Error,
+};
 
 use crate::core::{
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
     util::create_workspace,
 };
-
-use super::ProjectInfoType;
 
 pub fn create<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<PathBuf, Error>
 where
@@ -49,21 +50,19 @@ where
         .current_dir(path.as_ref())
         .output()
         .map_or_else(
-            |e| {
-                Err(Error::from(e.to_string()))
-            },
+            |e| Err(Error::from(e.to_string())),
             |out| {
                 if out.status.success() {
                     CreateLogs::Cargo.terminal().success();
                     // [create dir: resources, views, components] ------------------------------------------
                     let ui_dir_path = path.as_ref().join(&info.name);
                     for path in ["resources", "views", "components"].iter() {
-                        let _ = fs::create_dir(ui_dir_path.join(path).as_path())?;
+                        let _ = fs::create_dir(ui_dir_path.join(path))?;
                     }
                     // [handle Cargo.toml] -----------------------------------------------------------------
-                    let _ = info.write(ui_dir_path.as_path())?;
+                    let _ = info.write(ui_dir_path.join("Cargo.toml"))?;
                     // [create config files: gen_ui.toml, .gen_ui_cache] -----------------------------------
-                    let _ = fs::create_new(ui_dir_path.join(".gen_ui_cache").as_path())?;
+                    let _ = fs::create_new(ui_dir_path.join(".gen_ui_cache"))?;
                     // - [gen_ui.toml] ---------------------------------------------------------------------
                     info.write_gen_ui_toml(ui_dir_path.as_path())?;
                     Ok(())

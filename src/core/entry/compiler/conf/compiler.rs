@@ -4,7 +4,7 @@ use gen_utils::error::{ConvertError, Error};
 use toml_edit::{value, Item, Table};
 
 use crate::core::{
-    entry::{compiler::excludes::Excludes, CompileTarget},
+    entry::{compiler::excludes::Excludes, Underlayer},
     log::LogLevel,
 };
 
@@ -17,7 +17,7 @@ use crate::core::{
 /// ```
 #[derive(Debug)]
 pub struct CompilerConf {
-    pub target: CompileTarget,
+    pub target: Underlayer,
     pub logo: bool,
     pub log_level: LogLevel,
     pub excludes: Excludes,

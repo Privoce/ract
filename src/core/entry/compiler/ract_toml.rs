@@ -34,6 +34,21 @@ pub struct RactToml {
 }
 
 impl RactToml {
+    /// ## get targets which need to be compiled
+    pub fn compiles(&self) -> Option<Vec<&Member>> {
+        self.members.as_ref().map(|members| {
+            let members = if let Some(compiles) = self.compiles.as_ref() {
+                compiles
+                    .iter()
+                    .map(|index| members.get(*index).unwrap())
+                    .collect()
+            } else {
+                vec![members.get(0).unwrap()]
+            };
+
+            members
+        })
+    }
     /// ## makepad project
     /// if target is makepad, members and compiles must be None
     /// do not need to care about members and compiles

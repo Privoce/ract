@@ -20,7 +20,7 @@ use super::check::current_states;
 #[derive(Args, Debug)]
 pub struct CreateArgs {
     // #[arg(short, long, default_value = "makepad")]
-    // pub target: CompileTarget,
+    // pub target: Underlayer,
     /// Path to create the project
     #[arg(short, long, default_value = ".")]
     pub path: PathBuf,

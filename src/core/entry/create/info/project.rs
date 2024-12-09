@@ -9,7 +9,7 @@ use gen_utils::{
 use inquire::{Confirm, Select, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
-use crate::core::entry::{CompileTarget, FrameworkType};
+use crate::core::entry::{Underlayer, FrameworkType};
 
 /// # Project Info for GenUI project
 /// use in ui project.Cargo.toml
@@ -24,16 +24,16 @@ pub struct ProjectInfo {
     pub license: License,
     pub keywords: Vec<String>,
     /// underlayer project only when project is gen_ui
-    pub underlayer: Option<CompileTarget>,
+    pub underlayer: Option<Underlayer>,
 }
 
 impl ProjectInfo {
     pub fn new(is_gen_ui: bool) -> Result<ProjectInfo, Error> {
         let underlayer = if is_gen_ui {
-            Some(CompileTarget::from_str(
+            Some(Underlayer::from_str(
                 Select::new(
                     "Which underlayer you want to select?",
-                    CompileTarget::options(),
+                    Underlayer::options(),
                 )
                 .with_help_message("Now only support Makepad, use enter to skip.")
                 .prompt()
@@ -128,8 +128,11 @@ impl ProjectInfo {
         }
         Ok(())
     }
-    pub fn write_gen_ui_toml<P>(&self, path: P) -> Result<(), Error> where P: AsRef<Path> {
-        
+    pub fn write_gen_ui_toml<P>(&self, path: P) -> Result<(), Error>
+    where
+        P: AsRef<Path>,
+    {
+        self.underlayer.unwrap().write_gen_ui_toml(path.as_ref())
     }
 }
 

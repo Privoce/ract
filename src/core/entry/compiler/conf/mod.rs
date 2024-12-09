@@ -10,12 +10,12 @@ use gen_utils::{
 
 use toml_edit::{DocumentMut, Item, Table};
 
-use super::{target::CompileUnderlayer, CompileTarget};
+use super::{target::CompileUnderlayer, Underlayer};
 
 /// Compiler Config for gen_ui.toml
 /// ```toml
 /// [compiler]
-/// // see [CompileTarget]
+/// // see [Underlayer]
 /// [makepad]
 /// // see [MakepadConfig]
 /// ```
@@ -72,10 +72,10 @@ impl FromStr for Conf {
     }
 }
 
-impl TryFrom<(PathBuf, CompileTarget)> for Conf {
+impl TryFrom<(PathBuf, Underlayer)> for Conf {
     type Error = Error;
 
-    fn try_from(value: (PathBuf, CompileTarget)) -> Result<Self, Self::Error> {
+    fn try_from(value: (PathBuf, Underlayer)) -> Result<Self, Self::Error> {
         let compiler = CompilerConf::default();
 
         Ok(Self {

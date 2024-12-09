@@ -7,25 +7,25 @@ use std::{
 use clap::ValueEnum;
 use gen_utils::{
     common::{DepType, RustDependence, ToToml},
-    compiler::UnderlayerConfImpl,
+    compiler::{CompilerImpl, UnderlayerConfImpl},
     error::{Error, ParseError},
 };
 use makepad_gen_plugin::compiler::{
+    Compiler as MakepadCompiler,
     Config as MakepadConfig, CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
 };
 use toml_edit::{DocumentMut, Formatted, Item, Value};
-
 use crate::core::util::real_chain_env_toml;
 
 use super::GenUIConf;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum CompileTarget {
+pub enum Underlayer {
     #[default]
     Makepad,
 }
 
-impl CompileTarget {
+impl Underlayer {
     pub fn options() -> Vec<&'static str> {
         vec!["Makepad"]
     }
@@ -37,30 +37,35 @@ impl CompileTarget {
         let toml = GenUIConf::try_from((path.as_ref().to_path_buf(), *self))?;
         toml.write(path.as_ref().join("gen_ui.toml"))
     }
+    pub fn compiler(&self) -> Box<dyn CompilerImpl>{
+        match self {
+            Underlayer::Makepad => Box::new(MakepadCompiler::new()),
+        }
+    }
 }
 
-impl FromStr for CompileTarget {
+impl FromStr for Underlayer {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Makepad" | "makepad" => Ok(CompileTarget::Makepad),
+            "Makepad" | "makepad" => Ok(Underlayer::Makepad),
             _ => Err(format!("unknown target: {}", s).into()),
         }
     }
 }
 
-impl Display for CompileTarget {
+impl Display for Underlayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(Value::from(self).to_string().as_str())
     }
 }
 
-impl From<&CompileTarget> for Value {
-    fn from(value: &CompileTarget) -> Self {
+impl From<&Underlayer> for Value {
+    fn from(value: &Underlayer) -> Self {
         Value::String(Formatted::new(
             match value {
-                CompileTarget::Makepad => "makepad",
+                Underlayer::Makepad => "makepad",
             }
             .to_string(),
         ))
@@ -74,23 +79,23 @@ pub struct CompileUnderlayer {
     pub others: Option<Vec<Box<dyn UnderlayerConfImpl>>>,
 }
 
-impl TryFrom<(PathBuf, CompileTarget)> for CompileUnderlayer {
+impl TryFrom<(PathBuf, Underlayer)> for CompileUnderlayer {
     type Error = Error;
 
-    fn try_from(value: (PathBuf, CompileTarget)) -> Result<Self, Self::Error> {
+    fn try_from(value: (PathBuf, Underlayer)) -> Result<Self, Self::Error> {
         match value.1 {
-            CompileTarget::Makepad => Self::makepad(value.0),
+            Underlayer::Makepad => Self::makepad(value.0),
         }
     }
 }
 
-impl TryFrom<(&DocumentMut, CompileTarget)> for CompileUnderlayer {
+impl TryFrom<(&DocumentMut, Underlayer)> for CompileUnderlayer {
     type Error = Error;
 
-    fn try_from(value: (&DocumentMut, CompileTarget)) -> Result<Self, Self::Error> {
+    fn try_from(value: (&DocumentMut, Underlayer)) -> Result<Self, Self::Error> {
         let (toml, target) = value;
         let target = match target {
-            CompileTarget::Makepad => toml.get("makepad").map_or_else(
+            Underlayer::Makepad => toml.get("makepad").map_or_else(
                 || Err(Error::from(MAKEPAD_CONF_FORMAT_SUGGESTION)),
                 |table| MakepadConfig::try_from(table).and_then(|conf| Ok(Box::new(conf))),
             ),

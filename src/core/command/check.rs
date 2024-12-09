@@ -9,7 +9,7 @@ use toml_edit::DocumentMut;
 use which::which;
 
 use crate::core::{
-    entry::{Checks, CompileTarget, Tools, UnderlayerTools},
+    entry::{Checks, Underlayer, Tools, UnderlayerTools},
     util::real_chain_env_path,
     log::{CheckLogs, TerminalLogger},
 };
@@ -99,14 +99,14 @@ fn basic_check(name: &str) -> Result<(), Error> {
 fn check_underlayer() -> () {
     let underlayer = Select::new(
         "Which underlayer tool chain you want to check?",
-        CompileTarget::options(),
+        Underlayer::options(),
     )
     .with_help_message("current support: Makepad")
     .prompt()
     .expect("select underlayer failed");
 
-    match CompileTarget::from_str(underlayer).unwrap() {
-        CompileTarget::Makepad => match check_makepad() {
+    match Underlayer::from_str(underlayer).unwrap() {
+        Underlayer::Makepad => match check_makepad() {
             Ok((makepad, gen_ui)) => {
                 if let Some(makepad) = makepad {
                     CheckLogs::DependenceReady(makepad).terminal().success();
