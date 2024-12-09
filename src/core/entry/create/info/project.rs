@@ -128,6 +128,9 @@ impl ProjectInfo {
         }
         Ok(())
     }
+    pub fn write_gen_ui_toml<P>(&self, path: P) -> Result<(), Error> where P: AsRef<Path> {
+        
+    }
 }
 
 impl ToToml for ProjectInfo {

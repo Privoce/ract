@@ -1,10 +1,11 @@
 use std::path::{Path, PathBuf};
 
-use gen_utils::{common::fs, error::Error};
+use gen_utils::{common::{fs, ToToml}, error::Error};
 
 use crate::core::{
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
-    log::TerminalLogger, util::create_workspace,
+    log::{CreateLogs, TerminalLogger},
+    util::create_workspace,
 };
 
 use super::ProjectInfoType;
@@ -25,58 +26,50 @@ where
     let cargo_toml = info.workspace_members_toml().to_string();
     // [create a new wrokspace] ----------------------------------------------------
     let _ = create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
-
+    // [create projects] -----------------------------------------------------------
+    for project in &info.members {
+        let _ = create_project(path.as_path(), project)?;
+    }
 
     Ok(path)
 }
 
-
-
 // create GenUI project depend on project info
-fn create_project<P>(
-    path: P,
-    info: &ProjectInfo,
-   
-) -> Result<(), Error>
+fn create_project<P>(path: P, info: &ProjectInfo) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    let workspace_path = path.as_ref().join(&info.name);
     // [LICENSE] -----------------------------------------------------------------------------------------
-    info.write_license(workspace_path.as_path())?;
+    info.write_license(path.as_ref())?;
     // [use cargo to create a new project] ---------------------------------------------------------------
-    // std::process::Command::new("cargo")
-    //     .arg("new")
-    //     .arg("--bin")
-    //     .arg(&info.name)
-    //     .current_dir(workspace_path.as_path())
-    //     .output()
-    //     .map_or_else(
-    //         |e| {
-    //             TerminalLogger::new(e.to_string().as_str()).error();
-    //             exit(2);
-    //         },
-    //         |out| {
-    //             if out.status.success() {
-    //                 CreateLogs::Cargo.terminal().success();
-    //                 // [create dir: resources, views, components] ------------------------------------------
-    //                 let ui_dir_path = workspace_path.join(&info.name);
-    //                 for path in ["resources", "views", "components"].iter() {
-    //                     let _ = fs::create_dir(ui_dir_path.join(path).as_path())?;
-    //                 }
-    //                 // [handle Cargo.toml] -----------------------------------------------------------------
-    //                 let _ = info.write_gen_ui_cargo_toml(ui_dir_path.as_path())?;
-    //                 // [create config files: gen_ui.toml, .gen_ui_cache] -----------------------------------
-    //                 let _ = fs::create_new(ui_dir_path.join(".gen_ui_cache").as_path())?;
-    //                 // - [gen_ui.toml] ---------------------------------------------------------------------
-    //                 underlayer.write_gen_ui_toml(ui_dir_path.as_path())?;
-    //                 // TODO! [create files in resources, views, components] --------------------------------
-    //                 CreateLogs::Ui.terminal().success();
-    //                 Ok(())
-    //             } else {
-    //                 Err(CreateLogs::CargoErr.to_string().into())
-    //             }
-    //         },
-    //     )
-    Ok(())
+    std::process::Command::new("cargo")
+        .arg("new")
+        .arg("--bin")
+        .arg(&info.name)
+        .current_dir(path.as_ref())
+        .output()
+        .map_or_else(
+            |e| {
+                Err(Error::from(e.to_string()))
+            },
+            |out| {
+                if out.status.success() {
+                    CreateLogs::Cargo.terminal().success();
+                    // [create dir: resources, views, components] ------------------------------------------
+                    let ui_dir_path = path.as_ref().join(&info.name);
+                    for path in ["resources", "views", "components"].iter() {
+                        let _ = fs::create_dir(ui_dir_path.join(path).as_path())?;
+                    }
+                    // [handle Cargo.toml] -----------------------------------------------------------------
+                    let _ = info.write(ui_dir_path.as_path())?;
+                    // [create config files: gen_ui.toml, .gen_ui_cache] -----------------------------------
+                    let _ = fs::create_new(ui_dir_path.join(".gen_ui_cache").as_path())?;
+                    // - [gen_ui.toml] ---------------------------------------------------------------------
+                    info.write_gen_ui_toml(ui_dir_path.as_path())?;
+                    Ok(())
+                } else {
+                    Err(CreateLogs::CargoErr.to_string().into())
+                }
+            },
+        )
 }
