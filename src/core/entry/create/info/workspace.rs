@@ -1,3 +1,4 @@
+use gen_utils::error::Error;
 use inquire::{Confirm, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
@@ -16,7 +17,7 @@ pub struct WorkspaceInfo {
 }
 
 impl WorkspaceInfo {
-    pub fn new() -> WorkspaceInfo {
+    pub fn new(is_gen_ui: bool) -> Result<WorkspaceInfo , Error>{
         // [workspace name] ---------------------------------------------------------
         let name = Text::new("Input the name of the workspace:")
             .prompt()
@@ -33,7 +34,7 @@ impl WorkspaceInfo {
                 format!("============ Project{} ======================", index).as_str(),
             )
             .warning();
-            let project = ProjectInfo::new();
+            let project = ProjectInfo::new(is_gen_ui)?;
             workspace.members.push(project);
             index += 1;
             let continue_or = Confirm::new("Do you want to add another project?")
@@ -46,7 +47,7 @@ impl WorkspaceInfo {
             }
         }
 
-        workspace
+        Ok(workspace)
     }
     /// ## get workspace members
     /// It will return toml content (DocumentMut)

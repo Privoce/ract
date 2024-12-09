@@ -32,12 +32,16 @@ impl Generator {
     /// ## Generate target project
     pub fn generate(&self) -> Result<(), Error> {
         // [ract.toml] -----------------------------------------------------------------
-        let ract_toml = match self.framework {
-            FrameworkType::GenUI => RactToml::gen_ui(self.info.members().unwrap()),
-            FrameworkType::Makepad => RactToml::makepad(),
+        let path = match self.framework {
+            FrameworkType::GenUI => {
+                let ract_toml = RactToml::gen_ui(self.info.members().unwrap());
+                self.gen_ui(ract_toml)?
+            }
+            FrameworkType::Makepad => {
+                let ract_toml = RactToml::makepad();
+                self.makepad(ract_toml)?
+            }
         };
-
-        let path = self.makepad(ract_toml)?;
 
         if self.git {
             // [init git repository] ------------------------------------------------------
@@ -47,6 +51,17 @@ impl Generator {
         Ok(())
     }
 
+    /// ## Generate gen_ui project
+    /// gen_ui project is a workspace project
+    fn gen_ui(&self, ract_toml: RactToml) -> Result<PathBuf, Error> {
+        if let ProjectInfoType::Workspace(workspace_info) = &self.info {
+            gen_ui::create(self.path.as_path(), workspace_info, &ract_toml)
+        } else {
+            Err(Error::from("gen_ui project must be a workspace project"))
+        }
+    }
+
+    /// ## Generate makepad project
     fn makepad(&self, ract_toml: RactToml) -> Result<PathBuf, Error> {
         match &self.info {
             ProjectInfoType::Workspace(workspace_info) => {

@@ -1,18 +1,15 @@
-use std::{
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{fmt::Display, path::Path, str::FromStr};
 
 use chrono::Datelike;
 use gen_utils::{
-    common::{fs, DepType, RustDependence},
+    common::{fs, ToToml},
     compiler::{Author, License},
-    error::{Error, ParseError, ParseType},
+    error::Error,
 };
 use inquire::{Confirm, Select, Text};
-use toml_edit::{value, Array, DocumentMut};
+use toml_edit::{value, Array, DocumentMut, Item, Table};
 
-use crate::core::util::real_chain_env_toml;
+use crate::core::entry::{CompileTarget, FrameworkType};
 
 /// # Project Info for GenUI project
 /// use in ui project.Cargo.toml
@@ -26,42 +23,58 @@ pub struct ProjectInfo {
     pub description: Option<String>,
     pub license: License,
     pub keywords: Vec<String>,
+    /// underlayer project only when project is gen_ui
+    pub underlayer: Option<CompileTarget>,
 }
 
 impl ProjectInfo {
-    pub fn new() -> ProjectInfo {
+    pub fn new(is_gen_ui: bool) -> Result<ProjectInfo, Error> {
+        let underlayer = if is_gen_ui {
+            Some(CompileTarget::from_str(
+                Select::new(
+                    "Which underlayer you want to select?",
+                    CompileTarget::options(),
+                )
+                .with_help_message("Now only support Makepad, use enter to skip.")
+                .prompt()
+                .map_err(|_| Error::from("Failed to get underlayer"))?,
+            )?)
+        } else {
+            None
+        };
+
         let name = Text::new("Project name:")
             .with_placeholder("Your project name use snake_case")
             .prompt()
-            .expect("Failed to get project name");
+            .map_err(|_| Error::from("Failed to get project name"))?;
 
         let authors = Text::new("Authors name:")
             .with_placeholder("format: name <email> and use `,` to separate multiple authors")
             .prompt_skippable()
-            .expect("Failed to get author name")
+            .map_err(|_| Error::from("Failed to get authors name"))?
             .filter(|s| !s.is_empty());
 
         let description = Text::new("Project description:")
             .with_default("This project is created by ract. Repo: https://github.com/Privoce/GenUI")
             .prompt_skippable()
-            .unwrap();
+            .map_err(|_| Error::from("Failed to get project description"))?;
 
         let license = Select::new("Choose LICENSE:", License::options())
             .prompt()
-            .expect("Failed to get license");
+            .map_err(|_| Error::from("Failed to get license"))?;
 
         let version = Text::new("Version:")
             .with_default("0.1.0")
             .with_placeholder("0.1.0")
             .prompt()
-            .unwrap();
+            .map_err(|_| Error::from("Failed to get version"))?;
 
         let keywords = Text::new("Keywords:")
             .with_help_message("You can input multiple keywords, or press Enter to skip")
             .with_default("front_end, ui")
             .with_placeholder("gen_ui, front_end, ui")
             .prompt()
-            .unwrap();
+            .map_err(|_| Error::from("Failed to get keywords"))?;
 
         if
         // confirm the project information
@@ -71,7 +84,7 @@ impl ProjectInfo {
                 "If you confirm, the project will be created with the above information",
             )
             .prompt()
-            .expect("Failed to confirm project information")
+            .map_err(|_| Error::from("Failed to confirm project information"))?
         {
             let authors = authors.map(|authors| {
                 authors
@@ -80,97 +93,18 @@ impl ProjectInfo {
                     .collect()
             });
 
-            return ProjectInfo {
+            return Ok(ProjectInfo {
                 name,
                 version,
                 authors,
                 description,
                 license: license.parse().unwrap(),
                 keywords: keywords.split(',').map(|x| x.trim().to_string()).collect(),
-            };
+                underlayer,
+            });
         } else {
-            return Self::new();
+            return Self::new(is_gen_ui);
         }
-    }
-
-    pub fn write_gen_ui_cargo_toml<P>(&self, path: P) -> Result<(), Error>
-    where
-        P: AsRef<Path>,
-    {
-        let path = path.as_ref().join("Cargo.toml");
-        let mut toml = Self::get_toml_content(path.as_path())?;
-        // [write project info] -----------------------------------------------------------------------------------
-        let _ = self.write_project_info(&mut toml);
-        // write to Cargo.toml file
-        fs::write(path.as_path(), &toml.to_string())?;
-        Ok(())
-    }
-    pub fn write_makepad_cargo_toml<P>(&self, path: P) -> Result<(), Error>
-    where
-        P: AsRef<Path>,
-    {
-        let path = path.as_ref().join("Cargo.toml");
-        let mut toml = Self::get_toml_content(path.as_path())?;
-        // [write project info] -----------------------------------------------------------------------------------
-        let _ = self.write_project_info(&mut toml);
-        // [write dependencies] -----------------------------------------------------------------------------------
-        // read dependencies from ract chain
-        let env_toml = real_chain_env_toml()?;
-        let mut makepad_path = PathBuf::from_str(
-            env_toml["dependencies"]["makepad-widgets"]
-                .as_str()
-                .unwrap(),
-        )
-        .map_err(|e| Error::from(e.to_string()))?;
-        makepad_path = makepad_path.join("widgets");
-        let mut rust_dep = RustDependence::new("makepad-widgets");
-        let _ = rust_dep.set_ty(DepType::local(makepad_path));
-        let (key, value) = rust_dep.to_table_kv();
-        let _ = toml["dependencies"].as_table_mut().map_or_else(
-            || Err(Error::from("can not convert to toml table".to_string())),
-            |table| {
-                table[&key] = value;
-                Ok(())
-            },
-        )?;
-        // write to Cargo.toml file
-        fs::write(path.as_path(), &toml.to_string())?;
-        Ok(())
-    }
-    fn get_toml_content<P>(path: P) -> Result<DocumentMut, Error>
-    where
-        P: AsRef<Path>,
-    {
-        let content = fs::read(path.as_ref())?;
-        content
-            .parse::<DocumentMut>()
-            .map_err(|e| Error::Parse(ParseError::new(e.to_string().as_str(), ParseType::Toml)))
-    }
-
-    fn write_project_info(&self, toml: &mut DocumentMut) -> () {
-        // write info to [package] section (except name)
-        // [version] ----------------------------------------------------------------------------------------------
-        toml["package"]["version"] = value(&self.version);
-        // [authors] ----------------------------------------------------------------------------------------------
-        if let Some(authors) = &self.authors {
-            let mut authors_value = Array::new();
-            for author in authors {
-                authors_value.push(author.to_string());
-            }
-            toml["package"]["authors"] = value(authors_value);
-        }
-        // [description] ------------------------------------------------------------------------------------------
-        if let Some(description) = &self.description {
-            toml["package"]["description"] = value(description);
-        }
-        // [license] ----------------------------------------------------------------------------------------------
-        toml["package"]["license"] = value(self.license.to_string());
-        // [keywords] ---------------------------------------------------------------------------------------------
-        let mut keywords_value = Array::new();
-        for keyword in &self.keywords {
-            keywords_value.push(keyword);
-        }
-        toml["package"]["keywords"] = value(keywords_value);
     }
     pub fn write_license<P>(&self, path: P) -> Result<(), Error>
     where
@@ -193,6 +127,57 @@ impl ProjectInfo {
             let _ = fs::write(path.as_ref().join("LICENSE"), &content)?;
         }
         Ok(())
+    }
+}
+
+impl ToToml for ProjectInfo {
+    fn to_toml(&self) -> DocumentMut {
+        let mut toml = Table::new();
+        // [package] -----------------------------------------------------------------------------------------------
+        let mut package = Table::new();
+        // - [name] ------------------------------------------------------------------------------------------------
+        package.insert("name", value(&self.name));
+        // - [version] ---------------------------------------------------------------------------------------------
+        package.insert("version", value(&self.version));
+        // - [authors] ---------------------------------------------------------------------------------------------
+        if let Some(authors) = self.authors.as_ref() {
+            let authors = authors.iter().fold(Array::new(), |mut arr, author| {
+                arr.push(author.to_string());
+                arr
+            });
+            package.insert("authors", value(authors));
+        }
+        // - [description] -----------------------------------------------------------------------------------------
+        if let Some(description) = self.description.as_ref() {
+            package.insert("description", value(description));
+        }
+        // - [license] ---------------------------------------------------------------------------------------------
+        package.insert("license", value(self.license.to_string()));
+        // - [keywords] --------------------------------------------------------------------------------------------
+        let keywords = self.keywords.iter().fold(Array::new(), |mut arr, keyword| {
+            arr.push(keyword);
+            arr
+        });
+        package.insert("keywords", value(keywords));
+
+        toml.insert("package", Item::Table(package));
+        // [dependencies] -------------------------------------------------------------------------------------------
+        // dependencies only add when project is makepad
+        if self.underlayer.is_none() {
+            match FrameworkType::Makepad.dependencies() {
+                Ok(deps) => {
+                    toml.insert("dependencies", deps);
+                }
+                Err(e) => panic!("{}", e.to_string()),
+            }
+        }
+        DocumentMut::from(toml)
+    }
+}
+
+impl Display for ProjectInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_toml().to_string().as_str())
     }
 }
 

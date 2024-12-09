@@ -1,6 +1,3 @@
-// mod gen_ui;
-// mod makepad;
-
 use std::{path::PathBuf, process::exit, str::FromStr};
 
 use crate::core::{

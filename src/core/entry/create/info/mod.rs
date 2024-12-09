@@ -1,13 +1,12 @@
-
+mod generator;
 mod project;
 mod workspace;
-mod generator;
 
-pub use generator::Generator as ProjectGenerator;
-use std::path::Path;
 use gen_utils::error::Error;
+pub use generator::Generator as ProjectGenerator;
 use inquire::Select;
 pub use project::ProjectInfo;
+use std::path::Path;
 pub use workspace::WorkspaceInfo;
 
 use crate::core::entry::{FrameworkType, Member};
@@ -39,12 +38,12 @@ impl ProjectInfoType {
         };
 
         // [project info] -----------------------------------------------------------
-        Self::project_info(project_type)
+        Self::project_info(project_type, framework.is_gen_ui())
     }
-    pub fn project_info(ty: &str) -> Result<Self, Error> {
+    pub fn project_info(ty: &str, is_gen_ui: bool) -> Result<Self, Error> {
         match ty {
-            "workspace" => Ok(WorkspaceInfo::new().into()),
-            "project" => Ok(ProjectInfo::new().into()),
+            "workspace" => WorkspaceInfo::new(is_gen_ui).map(Into::into),
+            "project" => ProjectInfo::new(is_gen_ui).map(Into::into),
             _ => Err(Error::from("Invalid project type")),
         }
     }
