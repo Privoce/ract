@@ -1,8 +1,3 @@
-pub const DEFAULT_CARGO_TOML_CONTENT: &str = r#"
-[workspace]
-members = ["{$ui_name}"]
-"#;
-
 pub const DEFAULT_GITIGNORE: &str = r#"
 target/
 Cargo.lock

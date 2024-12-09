@@ -10,7 +10,7 @@ use inquire::Select;
 pub use project::ProjectInfo;
 pub use workspace::WorkspaceInfo;
 
-use crate::core::entry::{FrameworkType, Member, RactToml};
+use crate::core::entry::{FrameworkType, Member};
 
 #[derive(Debug, Clone)]
 pub enum ProjectInfoType {

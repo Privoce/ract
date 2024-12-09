@@ -12,6 +12,7 @@ pub enum CreateLogs {
     CargoErr,
     Ui,
     Confirm,
+    Cancel,
 }
 
 impl Display for CreateLogs {
@@ -27,6 +28,7 @@ impl Display for CreateLogs {
             CreateLogs::Cargo => f.write_str("🚀 Create a new cargo project successfully!"),
             CreateLogs::GitErr => f.write_str("❌ Create a new git project failed!"),
             CreateLogs::CargoErr => f.write_str("❌ Create a new cargo project failed!"),
+            CreateLogs::Cancel => f.write_str("❗️ Cancel create project!"),
         }
     }
 }

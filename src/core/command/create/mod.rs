@@ -1,25 +1,16 @@
 // mod gen_ui;
 // mod makepad;
 
-use std::{
-    path::{Path, PathBuf},
-    process::exit,
-    str::FromStr,
-};
+use std::{path::PathBuf, process::exit, str::FromStr};
 
 use crate::core::{
-    constant::DEFAULT_GITIGNORE,
-    entry::{CompileTarget, FrameworkType, ProjectInfo, ProjectInfoType, RactToml},
+    entry::{FrameworkType, ProjectInfoType},
     log::{CreateLogs, TerminalLogger},
 };
 
 use clap::Args;
-use gen_utils::{
-    common::{fs, ToToml},
-    compiler::License,
-    error::Error,
-};
-use inquire::{Confirm, Select, Text};
+use gen_utils::error::Error;
+use inquire::{Confirm, Select};
 
 use super::check::current_states;
 
@@ -71,23 +62,28 @@ impl CreateArgs {
     fn create_project(&self) -> Result<(), Error> {
         match self.path.canonicalize() {
             Ok(path) => {
-                // [select framework] ---------------------------------------------------------
+                // [select framework] ----------------------------------------------------------------
                 let framwork = Select::new(
                     "Which framework template do you want to create?",
                     FrameworkType::options(),
                 )
                 .with_starting_cursor(0)
                 .prompt()
-                .unwrap();
+                .map_err(|e| Error::from(e.to_string()))?;
                 let framework = FrameworkType::from_str(&framwork)?;
-                // [get project info] ---------------------------------------------------------
+                // [get project info] ----------------------------------------------------------------
                 let project_info_type = ProjectInfoType::new(framework)?;
-                // [get generate] -------------------------------------------------------------
+                // [get generate] --------------------------------------------------------------------
                 let mut generator = project_info_type.create(path.as_path(), framework);
-                // [init git repository] ------------------------------------------------------
+                // [init git repository] -------------------------------------------------------------
                 generator.git = self.init_git();
-                // [do create] ----------------------------------------------------------------
-                generator.generate()
+                if self.confirm_create() {
+                    // [do create] -------------------------------------------------------------------
+                    generator.generate()
+                } else {
+                    CreateLogs::Cancel.terminal().warning();
+                    return self.create_project();
+                }
             }
             Err(e) => Err(e.to_string().into()),
         }
@@ -110,42 +106,4 @@ impl CreateArgs {
             .prompt()
             .expect("Failed to confirm project information")
     }
-
-    fn get_underlayer(&self) -> CompileTarget {
-        let underlayer = Select::new("Choose target underlayer: ", CompileTarget::options())
-            .with_help_message("Choose the target underlayer for the project, default is Makepad")
-            .prompt_skippable()
-            .unwrap();
-
-        underlayer.map_or(CompileTarget::Makepad, |underlayer| {
-            underlayer.parse().unwrap()
-        })
-    }
-}
-
-pub fn git_init<P>(path: P) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-{
-    // init git repository
-    std::process::Command::new("git")
-        .arg("init")
-        .current_dir(path.as_ref())
-        .output()
-        .map_or_else(
-            |e| Err(Error::from(e.to_string())),
-            |out| {
-                if out.status.success() {
-                    // write .gitignore
-                    let _ = fs::write(
-                        path.as_ref().join(".gitignore").as_path(),
-                        DEFAULT_GITIGNORE,
-                    );
-                    CreateLogs::Git.terminal().success();
-                    Ok(())
-                } else {
-                    Err(CreateLogs::GitErr.to_string().into())
-                }
-            },
-        )
 }

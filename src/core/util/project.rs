@@ -5,7 +5,7 @@ use gen_utils::{
     error::Error,
 };
 
-use crate::core::{constant::DEFAULT_CARGO_TOML_CONTENT, entry::RactToml, log::CreateLogs};
+use crate::core::{entry::RactToml, log::CreateLogs};
 
 /// ## create a rust workspace project
 /// - create a empty workspace dir

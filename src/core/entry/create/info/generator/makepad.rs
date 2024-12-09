@@ -1,4 +1,7 @@
-use std::{path::Path, process::Command};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use gen_utils::{common::fs, error::Error};
 
@@ -9,7 +12,11 @@ use crate::core::{
     util,
 };
 
-pub fn create_workspace<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<(), Error>
+pub fn create_workspace<P>(
+    path: P,
+    info: &WorkspaceInfo,
+    ract_toml: &RactToml,
+) -> Result<PathBuf, Error>
 where
     P: AsRef<Path>,
 {
@@ -23,13 +30,18 @@ where
     let path = path.as_ref().join(info.name.as_str());
     // [workspace Cargo.toml] ------------------------------------------------------
     let cargo_toml = info.workspace_members_toml().to_string();
+    // [create a new wrokspace] ----------------------------------------------------
     let _ = util::create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
+    // [create real projects] ------------------------------------------------------
+    for member in info.members.iter() {
+        let _ = create_project(path.as_path(), &member);
+    }
 
-    Ok(())
+    Ok(path)
 }
 
 /// create a default makepad project
-pub fn crate_project<P>(path: P, info: &ProjectInfo) -> Result<(), Error>
+pub fn create_project<P>(path: P, info: &ProjectInfo) -> Result<PathBuf, Error>
 where
     P: AsRef<Path>,
 {
@@ -66,7 +78,7 @@ where
                     // [LICENSE] ----------------------------------------------------------------------------------
                     let _ = info.write_license(path.as_path());
                     // finish
-                    Ok(())
+                    Ok(path)
                 } else {
                     Err(Error::from("Makepad project created failed!"))
                 }
