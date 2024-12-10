@@ -44,117 +44,113 @@
 
 use std::fmt::Display;
 
+use crate::core::{constant::LOGO, log::level::LevelColord};
 use colored::Colorize;
-use log::{info, warn, error, };
+use env_logger::{Builder, Env, WriteStyle};
+use gen_utils::common::time::local_time_default;
+use log::{error, info, warn};
+use std::io::Write;
 
-use crate::core::constant::LOGO;
-
+use super::{LogLevel, TerminalLogger};
 
 /// # Init Log
 /// init GenUI log service. It will read the system environment variable `GENUI_LOGO` and `GENUI_LOG_LEVEL` to set the log level and print the logo.
 /// If the system environment variable is not set, it will read the configuration file in the project root path.
 /// If the configuration file is not found, it will use the default value.
 /// > This function should be called before any other service is started.
-pub fn init_log() -> () {
-    // let conf = CONF.lock().unwrap();
+pub fn init(log_level: LogLevel) -> () {
+    // [init log env] -----------------------------------------------------------------------------------------
+    // let env = Env::default()
+    //     .filter_or("GENUI_LOG_LEVEL", log_level.to_string())
+    //     .write_style_or("GENUI_LOG_STYLE", "always");
+    // [build log] -----------------------------------------------------------------------------------------
+    let mut builder = Builder::new();
 
-    // // get and read env GENUI_LOGO ------------------------------------------------------------------------
-    // let print_logo = std::env::var(GENUI_LOGO).map_or_else(
-    //     |_| {
-    //         // read gen toml file
-    //         match conf.as_ref() {
-    //             Ok(conf) => {
-    //                 if let Some(val) = conf["compiler"]["logo"].as_value() {
-    //                     val.as_bool().unwrap()
-    //                 } else {
-    //                     true
-    //                 }
-    //             }
-    //             Err(e) => {
-    //                 warn(e.to_string().as_str());
-    //                 true
-    //             }
-    //         }
-    //     },
-    //     |flag| flag.parse::<bool>().unwrap(),
-    // );
+    builder
+        .filter_level(log_level.into())
+        .write_style(WriteStyle::Always)
+        .format(|buf, record| {
+            let title = "GenUI-Compiler".truecolor(255, 112, 67);
+            let timestamp = local_time_default().bright_blue();
+            let level = LevelColord::from(record.level()).colored();
+            writeln!(
+                buf,
+                "{} :: [{}] :: {} >>> {}",
+                title,
+                timestamp,
+                level,
+                record.args()
+            )
+        })
+        .init();
 
-    // // GENUI_LOG_LEVEL --------------------------------------------------------------------------------------
-    // let log_level = std::env::var(GENUI_LOG_LEVEL).map_or_else(
-    //     |_| {
-    //         // read gen toml file
-    //         match conf.as_ref() {
-    //             Ok(conf) => {
-    //                 if let Some(val) = conf["compiler"]["log_level"].as_value() {
-    //                     val.as_str().unwrap().to_string()
-    //                 } else {
-    //                     "info".to_string()
-    //                 }
-    //             }
-    //             Err(e) => {
-    //                 warn(e.to_string().as_str());
-    //                 "info".to_string()
-    //             }
-    //         }
-    //     },
-    //     |flag| flag,
-    // );
-
-    // // init log env -----------------------------------------------------------------------------------------
-
-    // Builder::from_env(env)
-    //     .format(|buf, record| {
-    //         let title = Color::RGB(255, 112, 67).paint("GenUI-Compiler");
-    //         let timestamp = local_time_default();
-    //         let timestamp = Color::Blue.paint(timestamp.to_string());
-
-    //         writeln!(
-    //             buf,
-    //             "{} :: [{}] :: {} >>> {}",
-    //             title,
-    //             timestamp,
-    //             record.level(),
-    //             record.args()
-    //         )
-    //     })
-    //     .init();
-
-    // if print_logo {
-    //     info!("{}", Color::RGB(255, 112, 67).paint(LOGO));
-    // }
-    // // log serve start
-    // info(LOG_INIT);
+    CompilerLogs::Init.compiler().info();
 }
 
-pub fn info(msg: &str) -> () {
-    info!("{}", msg.on_white());
+pub struct CompilerLogger {
+    pub output: String,
 }
 
-pub fn warn(msg: &str) -> () {
-    warn!("{}", msg.bright_yellow());
+impl CompilerLogger {
+    pub fn new(s: &str) -> CompilerLogger {
+        CompilerLogger {
+            output: s.to_string(),
+        }
+    }
+    pub fn info(&self) -> () {
+        info!("{}", self.output.white());
+    }
+
+    pub fn warn(&self) -> () {
+        warn!("{}", self.output.bright_yellow());
+    }
+
+    pub fn error(&self) -> () {
+        error!("{}", self.output.bright_red());
+    }
+
+    pub fn error_and_exit(&self) -> ! {
+        error!("{}", self.output.bright_red());
+        std::process::exit(1)
+    }
 }
 
-pub fn error(msg: &str) -> () {
-    error!("{}", msg.bright_red());
+impl From<String> for CompilerLogger {
+    fn from(value: String) -> Self {
+        CompilerLogger { output: value }
+    }
 }
 
-pub fn error_and_exit(msg: &str) -> ! {
-    error!("{}", msg.bright_red());
-    std::process::exit(1)
+impl From<CompilerLogs> for CompilerLogger {
+    fn from(value: CompilerLogs) -> Self {
+        CompilerLogger {
+            output: value.to_string(),
+        }
+    }
 }
 
-
+#[derive(Debug, Clone, Copy)]
 pub enum CompilerLogs {
     Init,
     Logo,
-    
 }
 
 impl Display for CompilerLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompilerLogs::Init => todo!(),
+            CompilerLogs::Init => f.write_str("🔧 Log Service is starting... Log entries will be available after the `app event::Change` occurs!"),
             CompilerLogs::Logo => f.write_str(LOGO),
         }
+    }
+}
+
+impl CompilerLogs {
+    pub fn terminal(&self) -> TerminalLogger {
+        TerminalLogger {
+            output: self.to_string(),
+        }
+    }
+    pub fn compiler(&self) -> CompilerLogger {
+        (*self).into()
     }
 }

@@ -1,4 +1,4 @@
-pub const DEFAULT_GITIGNORE: &str = r#"
+pub const DEFAULT_GITIGNORE: &str = r#"# DEFAULT GITIGNORE CREATE BY `RACT`
 target/
 Cargo.lock
 **/*.DS_Store

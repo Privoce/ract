@@ -25,4 +25,7 @@ impl TerminalLogger {
             output: s.to_string(),
         }
     }
+    pub fn logo(&self) {
+        println!("{}", self.output.truecolor(255, 112, 67).bold());
+    }
 }

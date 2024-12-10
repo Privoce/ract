@@ -8,7 +8,7 @@ mod level;
 mod run;
 mod wasm;
 mod package;
-mod compiler;
+pub mod compiler;
 
 pub use run::{RunLogs, StudioLogs, ProjectLogs};
 pub use install::InstallLogs;

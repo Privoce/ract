@@ -91,6 +91,24 @@ impl Display for Conf {
     }
 }
 
+impl TryFrom<&DocumentMut> for Conf {
+    type Error = Error;
+
+    fn try_from(value: &DocumentMut) -> Result<Self, Self::Error> {
+        let compiler_section = value.get("compiler").map_or_else(
+            || Ok(CompilerConf::default()),
+            |table| CompilerConf::try_from(table),
+        )?;
+
+        let underlayer_section = CompileUnderlayer::try_from((value, compiler_section.target))?;
+
+        Ok(Self {
+            compiler: compiler_section,
+            underlayer: underlayer_section,
+        })
+    }
+}
+
 #[cfg(test)]
 mod test_conf {
     use super::*;

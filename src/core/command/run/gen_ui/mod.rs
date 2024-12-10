@@ -12,11 +12,10 @@ where
         // TODO!(multi thread compiler) now use single compiler
         let member = compiles[0];
         // [generate compiler service] -----------------------------------------------------------------------
-        let compilerpiler = Compiler::new(path.as_ref(), member);
+        let mut compiler = Compiler::new(path.as_ref(), member)?;
 
+        compiler.run();
 
-
-        dbg!(compiles);
         Ok(())
     } else {
         Err("can not get compile members from .ract".to_string().into())

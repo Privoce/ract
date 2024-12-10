@@ -1,6 +1,8 @@
 use std::{fmt::Display, str::FromStr};
 
+use colored::{ColoredString, Colorize};
 use gen_utils::error::{ConvertError, Error};
+use log::{Level, LevelFilter};
 use toml_edit::{Formatted, Value};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -53,5 +55,38 @@ impl From<&LogLevel> for Value {
             }
             .to_string(),
         ))
+    }
+}
+
+impl From<LogLevel> for LevelFilter {
+    fn from(value: LogLevel) -> Self {
+        match value {
+            LogLevel::Info => LevelFilter::Info,
+            LogLevel::Debug => LevelFilter::Debug,
+            LogLevel::Error => LevelFilter::Error,
+            LogLevel::Warn => LevelFilter::Warn,
+            LogLevel::Trace => LevelFilter::Trace,
+            LogLevel::Off => LevelFilter::Off,
+        }
+    }
+}
+
+pub struct LevelColord(Level);
+
+impl LevelColord {
+    pub fn colored(&self) -> ColoredString {
+        match self.0 {
+            Level::Info => "INFO".bright_blue(),
+            Level::Debug => "DEBUG".cyan(),
+            Level::Error => "ERROR".bright_red(),
+            Level::Warn => "WARN".bright_yellow(),
+            Level::Trace => "TRACE".purple(),
+        }
+    }
+}
+
+impl From<Level> for LevelColord {
+    fn from(value: Level) -> Self {
+        Self(value)
     }
 }
