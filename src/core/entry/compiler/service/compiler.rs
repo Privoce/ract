@@ -1,14 +1,17 @@
 use std::{
     path::{Path, PathBuf},
+    process::exit,
     str::FromStr,
 };
 
 use gen_utils::{
-    common::ToToml,
+    common::{
+        fs::{copy_file, GenUIFs},
+        Source, ToToml,
+    },
     compiler::CompilerImpl,
     error::{Error, FsError},
 };
-
 
 use crate::core::{
     constant::LOGO,
@@ -19,7 +22,7 @@ use crate::core::{
     },
 };
 
-use super::init_watcher;
+use super::{init_watcher, Cache};
 
 /// # GenUI Compiler
 /// compiler will compile the file when the file is created or modified
@@ -28,6 +31,7 @@ use super::init_watcher;
 ///
 /// dir will be generated after the file in the dir is compiled
 pub struct Compiler {
+    /// work path
     pub path: PathBuf,
     /// path of the compiled project and after compiled project
     pub source: Member,
@@ -36,6 +40,8 @@ pub struct Compiler {
     pub target: Box<dyn CompilerImpl>,
     /// gen_ui.toml file conf
     pub conf: GenUIConf,
+    /// cache of the compiled project
+    pub cache: Cache,
 }
 
 impl Compiler {
@@ -48,36 +54,33 @@ impl Compiler {
         let conf: GenUIConf = (&GenUIConf::read(source_path.join("gen_ui.toml"))?).try_into()?;
         // [target] --------------------------------------------------------------------------------------
         let target = conf.compiler.target.compiler();
+        // [cache] ---------------------------------------------------------------------------------------
+        let cache = Cache::new(&source_path)?;
 
         Ok(Self {
             path: path.as_ref().to_path_buf(),
             source: member.clone(),
             target,
             conf,
+            cache,
         })
     }
     /// run compiler
     /// - init and execute watcher
     pub fn run(&mut self) {
         self.before_compile();
-
+        // [compiler source path] -------------------------------------------------------------------------
         let source = self.path.join(self.source.source.as_path());
-
-        let _ = init_watcher(
-            source,
-            &self.conf.compiler.excludes,
-            |path, e| {
-                dbg!(path);
-                dbg!(e);
-            },
-        );
-
-        // let runtime = Runtime::new().unwrap();
-        // runtime.block_on(
-
-        // )
-
-
+        // [init watcher] ---------------------------------------------------------------------------------
+        let excludes = self.conf.compiler.excludes.clone();
+        let _ = init_watcher(source, &excludes, |path, event| match event {
+            notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
+                self.compile_one(path);
+            }
+            notify::EventKind::Remove(_) => {}
+            _ => (),
+        });
+        exit(1);
         // info(APP_RUNNING);
         // let rt = Runtime::new().unwrap();
         // let origin_path = self.origin_path.clone();
@@ -115,6 +118,58 @@ impl Compiler {
         //     }
         // });
         // exit(-1);
+    }
+
+    /// compile single gen / other type file
+    fn compile_one<P>(&mut self, path: P) -> ()
+    where
+        P: AsRef<Path>,
+    {
+        let source_path = self.path.join(self.source.source.as_path());
+        //  let target_path = self.origin_path.as_path().to_path_buf();
+        match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
+            (false, true) | (false, false) => {
+                // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
+                return;
+            }
+            (true, true) => {
+                self.cache
+                    .exists_or_insert(path.as_ref())
+                    .unwrap()
+                    .modify_then(|| {
+
+                        // let model =
+                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
+                        // let source = model.special.clone();
+                        // let _ = self.insert(Box::new(model));
+                        // let _ = self.get(&source).unwrap().compile();
+                    });
+                let _ = self.cache.write(source_path.as_path());
+            }
+            (true, false) => {
+                // not gen file, directly copy to the compiled project
+                // let compiled_path =
+                //     Source::origin_file_without_gen(path.as_ref(), target_path.as_path());
+
+                let compiled_path = path
+                    .as_ref()
+                    .to_compiled(self.source.source.as_path(), self.source.target.as_path());
+
+                let _ = self
+                    .cache
+                    .exists_or_insert(path.as_ref())
+                    .unwrap()
+                    .modify_then(|| {
+                        dbg!(path.as_ref(), compiled_path);
+                        // let _ = copy_file(path.as_ref(), compiled_path);
+                    });
+                let _ = self.cache.write(source_path.as_path());
+            }
+        }
+
+        CompilerLogs::Compiled(path.as_ref().to_path_buf())
+            .compiler()
+            .info();
     }
 }
 

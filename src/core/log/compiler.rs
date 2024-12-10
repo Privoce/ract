@@ -134,6 +134,8 @@ pub enum CompilerLogs {
     LogInit,
     Logo,
     WatcherInit(PathBuf),
+    Compiled(PathBuf),
+    WriteCache,
 }
 
 impl Display for CompilerLogs {
@@ -141,7 +143,9 @@ impl Display for CompilerLogs {
         match self {
             CompilerLogs::LogInit => f.write_str("🔧 Log Service is starting... Log entries will be available after the `app event::Change` occurs!"),
             CompilerLogs::Logo => f.write_str(LOGO),
-            CompilerLogs::WatcherInit(p) => f.write_fmt(format_args!("🔧 Watcher Service started successfully! Ract is watching: `{}`", p.display()))
+            CompilerLogs::WatcherInit(p) => f.write_fmt(format_args!("🔧 Watcher Service started successfully! Ract is watching: `{}`", p.display())),
+            CompilerLogs::Compiled(p) => f.write_fmt(format_args!("File `{}` compiled successfully.", p.display())),
+            CompilerLogs::WriteCache => f.write_str("✅ Cache Service: Cache file written successfully!"),
         }
     }
 }

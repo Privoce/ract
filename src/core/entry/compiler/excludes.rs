@@ -13,7 +13,7 @@ use toml_edit::{Array, Formatted, Value};
 /// ```
 /// ## Default Excludes
 /// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache"]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Excludes(pub Vec<PathBuf>);
 
 impl Excludes {
@@ -21,7 +21,6 @@ impl Excludes {
     where
         P: AsRef<Path>,
     {
-        dbg!(prefix.as_ref());
         self.0.iter().any(|p| {
             let p = prefix.as_ref().join(p);
             // || path.as_ref().starts_with(&p)

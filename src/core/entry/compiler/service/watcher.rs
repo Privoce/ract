@@ -10,7 +10,7 @@
 //! 所以Watcher监听的是workspace下的`hello`目录
 //! 在开启监视前会获取`hello`目录下的`gen_ui.toml`文件，然后根据`gen_ui.toml`文件中的`[watcher]`配置来进行监听。
 
-use std::{path::Path, sync::mpsc::channel, time::Duration};
+use std::{path::{Path, PathBuf}, sync::mpsc::channel, time::Duration};
 
 use notify::{ Config, RecommendedWatcher, RecursiveMode, Watcher};
 
