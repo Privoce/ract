@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use gen_utils::{common::fs, error::Error};
 use toml_edit::{Array, Formatted, Value};
@@ -15,6 +15,20 @@ use toml_edit::{Array, Formatted, Value};
 /// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache"]
 #[derive(Debug)]
 pub struct Excludes(pub Vec<PathBuf>);
+
+impl Excludes {
+    pub fn contains<P>(&self, prefix: P, path: P) -> bool
+    where
+        P: AsRef<Path>,
+    {
+        dbg!(prefix.as_ref());
+        self.0.iter().any(|p| {
+            let p = prefix.as_ref().join(p);
+            // || path.as_ref().starts_with(&p)
+            p == path.as_ref()
+        })
+    }
+}
 
 impl From<Excludes> for Vec<PathBuf> {
     fn from(value: Excludes) -> Self {

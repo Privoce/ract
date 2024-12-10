@@ -22,3 +22,4 @@ makepad_gen_plugin = { path = "../../../gen_ui/GenUI/gen/generator/makepad" }
 log = "0.4.22"
 notify = "7.0.0"
 env_logger = "0.11.5"
+# tokio = { version = "1.37.0", features = ["full"] }

@@ -9,11 +9,17 @@ use gen_utils::{
     error::{Error, FsError},
 };
 
+
 use crate::core::{
     constant::LOGO,
     entry::{GenUIConf, Member, Underlayer},
-    log::{compiler::{CompilerLogger, CompilerLogs}, TerminalLogger},
+    log::{
+        compiler::{CompilerLogger, CompilerLogs},
+        TerminalLogger,
+    },
 };
+
+use super::init_watcher;
 
 /// # GenUI Compiler
 /// compiler will compile the file when the file is created or modified
@@ -22,6 +28,7 @@ use crate::core::{
 ///
 /// dir will be generated after the file in the dir is compiled
 pub struct Compiler {
+    pub path: PathBuf,
     /// path of the compiled project and after compiled project
     pub source: Member,
     /// compiler target, default is makepad
@@ -43,6 +50,7 @@ impl Compiler {
         let target = conf.compiler.target.compiler();
 
         Ok(Self {
+            path: path.as_ref().to_path_buf(),
             source: member.clone(),
             target,
             conf,
@@ -52,6 +60,24 @@ impl Compiler {
     /// - init and execute watcher
     pub fn run(&mut self) {
         self.before_compile();
+
+        let source = self.path.join(self.source.source.as_path());
+
+        let _ = init_watcher(
+            source,
+            &self.conf.compiler.excludes,
+            |path, e| {
+                dbg!(path);
+                dbg!(e);
+            },
+        );
+
+        // let runtime = Runtime::new().unwrap();
+        // runtime.block_on(
+
+        // )
+
+
         // info(APP_RUNNING);
         // let rt = Runtime::new().unwrap();
         // let origin_path = self.origin_path.clone();

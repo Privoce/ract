@@ -3,8 +3,7 @@ mod command;
 mod entry;
 pub mod util;
 mod log;
-// default constants or templates
-mod compiler;
+/// default constants or templates
 mod constant;
 
 use clap::Parser;

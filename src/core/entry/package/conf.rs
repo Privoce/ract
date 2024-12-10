@@ -11,8 +11,8 @@ use toml_edit::{value, Array, DocumentMut, Table};
 use crate::core::log::LogLevel;
 
 use super::{
-    PackageGenerator, AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation,
-    MacOsConfig, NsisConfig, PackageFormat, PacmanConfig, Position, Resource, Size, WindowsConfig,
+    AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation, MacOsConfig, NsisConfig,
+    PackageFormat, PackageGenerator, PacmanConfig, Position, Resource, Size, WindowsConfig,
     WixConfig,
 };
 
@@ -171,8 +171,10 @@ impl Conf {
         self.before_each_package_command = Some(command.replace("${cmd}", "before-each-package"));
         self.before_packaging_command = Some(command.replace("${cmd}", "before-packaging"));
         // [resources] -----------------------------------------------------------------------------
-        let src_path_pre =
-            PathBuf::from_str(format!("{}/resources", path_to_str(self.out_dir.as_path())).as_str()).unwrap();
+        let src_path_pre = PathBuf::from_str(
+            format!("{}/resources", path_to_str(self.out_dir.as_path())).as_str(),
+        )
+        .unwrap();
         let project_name = self.name.to_string();
         self.resources = Some(vec![
             Resource::new_obj(src_path_pre.join("makepad_widgets"), "makepad_widgets"),
@@ -180,7 +182,10 @@ impl Conf {
         ]);
         // [platforms] -----------------------------------------------------------------------------
         self.deb = Some(DebianConfig {
-            depends: Some(vec![format!("{}/depends_deb.txt", path_to_str(self.out_dir.as_path()))]),
+            depends: Some(vec![format!(
+                "{}/depends_deb.txt",
+                path_to_str(self.out_dir.as_path())
+            )]),
             desktop_template: Some(format!("./packaging/{}.desktop", &self.name)),
             files: None,
             priority: None,
@@ -198,13 +203,13 @@ impl Conf {
         });
 
         self.dmg = Some(DmgConfig {
-            app_folder_position: None,
-            app_position: Some(Position { x: 50, y: 50 }),
+            app_folder_position: Some(Position { x: 760, y: 250 }),
+            app_position: Some(Position { x: 200, y: 250 }),
             background: Some("./packaging/dmg_background.png".to_string()),
             window_position: None,
             window_size: Some(Size {
-                width: 1080,
-                height: 720,
+                width: 960,
+                height: 540,
             }),
         });
 
@@ -359,20 +364,20 @@ cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
 "#;
 
 #[cfg(test)]
-mod test_conf{
+mod test_conf {
     use std::str::FromStr;
 
     use super::Conf;
 
     #[test]
-    fn to_toml(){
+    fn to_toml() {
         let mut conf = Conf::new(
             "test".to_string(),
             "0.1.0".to_string(),
             "Test".to_string(),
             "com.test".to_string(),
             Some(vec!["test".to_string()]),
-            Some(std::path::PathBuf::from_str("./LICENSE").unwrap())
+            Some(std::path::PathBuf::from_str("./LICENSE").unwrap()),
         );
         let _ = conf.makepad("./test");
 

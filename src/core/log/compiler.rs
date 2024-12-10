@@ -42,7 +42,7 @@
 //! GenUI-Compiler :: [2024-06-28T19:09:24Z] :: INFO >>> File "E:\\Rust\\try\\makepad\\Gen-UI\\examples\\gen_makepad_simple\\ui\\views\\root.gen" compiled successfully.
 //! ```
 
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 use crate::core::{constant::LOGO, log::level::LevelColord};
 use colored::Colorize;
@@ -84,7 +84,7 @@ pub fn init(log_level: LogLevel) -> () {
         })
         .init();
 
-    CompilerLogs::Init.compiler().info();
+    CompilerLogs::LogInit.compiler().info();
 }
 
 pub struct CompilerLogger {
@@ -121,25 +121,27 @@ impl From<String> for CompilerLogger {
     }
 }
 
-impl From<CompilerLogs> for CompilerLogger {
-    fn from(value: CompilerLogs) -> Self {
+impl From<&CompilerLogs> for CompilerLogger {
+    fn from(value: &CompilerLogs) -> Self {
         CompilerLogger {
             output: value.to_string(),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum CompilerLogs {
-    Init,
+    LogInit,
     Logo,
+    WatcherInit(PathBuf),
 }
 
 impl Display for CompilerLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompilerLogs::Init => f.write_str("🔧 Log Service is starting... Log entries will be available after the `app event::Change` occurs!"),
+            CompilerLogs::LogInit => f.write_str("🔧 Log Service is starting... Log entries will be available after the `app event::Change` occurs!"),
             CompilerLogs::Logo => f.write_str(LOGO),
+            CompilerLogs::WatcherInit(p) => f.write_fmt(format_args!("🔧 Watcher Service started successfully! Ract is watching: `{}`", p.display()))
         }
     }
 }
@@ -151,6 +153,6 @@ impl CompilerLogs {
         }
     }
     pub fn compiler(&self) -> CompilerLogger {
-        (*self).into()
+        self.into()
     }
 }
