@@ -10,13 +10,14 @@
 //! 所以Watcher监听的是workspace下的`hello`目录
 //! 在开启监视前会获取`hello`目录下的`gen_ui.toml`文件，然后根据`gen_ui.toml`文件中的`[watcher]`配置来进行监听。
 
-use std::{path::{Path, PathBuf}, sync::mpsc::channel, time::Duration};
+use std::{path::Path, sync::mpsc::channel, time::Duration};
 
-use notify::{ Config, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
-use crate::core::{entry::compiler::excludes::Excludes, log::compiler::{CompilerLogger, CompilerLogs}};
-
-
+use crate::core::{
+    entry::compiler::excludes::Excludes,
+    log::compiler::{CompilerLogger, CompilerLogs},
+};
 
 /// ## init watcher
 /// init watcher to watch file change event
@@ -36,11 +37,13 @@ where
     config.with_poll_interval(Duration::from_secs(10));
     // [watcher] -------------------------------------------------------------------------------------------
     let mut watcher = RecommendedWatcher::new(tx, config)?;
-    
+
     // let mut fs_state = get_current_state(path)?;
 
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
-    CompilerLogs::WatcherInit(path.as_ref().to_path_buf()).compiler().info();
+    CompilerLogs::WatcherInit(path.as_ref().to_path_buf())
+        .compiler()
+        .info();
 
     while let Ok(event) = rx.recv() {
         match event {

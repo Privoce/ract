@@ -1,7 +1,11 @@
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use gen_utils::{
-    common::{fs, ToToml},
+    common::{fs, Source, ToToml},
     error::{Error, ParseError, ParseType},
 };
 use toml_edit::{value, Array, DocumentMut, Formatted, InlineTable, Value};
@@ -179,6 +183,15 @@ pub struct Member {
     pub source: PathBuf,
     /// path of the project which after compiled
     pub target: PathBuf,
+}
+
+impl Member {
+    pub fn to_source<P>(&self, path: P) -> Source
+    where
+        P: AsRef<Path>,
+    {
+        Source::new(path.as_ref(), self.source.as_path(), self.target.as_path())
+    }
 }
 
 impl From<&Member> for Value {

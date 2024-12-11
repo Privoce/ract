@@ -7,7 +7,7 @@ use std::{
 use crate::core::util::real_chain_env_toml;
 use clap::ValueEnum;
 use gen_utils::{
-    common::{DepType, RustDependence, ToToml},
+    common::{DepType, RustDependence, Source, ToToml},
     compiler::{CompilerImpl, UnderlayerConfImpl},
     error::{Error, ParseError},
 };
@@ -37,22 +37,13 @@ impl Underlayer {
         let toml = GenUIConf::try_from((path.as_ref().to_path_buf(), *self))?;
         toml.write(path.as_ref().join("gen_ui.toml"))
     }
-    pub fn compiler<P>(
+    pub fn compiler(
         &self,
-        path: P,
-        member: &Member,
+        source: &Source,
         conf: &Box<dyn UnderlayerConfImpl>,
-    ) -> Result<Box<dyn CompilerImpl>, Error>
-    where
-        P: AsRef<Path>,
-    {
+    ) -> Result<Box<dyn CompilerImpl>, Error> {
         let compiler = match self {
-            Underlayer::Makepad => MakepadCompiler::new(
-                path.as_ref(),
-                member.source.as_path(),
-                member.target.as_path(),
-                conf,
-            ),
+            Underlayer::Makepad => MakepadCompiler::new(source.clone(), conf),
         }?;
 
         Ok(Box::new(compiler))

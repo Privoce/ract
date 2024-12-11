@@ -5,8 +5,7 @@ use std::{
 
 use gen_utils::{
     common::{
-        fs::{self, copy_file, GenUIFs},
-        ToToml,
+        fs::{self, copy_file, GenUIFs}, read_to_doc, Source, ToToml
     },
     compiler::CompilerImpl,
     error::Error,
@@ -18,7 +17,7 @@ use crate::core::{
     log::compiler::CompilerLogs,
 };
 
-use super::{init_watcher, Cache};
+use super::{init_watcher, Cache, CompilerSourceExt};
 
 /// # GenUI Compiler
 /// compiler will compile the file when the file is created or modified
@@ -27,10 +26,7 @@ use super::{init_watcher, Cache};
 ///
 /// dir will be generated after the file in the dir is compiled
 pub struct Compiler {
-    /// work path
-    pub path: PathBuf,
-    /// path of the compiled project and after compiled project
-    pub source: Member,
+    pub source: Source,
     /// compiler target, default is makepad
     /// which depends on `gen_ui.toml` file
     pub target: Box<dyn CompilerImpl>,
@@ -46,19 +42,20 @@ impl Compiler {
         P: AsRef<Path>,
     {
         let source_path = path.as_ref().join(member.source.as_path());
+        // [source] --------------------------------------------------------------------------------------
+        let source = member.to_source(path.as_ref());
         // [conf] ----------------------------------------------------------------------------------------
         let conf: GenUIConf = (&GenUIConf::read(source_path.join("gen_ui.toml"))?).try_into()?;
         // [target] --------------------------------------------------------------------------------------
         let target = conf
             .compiler
             .target
-            .compiler(path.as_ref(), member, &conf.underlayer.target)?;
+            .compiler(&source, &conf.underlayer.target)?;
         // [cache] ---------------------------------------------------------------------------------------
         let cache = Cache::new(&source_path)?;
 
         Ok(Self {
-            path: path.as_ref().to_path_buf(),
-            source: member.clone(),
+            source,
             target,
             conf,
             cache,
@@ -69,7 +66,7 @@ impl Compiler {
     pub fn run(&mut self) {
         self.before_compile();
         // [compiler source path] -------------------------------------------------------------------------
-        let source = self.path.join(self.source.source.as_path());
+        let source = self.source.from_path();
         // [init watcher] ---------------------------------------------------------------------------------
         let excludes = self.conf.compiler.excludes.clone();
         let _ = init_watcher(source, &excludes, |path, event| match event {
@@ -87,7 +84,8 @@ impl Compiler {
     where
         P: AsRef<Path>,
     {
-        let source_path = self.path.join(self.source.source.as_path());
+        let mut compiled = false;
+        let source_path = self.source.from_path();
         //  let target_path = self.origin_path.as_path().to_path_buf();
         match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
             (false, true) | (false, false) => {
@@ -99,24 +97,20 @@ impl Compiler {
                     .exists_or_insert(path.as_ref())
                     .unwrap()
                     .modify_then(|| {
-
                         // let model =
                         //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
                         // let source = model.special.clone();
                         // let _ = self.insert(Box::new(model));
                         // let _ = self.get(&source).unwrap().compile();
+                        compiled = true;
                     });
-                let _ = self.cache.write(source_path.as_path());
             }
             (true, false) => {
                 // not gen file, directly copy to the compiled project
-                // let compiled_path =
-                //     Source::origin_file_without_gen(path.as_ref(), target_path.as_path());
-
                 let compiled_path = path.as_ref().to_compiled(
-                    self.path.as_path(),
-                    self.source.source.as_path(),
-                    self.source.target.as_path(),
+                    self.source.path.as_path(),
+                    self.source.from.as_path(),
+                    self.source.to.as_path(),
                 )?;
 
                 let _ = self
@@ -125,14 +119,17 @@ impl Compiler {
                     .unwrap()
                     .modify_then(|| {
                         let _ = copy_file(path.as_ref(), compiled_path);
+                        compiled = true;
                     });
-                let _ = self.cache.write(source_path.as_path());
             }
         }
 
-        CompilerLogs::Compiled(path.as_ref().to_path_buf())
-            .compiler()
-            .info();
+        if compiled {
+            let _ = self.cache.write(source_path.as_path());
+            CompilerLogs::Compiled(path.as_ref().to_path_buf())
+                .compiler()
+                .info();
+        }
 
         Ok(())
     }
@@ -217,20 +214,17 @@ impl CompilerImpl for Compiler {
     /// ### test
     /// - no src_gen: 👌
     /// - no src_gen and no workspace: 👌
-    fn exist_or_create(&self) -> () {
+    fn exist_or_create(&self) -> Result<(), Error> {
         // check the super project is a workspace project or not
-        let target_project = self.source.target.to_str().unwrap().to_string();
+        let target_project = self.source.to.to_str().unwrap().to_string();
 
-        let workspace_toml_path = self.path.join("Cargo.toml");
+        let workspace_toml_path = self.source.path.join("Cargo.toml");
 
         if !workspace_toml_path.exists() {
-            panic!("Cargo.toml not found in the super project, you should create a workspace project first");
+            return Err(Error::from("Cargo.toml not found in the super project, you should create a workspace project first"));
         } else {
             // read the super project's Cargo.toml file and check the workspace member list
-            let mut workspace_toml = fs::read(workspace_toml_path.as_path())
-                .expect("failed to read super project's Cargo.toml")
-                .parse::<DocumentMut>()
-                .expect("Failed to parse Cargo.toml");
+            let mut workspace_toml = read_to_doc(workspace_toml_path.as_path())?;
 
             let member_list = workspace_toml
                 .get_mut("workspace")
@@ -266,11 +260,17 @@ impl CompilerImpl for Compiler {
         }
 
         // check the target project exists or not
-        if !self.path.as_path().join(target_project.as_str()).exists() {
+        if !self
+            .source
+            .path
+            .as_path()
+            .join(target_project.as_str())
+            .exists()
+        {
             // use std::process::Command to create a new rust project
             let status = Command::new("cargo")
                 .args(["new", "--bin", target_project.as_str()])
-                .current_dir(self.path.as_path())
+                .current_dir(self.source.path.as_path())
                 .status()
                 .expect("failed to create target project");
 
@@ -279,7 +279,7 @@ impl CompilerImpl for Compiler {
             }
         }
         // now call target exist_or_create
-        let _ = self.target.exist_or_create();
+        self.target.exist_or_create()
     }
 
     fn before_compile(&mut self) -> () {
