@@ -4,6 +4,7 @@ use std::{
     str::FromStr,
 };
 
+use crate::core::util::real_chain_env_toml;
 use clap::ValueEnum;
 use gen_utils::{
     common::{DepType, RustDependence, ToToml},
@@ -11,13 +12,12 @@ use gen_utils::{
     error::{Error, ParseError},
 };
 use makepad_gen_plugin::compiler::{
-    Compiler as MakepadCompiler,
-    Config as MakepadConfig, CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
+    Compiler as MakepadCompiler, Config as MakepadConfig,
+    CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
 };
 use toml_edit::{DocumentMut, Formatted, Item, Value};
-use crate::core::util::real_chain_env_toml;
 
-use super::GenUIConf;
+use super::{GenUIConf, Member};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
 pub enum Underlayer {
@@ -37,10 +37,25 @@ impl Underlayer {
         let toml = GenUIConf::try_from((path.as_ref().to_path_buf(), *self))?;
         toml.write(path.as_ref().join("gen_ui.toml"))
     }
-    pub fn compiler(&self) -> Box<dyn CompilerImpl>{
-        match self {
-            Underlayer::Makepad => Box::new(MakepadCompiler::new()),
-        }
+    pub fn compiler<P>(
+        &self,
+        path: P,
+        member: &Member,
+        conf: &Box<dyn UnderlayerConfImpl>,
+    ) -> Result<Box<dyn CompilerImpl>, Error>
+    where
+        P: AsRef<Path>,
+    {
+        let compiler = match self {
+            Underlayer::Makepad => MakepadCompiler::new(
+                path.as_ref(),
+                member.source.as_path(),
+                member.target.as_path(),
+                conf,
+            ),
+        }?;
+
+        Ok(Box::new(compiler))
     }
 }
 

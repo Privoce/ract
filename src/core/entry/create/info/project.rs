@@ -176,6 +176,8 @@ impl ToToml for ProjectInfo {
                 }
                 Err(e) => panic!("{}", e.to_string()),
             }
+        }else{
+            toml.insert("dependencies", Item::None);
         }
         DocumentMut::from(toml)
     }

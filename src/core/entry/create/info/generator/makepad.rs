@@ -1,5 +1,5 @@
 use std::{
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
     process::Command,
 };
 
@@ -7,7 +7,7 @@ use gen_utils::{common::{fs, ToToml}, error::Error};
 
 use crate::core::{
     constant::{MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
-    entry::{ProjectInfo, RactToml, WorkspaceInfo},
+    entry::{Member, ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
     util,
 };
@@ -85,6 +85,8 @@ where
             },
         )
 }
+
+
 
 fn create_lib_rs<P>(path: P) -> Result<(), Error>
 where

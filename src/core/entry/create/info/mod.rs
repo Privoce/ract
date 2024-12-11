@@ -3,7 +3,7 @@ mod project;
 mod workspace;
 
 use gen_utils::error::Error;
-pub use generator::Generator as ProjectGenerator;
+pub use generator::{Generator as ProjectGenerator, makepad, gen_ui};
 use inquire::Select;
 pub use project::ProjectInfo;
 use std::path::Path;
