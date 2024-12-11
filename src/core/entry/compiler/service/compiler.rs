@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     path::{Path, PathBuf},
     process::{exit, Command},
 };
@@ -12,7 +11,7 @@ use gen_utils::{
     compiler::CompilerImpl,
     error::Error,
 };
-use toml_edit::{value, DocumentMut};
+use toml_edit::value;
 use walkdir::WalkDir;
 
 use crate::core::{
@@ -74,67 +73,12 @@ impl Compiler {
         let excludes = self.conf.compiler.excludes.clone();
         let _ = init_watcher(source, &excludes, |path, event| match event {
             notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
-                let _ = self.compile_one(path);
+                let _ = self.compile(path.to_path_buf());
             }
             notify::EventKind::Remove(_) => {}
             _ => (),
         });
         exit(1);
-    }
-
-    /// compile single gen / other type file
-    fn compile_one<P>(&mut self, path: P) -> Result<(), Error>
-    where
-        P: AsRef<Path>,
-    {
-        let mut compiled = false;
-        let source_path = self.source.from_path();
-        //  let target_path = self.origin_path.as_path().to_path_buf();
-        match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
-            (false, true) | (false, false) => {
-                // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
-                return Ok(());
-            }
-            (true, true) => {
-                self.cache
-                    .exists_or_insert(path.as_ref())
-                    .unwrap()
-                    .modify_then(|| {
-                        // let model =
-                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
-                        // let source = model.special.clone();
-                        // let _ = self.insert(Box::new(model));
-                        // let _ = self.get(&source).unwrap().compile();
-                        compiled = true;
-                    });
-            }
-            (true, false) => {
-                // not gen file, directly copy to the compiled project
-                let compiled_path = path.as_ref().to_compiled(
-                    self.source.path.as_path(),
-                    self.source.from.as_path(),
-                    self.source.to.as_path(),
-                )?;
-
-                let _ = self
-                    .cache
-                    .exists_or_insert(path.as_ref())
-                    .unwrap()
-                    .modify_then(|| {
-                        let _ = copy_file(path.as_ref(), compiled_path);
-                        compiled = true;
-                    });
-            }
-        }
-
-        if compiled {
-            let _ = self.cache.write(source_path.as_path());
-            CompilerLogs::Compiled(path.as_ref().to_path_buf())
-                .compiler()
-                .info();
-        }
-
-        Ok(())
     }
 
     /// compile all gen / other type file before run compiler
@@ -162,8 +106,7 @@ impl Compiler {
                     continue;
                 }
                 (true, true) => {
-                    self
-                        .cache
+                    self.cache
                         .exists_or_insert(path.as_path())
                         .unwrap()
                         .then(|_| {
@@ -185,10 +128,10 @@ impl Compiler {
                         .modify_then(|| {
                             let _ = copy_file(path.as_path(), compiled_path);
                             compiled = true;
+                            Ok(())
                         });
                 }
             }
-            
         }
 
         if compiled {
@@ -300,8 +243,54 @@ impl CompilerImpl for Compiler {
         Ok(())
     }
 
-    fn compile(&mut self, gen_files: Option<&Vec<&PathBuf>>) -> () {
-        todo!()
+    fn compile(&mut self, path: PathBuf) -> Result<(), Error> {
+        let mut compiled = false;
+        let source_path = self.source.from_path();
+        match (path.as_path().is_file(), path.as_path().is_gen_file()) {
+            (false, true) | (false, false) => {
+                // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
+                return Ok(());
+            }
+            (true, true) => {
+                let _ = self.cache
+                    .exists_or_insert(path.as_path())
+                    .unwrap()
+                    .modify_then(|| {
+                        // let model =
+                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
+                        // let source = model.special.clone();
+                        // let _ = self.insert(Box::new(model));
+                        // let _ = self.get(&source).unwrap().compile();
+                        compiled = true;
+                        self.target.compile(path.to_path_buf())
+                    });
+            }
+            (true, false) => {
+                // not gen file, directly copy to the compiled project
+                let compiled_path = path.as_path().to_compiled(
+                    self.source.path.as_path(),
+                    self.source.from.as_path(),
+                    self.source.to.as_path(),
+                )?;
+
+                let _ = self
+                    .cache
+                    .exists_or_insert(path.as_path())
+                    .unwrap()
+                    .modify_then(|| {
+                        compiled = true;
+                        copy_file(path.as_path(), compiled_path)
+                    });
+            }
+        }
+        if compiled {
+            let _ = self.cache.write(source_path.as_path());
+            CompilerLogs::Compiled(path.as_path().to_path_buf())
+                .compiler()
+                .info();
+        }
+
+        Ok(())
     }
 
     fn insert(&mut self, node: Box<dyn std::any::Any>) -> () {
