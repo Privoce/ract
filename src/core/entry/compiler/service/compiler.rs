@@ -1,16 +1,19 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     process::{exit, Command},
 };
 
 use gen_utils::{
     common::{
-        fs::{self, copy_file, GenUIFs}, read_to_doc, Source, ToToml
+        fs::{self, copy_file, GenUIFs},
+        read_to_doc, Source, ToToml,
     },
     compiler::CompilerImpl,
     error::Error,
 };
 use toml_edit::{value, DocumentMut};
+use walkdir::WalkDir;
 
 use crate::core::{
     entry::{GenUIConf, Member},
@@ -63,8 +66,8 @@ impl Compiler {
     }
     /// run compiler
     /// - init and execute watcher
-    pub fn run(&mut self) {
-        self.before_compile();
+    pub fn run(&mut self) -> () {
+        let _ = self.before_compile();
         // [compiler source path] -------------------------------------------------------------------------
         let source = self.source.from_path();
         // [init watcher] ---------------------------------------------------------------------------------
@@ -134,67 +137,66 @@ impl Compiler {
         Ok(())
     }
 
-    // fn loop_compile(compiler: &mut Compiler, visited: &mut HashSet<PathBuf>) {
-    //     // Convert to absolute path
-    //     // let target_path = target.as_ref().canonicalize().unwrap();
-    //     let target_path = compiler.origin_path.as_path().to_path_buf();
-    //     if !visited.insert(target_path.clone()) {
-    //         return;
-    //     }
+    /// compile all gen / other type file before run compiler
+    fn compile_all(&mut self) -> Result<(), Error> {
+        let mut compiled = false;
+        let source_path = self.source.from_path();
 
-    //     for item in WalkDir::new(target_path.as_path())
-    //         .into_iter()
-    //         .filter_map(|d| d.ok())
-    //     {
-    //         let source_path = item.path();
-    //         // check if the file or folder is in the exclude list, if true, skip it
-    //         if compiler
-    //             .exclude
-    //             .iter()
-    //             .any(|uncompiled_item| is_eq_path_exclude(source_path, uncompiled_item.as_path()))
-    //         {
-    //             continue;
-    //         }
+        for item in WalkDir::new(source_path.as_path())
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = item.path().to_path_buf();
+            // check if the file or folder is in the exclude list, if true, skip it
+            if self
+                .conf
+                .compiler
+                .excludes
+                .contains(source_path.as_path(), path.as_path())
+            {
+                continue;
+            }
 
-    //         match (
-    //             source_path.is_file(),
-    //             source_path.to_str().unwrap().ends_with(".gen"),
-    //         ) {
-    //             (false, true) | (false, false) => {
-    //                 // is dir should loop compile again
-    //                 Compiler::loop_compile(compiler, visited);
-    //             }
-    //             (true, true) => {
-    //                 compiler
-    //                     .cache
-    //                     .exists_or_insert(source_path)
-    //                     .unwrap()
-    //                     .then(|_| {
-    //                         let model = Model::new(&source_path.to_path_buf(), &target_path, false)
-    //                             .unwrap();
-    //                         let _ = compiler.insert(Box::new(model));
-    //                     });
+            match (path.as_path().is_file(), path.as_path().is_gen_file()) {
+                (false, true) | (false, false) => {
+                    continue;
+                }
+                (true, true) => {
+                    self
+                        .cache
+                        .exists_or_insert(path.as_path())
+                        .unwrap()
+                        .then(|_| {
+                            // todo!()
+                            compiled = true;
+                        });
+                }
+                (true, false) => {
+                    let compiled_path = path.as_path().to_compiled(
+                        self.source.path.as_path(),
+                        self.source.from.as_path(),
+                        self.source.to.as_path(),
+                    )?;
 
-    //                 // let model =
-    //                 //     Model::new(&source_path.to_path_buf(), &target_path, false).unwrap();
-    //                 // let _ = compiler.insert(Box::new(model));
-    //             }
-    //             (true, false) => {
-    //                 // is file but not gen file, directly copy to the compiled project
-    //                 // get the compiled path
-    //                 let compiled_path = Source::origin_file_without_gen(source_path, &target_path);
-    //                 // check and insert into cache
-    //                 let _ = compiler
-    //                     .cache
-    //                     .exists_or_insert(source_path)
-    //                     .unwrap()
-    //                     .modify_then(|| {
-    //                         let _ = copy_file(source_path, compiled_path);
-    //                     });
-    //             }
-    //         }
-    //     }
-    // }
+                    let _ = self
+                        .cache
+                        .exists_or_insert(path.as_path())
+                        .unwrap()
+                        .modify_then(|| {
+                            let _ = copy_file(path.as_path(), compiled_path);
+                            compiled = true;
+                        });
+                }
+            }
+            
+        }
+
+        if compiled {
+            let _ = self.cache.write(source_path.as_path());
+        }
+
+        Ok(())
+    }
 }
 
 impl CompilerImpl for Compiler {
@@ -282,7 +284,7 @@ impl CompilerImpl for Compiler {
         self.target.exist_or_create()
     }
 
-    fn before_compile(&mut self) -> () {
+    fn before_compile(&mut self) -> Result<(), Error> {
         // [display LOGO] ------------------------------------------------------------------------------------------------
         if self.conf.compiler.logo {
             CompilerLogs::Logo.terminal().logo();
@@ -291,7 +293,11 @@ impl CompilerImpl for Compiler {
         let log_level = self.conf.compiler.log_level;
         let _ = crate::core::log::compiler::init(log_level);
         // [check compiler target] ---------------------------------------------------------------------------------------
-        self.exist_or_create();
+        let _ = self.exist_or_create()?;
+        // [loop compile] ------------------------------------------------------------------------------------------------
+        let _ = self.compile_all()?;
+
+        Ok(())
     }
 
     fn compile(&mut self, gen_files: Option<&Vec<&PathBuf>>) -> () {
@@ -307,5 +313,24 @@ impl CompilerImpl for Compiler {
         key: &gen_utils::common::Source,
     ) -> Option<Box<dyn gen_utils::compiler::ModelNodeImpl>> {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod test_walkdir {
+    use std::path::PathBuf;
+
+    use walkdir::WalkDir;
+
+    #[test]
+    fn dir() {
+        let path = PathBuf::from("/Users/shengyifei/projects/gen_ui/GenUI/examples/ract/test/h1");
+
+        for item in WalkDir::new(path.as_path())
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            dbg!(&item.path());
+        }
     }
 }

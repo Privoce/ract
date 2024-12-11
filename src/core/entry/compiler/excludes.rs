@@ -12,7 +12,7 @@ use toml_edit::{Array, Formatted, Value};
 /// excludes: ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache"]
 /// ```
 /// ## Default Excludes
-/// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache"]
+/// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache", "gen_ui.toml"]
 #[derive(Debug, Clone)]
 pub struct Excludes(pub Vec<PathBuf>);
 
@@ -43,6 +43,7 @@ impl Default for Excludes {
             PathBuf::from("src").join("main.rs"),
             PathBuf::from("target"),
             PathBuf::from(".gen_ui_cache"),
+            PathBuf::from("gen_ui.toml"),
         ])
     }
 }
