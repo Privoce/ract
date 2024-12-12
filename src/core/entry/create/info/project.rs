@@ -183,16 +183,18 @@ impl ToToml for ProjectInfo {
         toml.insert("package", Item::Table(package));
         // [dependencies] -------------------------------------------------------------------------------------------
         // dependencies only add when project is makepad
-        if self.underlayer.is_none() {
+        let deps = if self.underlayer.is_none() {
             match FrameworkType::Makepad.dependencies() {
                 Ok(deps) => {
-                    toml.insert("dependencies", deps);
+                    deps
                 }
                 Err(e) => panic!("{}", e.to_string()),
             }
         } else {
-            toml.insert("dependencies", Item::None);
-        }
+           Item::Table(Table::new())
+        };
+        toml.insert("dependencies", deps);
+
         DocumentMut::from(toml)
     }
 }
@@ -208,7 +210,7 @@ mod toml_test {
     use std::{path::PathBuf, str::FromStr};
 
     use gen_utils::common::fs;
-    use toml_edit::{value, DocumentMut};
+    use toml_edit::{value, DocumentMut, Table};
 
     #[test]
     fn read() {
@@ -224,5 +226,12 @@ mod toml_test {
         // dbg!(&toml);
         toml["package"]["version"] = value("0.2.0");
         dbg!(&toml["package"]["version"]);
+    }
+
+    #[test]
+    fn test_none(){
+        let mut doc = DocumentMut::new();
+        doc.insert("package", toml_edit::Item::Table(Table::new()));
+        println!("{}", doc.to_string());
     }
 }
