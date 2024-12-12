@@ -1,5 +1,5 @@
 use std::{
-    path::{self, Path, PathBuf},
+    path::{Path, PathBuf},
     process::Command,
 };
 
@@ -10,7 +10,7 @@ use gen_utils::{
 
 use crate::core::{
     constant::{MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
-    entry::{Member, ProjectInfo, RactToml, WorkspaceInfo},
+    entry::{ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
     util,
 };
@@ -56,7 +56,7 @@ where
     .info();
     // [use cargo new --bin to create] --------------------------------------------------------------------
     Command::new("cargo")
-        .args(&["new", "--bin", info.name.as_str(), "--vsc", "none"])
+        .args(&["new", "--bin", info.name.as_str(), "--vcs", "none"])
         .current_dir(path.as_ref())
         .output()
         .map_or_else(

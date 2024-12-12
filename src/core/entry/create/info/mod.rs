@@ -3,6 +3,7 @@ mod project;
 mod workspace;
 
 use gen_utils::error::Error;
+#[allow(unused_imports)]
 pub use generator::{Generator as ProjectGenerator, makepad, gen_ui};
 use inquire::Select;
 pub use project::ProjectInfo;

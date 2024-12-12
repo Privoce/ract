@@ -214,7 +214,7 @@ impl CompilerImpl for Compiler {
         {
             // use std::process::Command to create a new rust project
             let status = Command::new("cargo")
-                .args(["new", "--bin", target_project.as_str(), "--vsc", "none"])
+                .args(["new", "--bin", target_project.as_str(), "--vcs", "none"])
                 .current_dir(self.source.path.as_path())
                 .status()
                 .expect("failed to create target project");

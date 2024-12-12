@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use gen_utils::{compiler, error::Error};
+use gen_utils::error::Error;
 
 use crate::core::entry::{Compiler, RactToml};
 

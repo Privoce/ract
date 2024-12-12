@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use gen_utils::common::Source;
 
+#[allow(unused)]
 pub trait CompilerSourceExt {
     fn from_path(&self) -> PathBuf;
     fn to_path(&self) -> PathBuf;

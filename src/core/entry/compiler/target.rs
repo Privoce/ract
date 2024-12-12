@@ -17,7 +17,7 @@ use makepad_gen_plugin::compiler::{
 };
 use toml_edit::{DocumentMut, Formatted, Item, Value};
 
-use super::{GenUIConf, Member};
+use super::GenUIConf;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
 pub enum Underlayer {
