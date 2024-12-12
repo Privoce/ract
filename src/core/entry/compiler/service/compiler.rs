@@ -63,22 +63,58 @@ impl Compiler {
             cache,
         })
     }
-    /// run compiler
-    /// - init and execute watcher
-    pub fn run(&mut self) -> () {
-        let _ = self.before_compile();
-        // [compiler source path] -------------------------------------------------------------------------
-        let source = self.source.from_path();
-        // [init watcher] ---------------------------------------------------------------------------------
-        let excludes = self.conf.compiler.excludes.clone();
-        let _ = init_watcher(source, &excludes, |path, event| match event {
-            notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
-                let _ = self.compile(path.to_path_buf());
+    fn do_compile<P>(&mut self, path: P) -> Result<(), Error>
+    where
+        P: AsRef<Path>,
+    {
+        let mut compiled = false;
+        let source_path = self.source.from_path();
+        match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
+            (false, true) | (false, false) => {
+                // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
+                return Ok(());
             }
-            notify::EventKind::Remove(_) => {}
-            _ => (),
-        });
-        exit(1);
+            (true, true) => {
+                let _ = self
+                    .cache
+                    .exists_or_insert(path.as_ref())
+                    .unwrap()
+                    .modify_then(|| {
+                        // let model =
+                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
+                        // let source = model.special.clone();
+                        // let _ = self.insert(Box::new(model));
+                        // let _ = self.get(&source).unwrap().compile();
+                        compiled = true;
+                        self.target.compile(path.as_ref().to_path_buf())
+                    });
+            }
+            (true, false) => {
+                // not gen file, directly copy to the compiled project
+                let compiled_path = path.as_ref().to_compiled(
+                    self.source.path.as_path(),
+                    self.source.from.as_path(),
+                    self.source.to.as_path(),
+                )?;
+
+                let _ = self
+                    .cache
+                    .exists_or_insert(path.as_ref())
+                    .unwrap()
+                    .modify_then(|| {
+                        compiled = true;
+                        copy_file(path.as_ref(), compiled_path)
+                    });
+            }
+        }
+        if compiled {
+            let _ = self.cache.write(source_path.as_path());
+            CompilerLogs::Compiled(path.as_ref().to_path_buf())
+                .compiler()
+                .info();
+        }
+
+        Ok(())
     }
 
     /// compile all gen / other type file before run compiler
@@ -146,7 +182,6 @@ impl CompilerImpl for Compiler {
     fn execute_auxiliaries(&mut self, executor: gen_utils::compiler::Executor) -> () {
         todo!()
     }
-
     /// ## check if the generate rust project exists, if not create one
     ///
     /// ### details
@@ -159,7 +194,17 @@ impl CompilerImpl for Compiler {
     /// ### test
     /// - no src_gen: 👌
     /// - no src_gen and no workspace: 👌
-    fn exist_or_create(&self) -> Result<(), Error> {
+    fn init(&mut self) -> Result<(), Error> {
+        // [display LOGO] ------------------------------------------------------------------------------------------------
+        if self.conf.compiler.logo {
+            CompilerLogs::Logo.terminal().logo();
+        }
+        // [init logger] -------------------------------------------------------------------------------------------------
+        let log_level = self.conf.compiler.log_level;
+        let _ = crate::core::log::compiler::init(log_level);
+        // [clear cache] -------------------------------------------------------------------------------------------------
+        let _ = self.cache.clear(self.source.from_path().as_path());
+        // [check compiler target] ---------------------------------------------------------------------------------------
         // check the super project is a workspace project or not
         let target_project = self.source.to.to_str().unwrap().to_string();
 
@@ -223,88 +268,37 @@ impl CompilerImpl for Compiler {
                 panic!("failed to create target project");
             }
         }
-        // now call target exist_or_create
-        self.target.exist_or_create()
+
+        // [target init] -------------------------------------------------------------------------------------------------
+        self.target.init()
     }
 
     fn before_compile(&mut self) -> Result<(), Error> {
-        // [display LOGO] ------------------------------------------------------------------------------------------------
-        if self.conf.compiler.logo {
-            CompilerLogs::Logo.terminal().logo();
-        }
-        // [init logger] -------------------------------------------------------------------------------------------------
-        let log_level = self.conf.compiler.log_level;
-        let _ = crate::core::log::compiler::init(log_level);
-        // [clear cache] -------------------------------------------------------------------------------------------------
-        let _ = self.cache.clear(self.source.from_path().as_path());
-        // [check compiler target] ---------------------------------------------------------------------------------------
-        let _ = self.exist_or_create()?;
         // [loop compile] ------------------------------------------------------------------------------------------------
         let _ = self.compile_all()?;
+        // [do target before compile] ------------------------------------------------------------------------------------
+        self.target.before_compile()
+    }
 
+    fn after_compile(&mut self) -> Result<(), Error> {
+        self.target.after_compile()
+    }
+
+    fn compile(&mut self, _path: PathBuf) -> Result<(), Error> {
+        // [compiler source path] -------------------------------------------------------------------------
+        let source = self.source.from_path();
+        // [init watcher] ---------------------------------------------------------------------------------
+        let excludes = self.conf.compiler.excludes.clone();
+        let _ = init_watcher(source, &excludes, |path, event| match event {
+            notify::EventKind::Modify(_) | notify::EventKind::Create(_) => self.do_compile(path),
+            notify::EventKind::Remove(_) => Ok(()),
+            _ => Ok(()),
+        });
         Ok(())
     }
 
-    fn compile(&mut self, path: PathBuf) -> Result<(), Error> {
-        let mut compiled = false;
-        let source_path = self.source.from_path();
-        match (path.as_path().is_file(), path.as_path().is_gen_file()) {
-            (false, true) | (false, false) => {
-                // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
-                return Ok(());
-            }
-            (true, true) => {
-                let _ = self
-                    .cache
-                    .exists_or_insert(path.as_path())
-                    .unwrap()
-                    .modify_then(|| {
-                        // let model =
-                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
-                        // let source = model.special.clone();
-                        // let _ = self.insert(Box::new(model));
-                        // let _ = self.get(&source).unwrap().compile();
-                        compiled = true;
-                        self.target.compile(path.to_path_buf())
-                    });
-            }
-            (true, false) => {
-                // not gen file, directly copy to the compiled project
-                let compiled_path = path.as_path().to_compiled(
-                    self.source.path.as_path(),
-                    self.source.from.as_path(),
-                    self.source.to.as_path(),
-                )?;
-
-                let _ = self
-                    .cache
-                    .exists_or_insert(path.as_path())
-                    .unwrap()
-                    .modify_then(|| {
-                        compiled = true;
-                        copy_file(path.as_path(), compiled_path)
-                    });
-            }
-        }
-        if compiled {
-            let _ = self.cache.write(source_path.as_path());
-            CompilerLogs::Compiled(path.as_path().to_path_buf())
-                .compiler()
-                .info();
-        }
-
-        Ok(())
-    }
-
-    fn insert(&mut self, node: Box<dyn std::any::Any>) -> () {
-        todo!()
-    }
-
-    fn get(
-        &self,
-        key: &gen_utils::common::Source,
-    ) -> Option<Box<dyn gen_utils::compiler::ModelNodeImpl>> {
-        todo!()
+    fn update(&mut self) -> Result<(), Error> {
+        self.target.update()
     }
 }
 

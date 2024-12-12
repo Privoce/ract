@@ -12,6 +12,7 @@
 
 use std::{path::Path, sync::mpsc::channel, time::Duration};
 
+use gen_utils::error::Error;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::core::{
@@ -29,7 +30,7 @@ pub fn init_watcher<P, F>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     P: AsRef<Path>,
-    F: FnMut(&Path, &notify::EventKind) -> (),
+    F: FnMut(&Path, &notify::EventKind) -> Result<(), Error>,
 {
     let (tx, rx) = channel();
     // [config for watcher] --------------------------------------------------------------------------------
@@ -50,7 +51,9 @@ where
             Ok(event) => {
                 // filter exclude
                 if !excludes.contains(path.as_ref(), &event.paths[0]) {
-                    f(&event.paths[0], &event.kind);
+                    if let Err(e) = f(&event.paths[0], &event.kind) {
+                        CompilerLogger::new(&e.to_string()).error();
+                    }
                 }
             }
             Err(e) => {
