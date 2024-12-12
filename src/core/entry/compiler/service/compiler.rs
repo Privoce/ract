@@ -214,7 +214,7 @@ impl CompilerImpl for Compiler {
         {
             // use std::process::Command to create a new rust project
             let status = Command::new("cargo")
-                .args(["new", "--bin", target_project.as_str()])
+                .args(["new", "--bin", target_project.as_str(), "--vsc", "none"])
                 .current_dir(self.source.path.as_path())
                 .status()
                 .expect("failed to create target project");
@@ -235,6 +235,8 @@ impl CompilerImpl for Compiler {
         // [init logger] -------------------------------------------------------------------------------------------------
         let log_level = self.conf.compiler.log_level;
         let _ = crate::core::log::compiler::init(log_level);
+        // [clear cache] -------------------------------------------------------------------------------------------------
+        let _ = self.cache.clear(self.source.from_path().as_path());
         // [check compiler target] ---------------------------------------------------------------------------------------
         let _ = self.exist_or_create()?;
         // [loop compile] ------------------------------------------------------------------------------------------------
@@ -252,7 +254,8 @@ impl CompilerImpl for Compiler {
                 return Ok(());
             }
             (true, true) => {
-                let _ = self.cache
+                let _ = self
+                    .cache
                     .exists_or_insert(path.as_path())
                     .unwrap()
                     .modify_then(|| {

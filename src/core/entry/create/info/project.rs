@@ -9,7 +9,7 @@ use gen_utils::{
 use inquire::{Confirm, Select, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
-use crate::core::entry::{Underlayer, FrameworkType};
+use crate::core::entry::{FrameworkType, Underlayer};
 
 /// # Project Info for GenUI project
 /// use in ui project.Cargo.toml
@@ -25,6 +25,20 @@ pub struct ProjectInfo {
     pub keywords: Vec<String>,
     /// underlayer project only when project is gen_ui
     pub underlayer: Option<Underlayer>,
+}
+
+impl Default for ProjectInfo {
+    fn default() -> Self {
+        Self {
+            name: "hello".to_string(),
+            version: "0.1.0".to_string(),
+            authors: Default::default(),
+            description: Default::default(),
+            license: Default::default(),
+            keywords: Default::default(),
+            underlayer: Default::default(),
+        }
+    }
 }
 
 impl ProjectInfo {
@@ -176,7 +190,7 @@ impl ToToml for ProjectInfo {
                 }
                 Err(e) => panic!("{}", e.to_string()),
             }
-        }else{
+        } else {
             toml.insert("dependencies", Item::None);
         }
         DocumentMut::from(toml)

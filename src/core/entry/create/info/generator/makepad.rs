@@ -3,7 +3,10 @@ use std::{
     process::Command,
 };
 
-use gen_utils::{common::{fs, ToToml}, error::Error};
+use gen_utils::{
+    common::{fs, ToToml},
+    error::Error,
+};
 
 use crate::core::{
     constant::{MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
@@ -53,7 +56,7 @@ where
     .info();
     // [use cargo new --bin to create] --------------------------------------------------------------------
     Command::new("cargo")
-        .args(&["new", "--bin", info.name.as_str()])
+        .args(&["new", "--bin", info.name.as_str(), "--vsc", "none"])
         .current_dir(path.as_ref())
         .output()
         .map_or_else(
@@ -85,8 +88,6 @@ where
             },
         )
 }
-
-
 
 fn create_lib_rs<P>(path: P) -> Result<(), Error>
 where

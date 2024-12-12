@@ -44,9 +44,7 @@ where
     info.write_license(path.as_ref())?;
     // [use cargo to create a new project] ---------------------------------------------------------------
     std::process::Command::new("cargo")
-        .arg("new")
-        .arg("--bin")
-        .arg(&info.name)
+        .args(&["new", "--bin", &info.name, "--vsc", "none"])
         .current_dir(path.as_ref())
         .output()
         .map_or_else(
@@ -71,4 +69,23 @@ where
                 }
             },
         )
+}
+
+#[cfg(test)]
+mod tets2 {
+    use std::path::PathBuf;
+
+    use crate::core::entry::ProjectInfo;
+
+    #[test]
+    fn test_create_project() {
+        let path = PathBuf::from("/Users/shengyifei/projects/gen_ui/GenUI/examples/ract");
+
+        let info = ProjectInfo {
+            name: "heloo".to_string(),
+            ..Default::default()
+        };
+
+        let result = super::create_project(path, &info);
+    }
 }

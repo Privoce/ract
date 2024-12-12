@@ -190,6 +190,11 @@ impl Cache {
     {
         self.values.insert(key.as_ref().to_path_buf(), value);
     }
+    /// clear the cache `[value]` section and write back to the file
+    pub fn clear<P>(&mut self, path: P) -> Result<(), Error> where P: AsRef<Path> {
+        self.values.clear();
+        self.write(path)
+    }
 }
 
 impl Default for Cache {
