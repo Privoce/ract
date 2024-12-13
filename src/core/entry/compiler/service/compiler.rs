@@ -16,7 +16,7 @@ use walkdir::WalkDir;
 
 use crate::core::{
     entry::{GenUIConf, Member},
-    log::compiler::CompilerLogs,
+    log::compiler::{CompilerLogger, CompilerLogs},
 };
 
 use super::{init_watcher, Cache, CompilerSourceExt};
@@ -68,15 +68,14 @@ impl Compiler {
         P: AsRef<Path>,
     {
         let mut compiled = false;
-        let source_path = self.source.from_path();
+        // let source_path = self.source.from_path();
         match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
             (false, true) | (false, false) => {
                 // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
                 return Ok(());
             }
             (true, true) => {
-                let _ = self
-                    .cache
+                self.cache
                     .exists_or_insert(path.as_ref())
                     .unwrap()
                     .modify_then(|| {
@@ -87,7 +86,7 @@ impl Compiler {
                         // let _ = self.get(&source).unwrap().compile();
                         compiled = true;
                         self.target.compile(path.as_ref().to_path_buf())
-                    });
+                    })
             }
             (true, false) => {
                 // not gen file, directly copy to the compiled project
@@ -97,24 +96,17 @@ impl Compiler {
                     self.source.to.as_path(),
                 )?;
 
-                let _ = self
-                    .cache
+                self.cache
                     .exists_or_insert(path.as_ref())
                     .unwrap()
                     .modify_then(|| {
                         compiled = true;
                         copy_file(path.as_ref(), compiled_path)
-                    });
+                    })
             }
         }
-        if compiled {
-            let _ = self.cache.write(source_path.as_path());
-            CompilerLogs::Compiled(path.as_ref().to_path_buf())
-                .compiler()
-                .info();
-        }
 
-        Ok(())
+        // Ok(())
     }
 
     /// compile all gen / other type file before run compiler
@@ -142,12 +134,13 @@ impl Compiler {
                     continue;
                 }
                 (true, true) => {
-                    self.cache
+                    let _ = self
+                        .cache
                         .exists_or_insert(path.as_path())
                         .unwrap()
                         .then(|_| {
-                            // todo!()
                             compiled = true;
+                            self.target.compile(path)
                         });
                 }
                 (true, false) => {
@@ -162,9 +155,8 @@ impl Compiler {
                         .exists_or_insert(path.as_path())
                         .unwrap()
                         .modify_then(|| {
-                            let _ = copy_file(path.as_path(), compiled_path);
                             compiled = true;
-                            Ok(())
+                            copy_file(path.as_path(), compiled_path)
                         });
                 }
             }
@@ -289,12 +281,31 @@ impl CompilerImpl for Compiler {
         let source = self.source.from_path();
         // [init watcher] ---------------------------------------------------------------------------------
         let excludes = self.conf.compiler.excludes.clone();
-        let _ = init_watcher(source, &excludes, |path, event| match event {
-            notify::EventKind::Modify(_) | notify::EventKind::Create(_) => self.do_compile(path),
-            notify::EventKind::Remove(_) => Ok(()),
-            _ => Ok(()),
+        let _ = init_watcher(source, &excludes, |path, event| {
+            let res = match event {
+                notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
+                    self.do_compile(path)
+                }
+                notify::EventKind::Remove(_) => Ok(()),
+                _ => Ok(()),
+            };
+
+            if let Err(e) = res {
+                CompilerLogger::new(&e.to_string()).error();
+            } else {
+                let source_path = self.source.from_path();
+                let _ = self.cache.write(source_path.as_path());
+                CompilerLogs::Compiled(path.to_path_buf()).compiler().info();
+            }
+
+            // self.update()
+            Ok(())
         });
         Ok(())
+    }
+
+    fn execute(&mut self) -> Result<(), Error> {
+        self.compile(PathBuf::new())
     }
 
     fn update(&mut self) -> Result<(), Error> {

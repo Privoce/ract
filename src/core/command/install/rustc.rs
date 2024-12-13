@@ -5,7 +5,7 @@ use gen_utils::error::Error;
 pub fn install_rustc() -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     use std::process::Command;
-    Command::new("curl")
+    let mut child = Command::new("curl")
         .args(&[
             "--proto",
             "=https",
@@ -15,27 +15,40 @@ pub fn install_rustc() -> Result<(), Error> {
             "|",
             "sh",
         ])
-        .output()
-        .map_or_else(
-            |e| Err(e.to_string().into()),
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Rustc.terminal().success();
-                    Ok(())
-                } else {
-                    Err(InstallLogs::InstallErr("rustc".to_string())
-                        .to_string()
-                        .into())
-                }
-            },
-        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    stream_terminal(
+        &mut child,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                InstallLogs::Rustc.terminal().success();
+                Ok(())
+            } else {
+                Err(InstallLogs::InstallErr("rustc".to_string())
+                    .to_string()
+                    .into())
+            }
+        },
+    )
 }
 
 #[cfg(target_os = "macos")]
 pub fn install_rustc() -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    use std::process::Command;
-    Command::new("curl")
+    use std::process::{Command, Stdio};
+
+    use gen_utils::common::stream_terminal;
+
+    use crate::core::log::TerminalLogger;
+    let mut child = Command::new("curl")
         .args(&[
             "--proto",
             "=https",
@@ -45,28 +58,37 @@ pub fn install_rustc() -> Result<(), Error> {
             "|",
             "sh",
         ])
-        .output()
-        .map_or_else(
-            |e| Err(e.to_string().into()),
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Rustc.terminal().success();
-                    Ok(())
-                } else {
-                    Err(InstallLogs::InstallErr("rustc".to_string())
-                        .to_string()
-                        .into())
-                }
-            },
-        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    stream_terminal(
+        &mut child,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                InstallLogs::Rustc.terminal().success();
+                Ok(())
+            } else {
+                Err(InstallLogs::InstallErr("rustc".to_string())
+                    .to_string()
+                    .into())
+            }
+        },
+    )
 }
 
 #[cfg(target_os = "windows")]
 pub fn install_rustc() -> Result<(), Error> {
     // Powershell: Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
-    use std::process::Command;
     use crate::core::env::exe_path;
     use crate::core::log::TerminalLogger;
+    use std::process::Command;
     // create a downloads folder for the rustup-init.exe, after download, move to the exe_path
     let current_dir = exe_path().join("downloads");
     let res = Command::new("Invoke-WebRequest")
