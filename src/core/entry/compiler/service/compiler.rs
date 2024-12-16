@@ -280,6 +280,7 @@ impl CompilerImpl for Compiler {
         self.target.remove(path).map(|removes| {
             if let Some(removes) = removes {
                 for path in removes {
+                    dbg!(path.as_path());
                     self.cache.remove(path.as_path());
                 }
             }
