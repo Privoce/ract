@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    process::{exit, Command},
+    process::Command,
 };
 
 use gen_utils::{
@@ -19,7 +19,7 @@ use crate::core::{
     log::compiler::{CompilerLogger, CompilerLogs},
 };
 
-use super::{init_watcher, Cache, CompilerSourceExt};
+use super::{init_watcher, Cache};
 
 /// # GenUI Compiler
 /// compiler will compile the file when the file is created or modified
@@ -63,29 +63,28 @@ impl Compiler {
             cache,
         })
     }
-    fn do_compile<P>(&mut self, path: P) -> Result<(), Error>
+    fn do_compile<P>(&mut self, path: P) -> Result<bool, Error>
     where
         P: AsRef<Path>,
     {
-        let mut compiled = false;
-        // let source_path = self.source.from_path();
         match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
             (false, true) | (false, false) => {
                 // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
-                return Ok(());
+                Ok(false)
             }
             (true, true) => {
                 self.cache
                     .exists_or_insert(path.as_ref())
                     .unwrap()
-                    .modify_then(|| {
+                    .modify_then(false, || {
                         // let model =
                         //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
                         // let source = model.special.clone();
                         // let _ = self.insert(Box::new(model));
                         // let _ = self.get(&source).unwrap().compile();
-                        compiled = true;
-                        self.target.compile(path.as_ref().to_path_buf())
+                        self.target
+                            .compile(path.as_ref().to_path_buf())
+                            .map(|_| true)
                     })
             }
             (true, false) => {
@@ -99,9 +98,8 @@ impl Compiler {
                 self.cache
                     .exists_or_insert(path.as_ref())
                     .unwrap()
-                    .modify_then(|| {
-                        compiled = true;
-                        copy_file(path.as_ref(), compiled_path)
+                    .modify_then(false, || {
+                        copy_file(path.as_ref(), compiled_path).map(|_| false)
                     })
             }
         }
@@ -154,9 +152,9 @@ impl Compiler {
                         .cache
                         .exists_or_insert(path.as_path())
                         .unwrap()
-                        .modify_then(|| {
+                        .modify_then(false, || {
                             compiled = true;
-                            copy_file(path.as_path(), compiled_path)
+                            copy_file(path.as_path(), compiled_path).map(|_| true)
                         });
                 }
             }
@@ -286,19 +284,24 @@ impl CompilerImpl for Compiler {
                 notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
                     self.do_compile(path)
                 }
-                notify::EventKind::Remove(_) => Ok(()),
-                _ => Ok(()),
+                notify::EventKind::Remove(_) => Ok(false),
+                _ => Ok(false),
             };
 
-            if let Err(e) = res {
-                CompilerLogger::new(&e.to_string()).error();
-            } else {
-                let source_path = self.source.from_path();
-                let _ = self.cache.write(source_path.as_path());
-                CompilerLogs::Compiled(path.to_path_buf()).compiler().info();
+            match res {
+                Ok(compiled) => {
+                    if compiled {
+                        let source_path = self.source.from_path();
+                        let _ = self.cache.write(source_path.as_path());
+                        CompilerLogs::Compiled(path.to_path_buf()).compiler().info();
+                        let _ = self.update()?;
+                    }
+                }
+                Err(e) => {
+                    CompilerLogger::new(&e.to_string()).error();
+                }
             }
 
-            // self.update()
             Ok(())
         });
         Ok(())
