@@ -195,6 +195,13 @@ impl Cache {
         self.values.clear();
         self.write(path)
     }
+
+    pub fn remove<P>(&mut self, key: P) -> ()
+    where
+        P: AsRef<Path>,
+    {
+        self.values.remove(key.as_ref());
+    }
 }
 
 impl Default for Cache {

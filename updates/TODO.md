@@ -4,6 +4,9 @@
 - [x] Run for GenUI
 - [ ] Packager for GenUI
 - [ ] Compiler for GenUI
+  - [x] main.rs
+  - [ ] lib.rs
+  - [ ] template compile
 - [x] Logger for GenUI
 ------ v0.0.2
 - [ ] i18n

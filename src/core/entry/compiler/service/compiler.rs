@@ -36,6 +36,8 @@ pub struct Compiler {
     pub conf: GenUIConf,
     /// cache of the compiled project
     pub cache: Cache,
+    // /// context of the compiler
+    // pub context: Context,
 }
 
 impl Compiler {
@@ -93,6 +95,7 @@ impl Compiler {
                     self.source.path.as_path(),
                     self.source.from.as_path(),
                     self.source.to.as_path(),
+                    false
                 )?;
 
                 self.cache
@@ -103,8 +106,6 @@ impl Compiler {
                     })
             }
         }
-
-        // Ok(())
     }
 
     /// compile all gen / other type file before run compiler
@@ -146,6 +147,7 @@ impl Compiler {
                         self.source.path.as_path(),
                         self.source.from.as_path(),
                         self.source.to.as_path(),
+                        false
                     )?;
 
                     let _ = self
@@ -274,36 +276,87 @@ impl CompilerImpl for Compiler {
         self.target.after_compile()
     }
 
-    fn compile(&mut self, _path: PathBuf) -> Result<(), Error> {
-        // [compiler source path] -------------------------------------------------------------------------
-        let source = self.source.from_path();
-        // [init watcher] ---------------------------------------------------------------------------------
-        let excludes = self.conf.compiler.excludes.clone();
-        let _ = init_watcher(source, &excludes, |path, event| {
-            let res = match event {
-                notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
-                    self.do_compile(path)
+    fn remove(&mut self, path: PathBuf) -> Result<Option<Vec<PathBuf>>, Error> {
+        self.target.remove(path).map(|removes| {
+            if let Some(removes) = removes {
+                for path in removes {
+                    self.cache.remove(path.as_path());
                 }
-                notify::EventKind::Remove(_) => Ok(false),
-                _ => Ok(false),
-            };
+            }
+            None
+        })
+    }
 
+    fn compile(&mut self, _path: PathBuf) -> Result<(), Error> {
+        fn handle<P>(
+            compiler: &mut Compiler,
+            path: P,
+            res: Result<bool, Error>,
+        ) -> Result<(), Error>
+        where
+            P: AsRef<Path>,
+        {
             match res {
                 Ok(compiled) => {
                     if compiled {
-                        let source_path = self.source.from_path();
-                        let _ = self.cache.write(source_path.as_path());
-                        CompilerLogs::Compiled(path.to_path_buf()).compiler().info();
-                        let _ = self.update()?;
+                        let source_path = compiler.source.from_path();
+                        let _ = compiler.cache.write(source_path.as_path());
+                        CompilerLogs::Compiled(path.as_ref().to_path_buf())
+                            .compiler()
+                            .info();
+                        let _ = compiler.update()?;
                     }
                 }
                 Err(e) => {
                     CompilerLogger::new(&e.to_string()).error();
                 }
             }
-
             Ok(())
+        }
+
+        // [compiler source path] -------------------------------------------------------------------------
+        let source = self.source.from_path();
+        // [init watcher] ---------------------------------------------------------------------------------
+        let excludes = self.conf.compiler.excludes.clone();
+
+        #[cfg(not(target_os = "macos"))]
+        let _ = init_watcher(source, &excludes, |path, event| {
+            let res = match event {
+                notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
+                    self.do_compile(path)
+                }
+                notify::EventKind::Remove(_) => {
+                    eprintln!("remove file: {:?}", path);
+                    Ok(false)
+                }
+                _ => Ok(false),
+            };
+
+            handle(self, path, res)
         });
+
+        let _ = init_watcher(source, &excludes, |path, state| {
+            let res = match state {
+                fs::FileState::Modified | fs::FileState::Created => self.do_compile(path),
+                fs::FileState::Deleted => {
+                    eprintln!("remove file: {:?}", path);
+                    self.remove(path.to_path_buf()).map(|_| true)
+                }
+                fs::FileState::Renamed => {
+                    // find the rename file
+                    if path.exists() {
+                        self.do_compile(path)
+                    } else {
+                        // remove from cache
+                        self.remove(path.to_path_buf()).map(|_| true)
+                    }
+                }
+                _ => Ok(false),
+            };
+
+            handle(self, path, res)
+        });
+
         Ok(())
     }
 
