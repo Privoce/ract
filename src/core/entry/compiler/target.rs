@@ -15,7 +15,7 @@ use makepad_gen_plugin::compiler::{
     Compiler as MakepadCompiler, Config as MakepadConfig,
     CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
 };
-use toml_edit::{DocumentMut, Formatted, Item, Value};
+use toml_edit::{DocumentMut, Formatted, InlineTable, Item, Value};
 
 use super::GenUIConf;
 
@@ -95,15 +95,50 @@ impl TryFrom<(PathBuf, Underlayer)> for CompileUnderlayer {
     }
 }
 
-impl TryFrom<(&DocumentMut, Underlayer)> for CompileUnderlayer {
+impl TryFrom<(DocumentMut, Underlayer)> for CompileUnderlayer {
     type Error = Error;
 
-    fn try_from(value: (&DocumentMut, Underlayer)) -> Result<Self, Self::Error> {
-        let (toml, target) = value;
+    fn try_from(value: (DocumentMut, Underlayer)) -> Result<Self, Self::Error> {
+        let (mut toml, target) = value;
         let target = match target {
-            Underlayer::Makepad => toml.get("makepad").map_or_else(
+            Underlayer::Makepad => toml.get_mut("makepad").map_or_else(
                 || Err(Error::from(MAKEPAD_CONF_FORMAT_SUGGESTION)),
-                |table| MakepadConfig::try_from(table).and_then(|conf| Ok(Box::new(conf))),
+                |table| {
+                    // before to makepad config, add gen_components dependence into [makepad.dependencies]
+                    let gen_dep_path = PathBuf::from_str(
+                        real_chain_env_toml()?["dependencies"]["gen_components"]
+                            .as_str()
+                            .expect("gen-components path not found"),
+                    )
+                    .map_err(|e| {
+                        Error::Parse(ParseError::new(
+                            e.to_string().as_str(),
+                            gen_utils::error::ParseType::Toml,
+                        ))
+                    })?;
+
+                    table
+                        .as_table_mut()
+                        .unwrap()
+                        .get_mut("dependencies")
+                        .as_mut()
+                        .map(|deps| {
+                            let mut dep_table = InlineTable::new();
+                            dep_table.insert(
+                                "path",
+                                Value::String(Formatted::new(
+                                    gen_dep_path.to_str().unwrap().to_string(),
+                                )),
+                            );
+
+                            deps.as_table_mut().unwrap().insert(
+                                "gen_components",
+                                Item::Value(Value::InlineTable(dep_table)),
+                            );
+                        });
+
+                    MakepadConfig::try_from(table).and_then(|conf| Ok(Box::new(conf)))
+                },
             ),
         }?;
 

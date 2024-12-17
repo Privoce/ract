@@ -49,7 +49,7 @@ impl Compiler {
         // [source] --------------------------------------------------------------------------------------
         let source = member.to_source(path.as_ref());
         // [conf] ----------------------------------------------------------------------------------------
-        let conf: GenUIConf = (&GenUIConf::read(source_path.join("gen_ui.toml"))?).try_into()?;
+        let conf: GenUIConf = GenUIConf::read(source_path.join("gen_ui.toml"))?.try_into()?;
         // [target] --------------------------------------------------------------------------------------
         let target = conf
             .compiler
@@ -95,7 +95,7 @@ impl Compiler {
                     self.source.path.as_path(),
                     self.source.from.as_path(),
                     self.source.to.as_path(),
-                    false
+                    false,
                 )?;
 
                 self.cache
@@ -147,7 +147,7 @@ impl Compiler {
                         self.source.path.as_path(),
                         self.source.from.as_path(),
                         self.source.to.as_path(),
-                        false
+                        false,
                     )?;
 
                     let _ = self
@@ -336,6 +336,7 @@ impl CompilerImpl for Compiler {
             handle(self, path, res)
         });
 
+        #[cfg(target_os = "macos")]
         let _ = init_watcher(source, &excludes, |path, state| {
             let res = match state {
                 fs::FileState::Modified | fs::FileState::Created => self.do_compile(path),

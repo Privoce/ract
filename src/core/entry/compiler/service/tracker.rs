@@ -14,7 +14,7 @@ use notify::{event::ModifyKind, EventKind};
 #[derive(Debug)]
 pub struct FileEventTracker {
     pub path: Option<PathBuf>,
-    /// 记录需要编译的文件及其状态
+    /// Record the files that need to be compiled and their status
     pub states: Vec<EventKind>,
 }
 

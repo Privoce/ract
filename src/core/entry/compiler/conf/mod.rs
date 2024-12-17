@@ -63,7 +63,7 @@ impl FromStr for Conf {
             |table| CompilerConf::try_from(table),
         )?;
 
-        let underlayer = CompileUnderlayer::try_from((&toml, compiler.target))?;
+        let underlayer = CompileUnderlayer::try_from((toml, compiler.target))?;
 
         Ok(Self {
             compiler,
@@ -91,10 +91,10 @@ impl Display for Conf {
     }
 }
 
-impl TryFrom<&DocumentMut> for Conf {
+impl TryFrom<DocumentMut> for Conf {
     type Error = Error;
 
-    fn try_from(value: &DocumentMut) -> Result<Self, Self::Error> {
+    fn try_from(value: DocumentMut) -> Result<Self, Self::Error> {
         let compiler_section = value.get("compiler").map_or_else(
             || Ok(CompilerConf::default()),
             |table| CompilerConf::try_from(table),
