@@ -25,6 +25,7 @@ pub struct ProjectInfo {
     pub keywords: Vec<String>,
     /// underlayer project only when project is gen_ui
     pub underlayer: Option<Underlayer>,
+    pub edition: u16
 }
 
 impl Default for ProjectInfo {
@@ -37,6 +38,7 @@ impl Default for ProjectInfo {
             license: Default::default(),
             keywords: Default::default(),
             underlayer: Default::default(),
+            edition: 2021
         }
     }
 }
@@ -115,6 +117,7 @@ impl ProjectInfo {
                 license: license.parse().unwrap(),
                 keywords: keywords.split(',').map(|x| x.trim().to_string()).collect(),
                 underlayer,
+                ..Default::default()
             });
         } else {
             return Self::new(is_gen_ui);
@@ -159,6 +162,8 @@ impl ToToml for ProjectInfo {
         package.insert("name", value(&self.name));
         // - [version] ---------------------------------------------------------------------------------------------
         package.insert("version", value(&self.version));
+        // - [edition] ---------------------------------------------------------------------------------------------
+        package.insert("edition", value(self.edition.to_string()));
         // - [authors] ---------------------------------------------------------------------------------------------
         if let Some(authors) = self.authors.as_ref() {
             let authors = authors.iter().fold(Array::new(), |mut arr, author| {
