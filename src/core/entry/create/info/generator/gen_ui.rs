@@ -6,9 +6,7 @@ use gen_utils::{
 };
 
 use crate::core::{
-    entry::{ProjectInfo, RactToml, WorkspaceInfo},
-    log::{CreateLogs, TerminalLogger},
-    util::create_workspace,
+    constant::{ROOT_GEN, VIEW_MOD_GEN}, entry::{ProjectInfo, RactToml, WorkspaceInfo}, log::{CreateLogs, TerminalLogger}, util::create_workspace
 };
 
 pub fn create<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<PathBuf, Error>
@@ -57,6 +55,9 @@ where
                     for path in ["resources", "views", "components"].iter() {
                         let _ = fs::create_dir(ui_dir_path.join(path))?;
                     }
+                    // [create basic gen files: views/mod.gen, views/root.gen] -----------------------------
+                    let _ = fs::write(ui_dir_path.join("views").join("mod.gen"), VIEW_MOD_GEN)?;
+                    let _ = fs::write(ui_dir_path.join("views").join("root.gen"), ROOT_GEN)?;
                     // [handle Cargo.toml] -----------------------------------------------------------------
                     let _ = info.write(ui_dir_path.join("Cargo.toml"))?;
                     // [create config files: gen_ui.toml, .gen_ui_cache] -----------------------------------

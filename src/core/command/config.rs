@@ -43,9 +43,9 @@ pub fn run() -> () {
 
 fn config_env() -> Result<(), Error> {
     let env_path = env_path();
-
+    let content = fs::read(env_path.as_path())?;
     if get_or_set() {
-        let content = fs::read(env_path.as_path())?;
+        
         TerminalLogger::new(&format!(
             "🔸 `{}` is the path for GenUI toolchain env.toml",
             content
@@ -54,7 +54,7 @@ fn config_env() -> Result<(), Error> {
     } else {
         let path = Text::new("Path for the chain env.toml file")
             .with_placeholder("You can write an env.toml file self or use the default path")
-            .with_default(env_path.as_path().to_str().unwrap())
+            .with_default(&content)
             .prompt()
             .map_err(|e| e.to_string())?;
 
