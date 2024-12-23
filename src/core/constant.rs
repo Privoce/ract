@@ -112,18 +112,16 @@ _/    _/  _/        _/    _/_/  _/    _/    _/
 
 pub const VIEW_MOD_GEN: &str = r#"<script>
 pub mod root;
-<script>
+</script>
 "#;
 
 pub const ROOT_GEN: &str = r###"// default template for root.gen
 <template>
-  <root id="ui_root">
-    <window os_type="Linux" show_title="false" show_icon="true" height="Fill" width="Fill" flow="Down">
-        <view theme="Dark" height="Fill" width="Fill" align="0.5" spacing="12.0" flow="Down">
-            <label text="'This is an easy GenUI template'" font_size="36.0"></label>
-            <label text="'You now using Makepad + GenUI + GenUI Components'" font_size="16.0" color="#FF7043"></label>
-        </view>
-    </window>
-  </root>
+  <component name="UiRoot">
+    <view theme="Dark" height="Fill" width="Fill" align="0.5" spacing="12.0" flow="Down">
+      <label text="'This is an easy GenUI template'" font_size="36.0"></label>
+      <label text="'You now using Makepad + GenUI + GenUI Components'" font_size="16.0" color="#FF7043"></label>
+    </view>
+  </component>
 </template>
 "###;
