@@ -196,10 +196,15 @@ impl CompilerImpl for Compiler {
         let _ = crate::core::log::compiler::init(log_level);
         // [clear cache] -------------------------------------------------------------------------------------------------
         let _ = self.cache.clear(self.source.from_path().as_path());
+        // [delete compiled project] -------------------------------------------------------------------------------------
+        let target_project = self.source.to.to_str().unwrap().to_string();
+        let compiled_path = self.source.path.as_path().join(target_project.as_str());
+
+        if compiled_path.as_path().exists() {
+            fs::delete_dir(compiled_path.as_path())?;
+        }
         // [check compiler target] ---------------------------------------------------------------------------------------
         // check the super project is a workspace project or not
-        let target_project = self.source.to.to_str().unwrap().to_string();
-
         let workspace_toml_path = self.source.path.join("Cargo.toml");
 
         if !workspace_toml_path.exists() {
@@ -242,13 +247,7 @@ impl CompilerImpl for Compiler {
         }
 
         // check the target project exists or not
-        if !self
-            .source
-            .path
-            .as_path()
-            .join(target_project.as_str())
-            .exists()
-        {
+        if !compiled_path.exists() {
             // use std::process::Command to create a new rust project
             let status = Command::new("cargo")
                 .args(["new", "--bin", target_project.as_str(), "--vcs", "none"])

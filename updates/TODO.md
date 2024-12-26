@@ -5,13 +5,14 @@
 - [ ] Packager for GenUI
 - [x] Compiler for GenUI (策略支持中50%)
   - [x] main.rs
-  - [x] lib.rs ✅
-  - [x] template compile ✅
-    - [x] mod.gen ✅
-    - [x] root.gen ✅
+  - [x] lib.rs 
+  - [x] template compile 
+    - [x] mod.gen 
+    - [x] root.gen 
 - [x] Logger for GenUI
-- [x] Fix Rustc toolchain install ✅
-- [x] Fix config get .env content error ✅
+- [x] Fix Rustc toolchain install 
+- [x] Fix config get .env content error 
+- [x] 重新编译需要删除原编译结果 ✅
 ------ v0.0.2
 - [ ] i18n
 - [ ] A better way for packaging settings (visualization)
