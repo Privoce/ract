@@ -108,7 +108,7 @@ impl CompilerLogger {
     pub fn error(&self) -> () {
         error!("{}", self.output.bright_red());
     }
-
+    #[allow(dead_code)]
     pub fn error_and_exit(&self) -> ! {
         error!("{}", self.output.bright_red());
         std::process::exit(1)

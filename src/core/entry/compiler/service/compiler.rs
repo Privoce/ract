@@ -172,7 +172,16 @@ impl Compiler {
 
 impl CompilerImpl for Compiler {
     fn execute_auxiliaries(&mut self, executor: gen_utils::compiler::Executor) -> () {
-        todo!()
+        self.target.execute_auxiliaries(executor)
+    }
+    fn send_plugins(&mut self) -> Result<(), Error> {
+        // send plugins to target compiler
+        let plugins = self.conf.plugins.as_ref();
+        self.target.recv_plugins(plugins)
+    }
+    fn recv_plugins(&mut self, plugins: Option<&std::collections::HashMap<String, PathBuf>>) -> Result<(), Error> {
+        // in super compiler, we don't need to receive plugins
+        Ok(())
     }
     /// ## check if the generate rust project exists, if not create one
     ///
@@ -259,7 +268,8 @@ impl CompilerImpl for Compiler {
                 panic!("failed to create target project");
             }
         }
-
+        // [send plugins] ------------------------------------------------------------------------------------------------
+        self.send_plugins()?;
         // [target init] -------------------------------------------------------------------------------------------------
         self.target.init()
     }

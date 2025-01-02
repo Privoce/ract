@@ -1,11 +1,11 @@
 mod compiler;
 
 pub use compiler::CompilerConf;
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use gen_utils::{
     common::{fs, ToToml},
-    error::Error,
+    error::{ConvertError, Error},
 };
 
 use toml_edit::{DocumentMut, Item, Table};
@@ -24,6 +24,8 @@ pub struct Conf {
     pub compiler: CompilerConf,
     /// underlayer for makepad (current support)
     pub underlayer: CompileUnderlayer,
+    /// genui plugins, each plugin has a token.toml file
+    pub plugins: Option<HashMap<String, PathBuf>>,
 }
 
 impl ToToml for Conf {
@@ -36,6 +38,19 @@ impl ToToml for Conf {
             let (k, v) = underlayer.into_iter().next().unwrap();
             table.insert(&k, v);
         }
+
+        let plugins = if let Some(plugins) = self.plugins.as_ref() {
+            let mut table = Table::new();
+            for (k, v) in plugins.iter() {
+                table.insert(k, toml_edit::value(&fs::path_to_str(v)));
+            }
+
+            Item::Table(table)
+        } else {
+            Item::None
+        };
+
+        table.insert("plugins", plugins);
 
         table.set_implicit(false);
         DocumentMut::from(table)
@@ -56,19 +71,9 @@ impl FromStr for Conf {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // convert to DocumentMut
-        let toml = s.parse::<DocumentMut>().map_err(|e| e.to_string())?;
-        // [compiler] ------------------------------------------------------------------------------------------------
-        let compiler = toml.get("compiler").map_or_else(
-            || Ok(CompilerConf::default()),
-            |table| CompilerConf::try_from(table),
-        )?;
-
-        let underlayer = CompileUnderlayer::try_from((toml, compiler.target))?;
-
-        Ok(Self {
-            compiler,
-            underlayer,
-        })
+        s.parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?
+            .try_into()
     }
 }
 
@@ -81,6 +86,7 @@ impl TryFrom<(PathBuf, Underlayer)> for Conf {
         Ok(Self {
             compiler,
             underlayer: value.try_into()?,
+            plugins: None,
         })
     }
 }
@@ -94,17 +100,56 @@ impl Display for Conf {
 impl TryFrom<DocumentMut> for Conf {
     type Error = Error;
 
-    fn try_from(value: DocumentMut) -> Result<Self, Self::Error> {
-        let compiler_section = value.get("compiler").map_or_else(
+    fn try_from(toml: DocumentMut) -> Result<Self, Self::Error> {
+        // [compiler] ------------------------------------------------------------------------------------------------
+        let compiler = toml.get("compiler").map_or_else(
             || Ok(CompilerConf::default()),
             |table| CompilerConf::try_from(table),
         )?;
+        // [plugins] -------------------------------------------------------------------------------------------------
+        let plugins = if let Some(item) = toml.get("plugins") {
+            let plugins = item.as_table().map_or_else(
+                || {
+                    Err(Error::from(ConvertError::FromTo {
+                        from: "toml::Item".to_string(),
+                        to: "toml::Table, gen_ui.toml [plugins]".to_string(),
+                    }))
+                },
+                |table| {
+                    let mut map = HashMap::new();
+                    for (k, v) in table.iter() {
+                        let path = v.as_str().map_or_else(
+                            || {
+                                Err(Error::from(ConvertError::FromTo {
+                                    from: "toml::Item".to_string(),
+                                    to: "toml::String, gen_ui.toml [plugins]".to_string(),
+                                }))
+                            },
+                            |s| Ok(PathBuf::from(s)),
+                        )?;
 
-        let underlayer_section = CompileUnderlayer::try_from((value, compiler_section.target))?;
+                        map.insert(k.to_string(), path);
+                    }
+
+                    Ok(map)
+                },
+            )?;
+
+            if plugins.is_empty() {
+                None
+            } else {
+                Some(plugins)
+            }
+        } else {
+            None
+        };
+        // [underlayer] -----------------------------------------------------------------------------------------------
+        let underlayer = CompileUnderlayer::try_from((toml, compiler.target))?;
 
         Ok(Self {
-            compiler: compiler_section,
-            underlayer: underlayer_section,
+            compiler,
+            underlayer,
+            plugins,
         })
     }
 }
