@@ -12,7 +12,7 @@ use toml_edit::{Array, Formatted, Value};
 /// excludes: ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache"]
 /// ```
 /// ## Default Excludes
-/// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache", "gen_ui.toml"]
+/// ["Cargo.toml", "Cargo.lock", "src/main.rs", "target", ".gen_ui_cache", "gen_ui.toml", ".plugins"]
 #[derive(Debug, Clone)]
 pub struct Excludes(pub Vec<PathBuf>);
 
@@ -24,7 +24,7 @@ impl Excludes {
         self.0.iter().any(|p| {
             let p = prefix.as_ref().join(p);
             // || path.as_ref().starts_with(&p)
-            p == path.as_ref()
+            p == path.as_ref() || path.as_ref().starts_with(&p)
         })
     }
 }
@@ -44,6 +44,7 @@ impl Default for Excludes {
             PathBuf::from("target"),
             PathBuf::from(".gen_ui_cache"),
             PathBuf::from("gen_ui.toml"),
+            PathBuf::from(".plugins"),
         ])
     }
 }

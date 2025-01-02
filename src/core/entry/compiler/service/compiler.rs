@@ -49,7 +49,7 @@ impl Compiler {
         // [source] --------------------------------------------------------------------------------------
         let source = member.to_source(path.as_ref());
         // [conf] ----------------------------------------------------------------------------------------
-        let conf: GenUIConf = GenUIConf::read(source_path.join("gen_ui.toml"))?.try_into()?;
+        let conf: GenUIConf = GenUIConf::new(source_path.as_path())?;
         // [target] --------------------------------------------------------------------------------------
         let target = conf
             .compiler
@@ -179,7 +179,10 @@ impl CompilerImpl for Compiler {
         let plugins = self.conf.plugins.as_ref();
         self.target.recv_plugins(plugins)
     }
-    fn recv_plugins(&mut self, plugins: Option<&std::collections::HashMap<String, PathBuf>>) -> Result<(), Error> {
+    fn recv_plugins(
+        &mut self,
+        _plugins: Option<&std::collections::HashMap<String, PathBuf>>,
+    ) -> Result<(), Error> {
         // in super compiler, we don't need to receive plugins
         Ok(())
     }

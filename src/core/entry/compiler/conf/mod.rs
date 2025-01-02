@@ -28,6 +28,17 @@ pub struct Conf {
     pub plugins: Option<HashMap<String, PathBuf>>,
 }
 
+impl Conf {
+    pub fn new<P>(path: P) -> Result<Self, Error>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        let toml_path = path.as_ref().join("gen_ui.toml");
+
+        fs::read(toml_path).and_then(|content| (content, path.as_ref().to_path_buf()).try_into())
+    }
+}
+
 impl ToToml for Conf {
     fn to_toml(&self) -> DocumentMut {
         let mut table = Table::new();
@@ -47,7 +58,7 @@ impl ToToml for Conf {
 
             Item::Table(table)
         } else {
-            Item::None
+            Item::Table(Table::new())
         };
 
         table.insert("plugins", plugins);
@@ -57,25 +68,14 @@ impl ToToml for Conf {
     }
 }
 
-// get content and from toml path
-impl TryFrom<&PathBuf> for Conf {
-    type Error = Error;
+// // get content and from toml path
+// impl TryFrom<&PathBuf> for Conf {
+//     type Error = Error;
 
-    fn try_from(value: &PathBuf) -> Result<Self, Self::Error> {
-        fs::read(value)?.parse()
-    }
-}
-
-impl FromStr for Conf {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // convert to DocumentMut
-        s.parse::<DocumentMut>()
-            .map_err(|e| e.to_string())?
-            .try_into()
-    }
-}
+//     fn try_from(value: &PathBuf) -> Result<Self, Self::Error> {
+//         fs::read(value)?.parse()
+//     }
+// }
 
 impl TryFrom<(PathBuf, Underlayer)> for Conf {
     type Error = Error;
@@ -97,10 +97,13 @@ impl Display for Conf {
     }
 }
 
-impl TryFrom<DocumentMut> for Conf {
+impl TryFrom<(String, PathBuf)> for Conf {
     type Error = Error;
 
-    fn try_from(toml: DocumentMut) -> Result<Self, Self::Error> {
+    fn try_from(value: (String, PathBuf)) -> Result<Self, Self::Error> {
+        let (content, path) = value;
+        let toml = content.parse::<DocumentMut>().map_err(|e| e.to_string())?;
+
         // [compiler] ------------------------------------------------------------------------------------------------
         let compiler = toml.get("compiler").map_or_else(
             || Ok(CompilerConf::default()),
@@ -125,7 +128,7 @@ impl TryFrom<DocumentMut> for Conf {
                                     to: "toml::String, gen_ui.toml [plugins]".to_string(),
                                 }))
                             },
-                            |s| Ok(PathBuf::from(s)),
+                            |s| Ok(fs::relative_to_absolute(path.as_path(), s)),
                         )?;
 
                         map.insert(k.to_string(), path);
@@ -151,42 +154,5 @@ impl TryFrom<DocumentMut> for Conf {
             underlayer,
             plugins,
         })
-    }
-}
-
-#[cfg(test)]
-mod test_conf {
-    use super::*;
-
-    #[test]
-    fn test_compiler_conf() {
-        let toml = r#"
-            [compiler]
-            target = "makepad"
-            logo = true
-            log_level = "info"
-            [makepad]
-            root = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
-        "#;
-        let toml2 = r#"
-            [compiler]
-            target = "makepad"
-            logo = false
-            log_level = "error"
-            excludes = ["Cargo.toml"]
-
-            [makepad]
-            root = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
-            entry = "hello"
-            [makepad.dependencies]
-            makepad_widgets = "E:/Rust/try/makepad/Gen-UI/examples/gen_makepad_simple/ui/views/root.gen"
-            [makepad.wasm]
-            fresh = true
-        "#;
-        let conf = toml.parse::<Conf>().unwrap();
-        let conf2 = toml2.parse::<Conf>().unwrap();
-
-        println!("{}", conf);
-        println!("{}", conf2);
     }
 }
