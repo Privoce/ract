@@ -1,9 +1,11 @@
-// create a new project for GenUI
-mod create;
-// help you to check the tool chain
+/// add a new plugin to the project
+pub mod add;
+/// help you to check the tool chain
 pub mod check;
 /// help you to config the cli and tool chain
 pub mod config;
+/// create a new project for GenUI
+mod create;
 /// help you to init the cli
 pub mod init;
 /// install the tool chain
@@ -14,7 +16,6 @@ pub mod package;
 pub mod run;
 /// run wasm project
 pub mod wasm;
-
 use clap::Subcommand;
 use create::CreateArgs;
 use wasm::WasmArgs;
@@ -39,4 +40,6 @@ pub enum Commands {
     Wasm(WasmArgs),
     /// Package a project using `cargo-packager`. (Currently only supports Makepad projects)
     Pkg,
+    /// Add a new plugin to the project.
+    Add { name: String },
 }

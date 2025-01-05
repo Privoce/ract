@@ -8,6 +8,7 @@ mod level;
 mod run;
 mod wasm;
 mod package;
+mod add;
 pub mod compiler;
 
 pub use run::{RunLogs, StudioLogs, ProjectLogs};
@@ -20,6 +21,7 @@ pub use terminal::TerminalLogger;
 pub use level::LogLevel;
 pub use wasm::WasmLogs;
 pub use package::PackageLogs;
+pub use add::AddLogs;
 
 use std::fmt::Display;
 

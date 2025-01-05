@@ -1,7 +1,7 @@
 mod compiler;
 
 pub use compiler::CompilerConf;
-use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use gen_utils::{
     common::{fs, ToToml},
@@ -67,15 +67,6 @@ impl ToToml for Conf {
         DocumentMut::from(table)
     }
 }
-
-// // get content and from toml path
-// impl TryFrom<&PathBuf> for Conf {
-//     type Error = Error;
-
-//     fn try_from(value: &PathBuf) -> Result<Self, Self::Error> {
-//         fs::read(value)?.parse()
-//     }
-// }
 
 impl TryFrom<(PathBuf, Underlayer)> for Conf {
     type Error = Error;

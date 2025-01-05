@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use super::command::{check, config, init, install, Commands, run, package};
+use super::command::{add, check, config, init, install, package, run, Commands};
 
 #[derive(Parser)]
 #[command(
@@ -31,6 +31,7 @@ impl Cli {
                 Commands::Studio => run::makepad::studio::run(),
                 Commands::Wasm(wasm_args) => wasm_args.run(),
                 Commands::Pkg => package::run(),
+                Commands::Add{name} => add::run(name),
             }
         }
     }
