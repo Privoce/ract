@@ -69,47 +69,67 @@ impl Compiler {
     where
         P: AsRef<Path>,
     {
+        fn modify<P>(compiler: &mut Compiler, path: P) -> Result<bool, Error>
+        where
+            P: AsRef<Path>,
+        {
+            compiler
+                .cache
+                .exists_or_insert(path.as_ref())
+                .unwrap()
+                .modify_then(false, || {
+                    compiler
+                        .target
+                        .compile(path.as_ref().to_path_buf())
+                        .map(|_| true)
+                })
+        }
+
         match (path.as_ref().is_file(), path.as_ref().is_gen_file()) {
             (false, true) | (false, false) => {
                 // if is dir, do nothing , use lazy compile(only dir has file, file will be compiled, dir generate after file compiled)
                 Ok(false)
             }
-            (true, true) => {
-                self.cache
-                    .exists_or_insert(path.as_ref())
-                    .unwrap()
-                    .modify_then(false, || {
-                        // let model =
-                        //     Model::new(&path.as_ref().to_path_buf(), &target_path, false).unwrap();
-                        // let source = model.special.clone();
-                        // let _ = self.insert(Box::new(model));
-                        // let _ = self.get(&source).unwrap().compile();
-                        self.target
-                            .compile(path.as_ref().to_path_buf())
-                            .map(|_| true)
-                    })
-            }
+            (true, true) => modify(self, path.as_ref()),
             (true, false) => {
-                // not gen file, directly copy to the compiled project
-                let compiled_path = path.as_ref().to_compiled(
-                    self.source.path.as_path(),
-                    self.source.from.as_path(),
-                    self.source.to.as_path(),
-                    false,
-                )?;
+                if path.as_ref().file_name().unwrap() == "main.rs" {
+                    modify(self, path.as_ref())
+                } else {
+                    // not gen file, directly copy to the compiled project
+                    let compiled_path = path.as_ref().to_compiled(
+                        self.source.path.as_path(),
+                        self.source.from.as_path(),
+                        self.source.to.as_path(),
+                        false,
+                    )?;
 
-                self.cache
-                    .exists_or_insert(path.as_ref())
-                    .unwrap()
-                    .modify_then(false, || {
-                        copy_file(path.as_ref(), compiled_path).map(|_| false)
-                    })
+                    self.cache
+                        .exists_or_insert(path.as_ref())
+                        .unwrap()
+                        .modify_then(false, || {
+                            copy_file(path.as_ref(), compiled_path).map(|_| false)
+                        })
+                }
             }
         }
     }
 
     /// compile all gen / other type file before run compiler
     fn compile_all(&mut self) -> Result<(), Error> {
+        fn modify<P>(compiler: &mut Compiler, path: P, mut compiled: bool) -> Result<(), Error>
+        where
+            P: AsRef<Path>,
+        {
+            compiler
+                .cache
+                .exists_or_insert(path.as_ref())
+                .unwrap()
+                .then(|_| {
+                    compiled = true;
+                    compiler.target.compile(path.as_ref().to_path_buf())
+                })
+        }
+
         let mut compiled = false;
         let source_path = self.source.from_path();
 
@@ -133,31 +153,28 @@ impl Compiler {
                     continue;
                 }
                 (true, true) => {
-                    let _ = self
-                        .cache
-                        .exists_or_insert(path.as_path())
-                        .unwrap()
-                        .then(|_| {
-                            compiled = true;
-                            self.target.compile(path)
-                        });
+                    let _ = modify(self, path.as_path(), compiled)?;
                 }
                 (true, false) => {
-                    let compiled_path = path.as_path().to_compiled(
-                        self.source.path.as_path(),
-                        self.source.from.as_path(),
-                        self.source.to.as_path(),
-                        false,
-                    )?;
+                    if path.file_name().unwrap() == "main.rs" {
+                        let _ = modify(self, path.as_path(), compiled)?;
+                    } else {
+                        let compiled_path = path.as_path().to_compiled(
+                            self.source.path.as_path(),
+                            self.source.from.as_path(),
+                            self.source.to.as_path(),
+                            false,
+                        )?;
 
-                    let _ = self
-                        .cache
-                        .exists_or_insert(path.as_path())
-                        .unwrap()
-                        .modify_then(false, || {
-                            compiled = true;
-                            copy_file(path.as_path(), compiled_path).map(|_| true)
-                        });
+                        let _ = self
+                            .cache
+                            .exists_or_insert(path.as_path())
+                            .unwrap()
+                            .modify_then(false, || {
+                                compiled = true;
+                                copy_file(path.as_path(), compiled_path).map(|_| true)
+                            });
+                    }
                 }
             }
         }

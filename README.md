@@ -1,7 +1,9 @@
-# Ract
+<div align="center">
+  <h1>Ract</h1>
 
-<img src="https://img.shields.io/badge/Ract-0.0.1-orange?style=flat-square&logo=rust&logoColor=%23fff&labelColor=%23DEA584&color=%23DEA584"> 
-<img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square&logoColor=%23fff&labelColor=%2323B898&color=%2323B898">
+  <img src="https://img.shields.io/badge/Ract-0.0.1-orange?style=flat-square&logo=rust&logoColor=%23fff&labelColor=%23DEA584&color=%23DEA584"> 
+  <img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square&logoColor=%23fff&labelColor=%2323B898&color=%2323B898">
+</div>
 
 **Ract** is a conversational CLI tool written in Rust, designed to simplify the development process by providing an all-in-one solution for:  
 
