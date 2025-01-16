@@ -1,4 +1,4 @@
-use std::{env::current_dir, process::exit};
+use std::{env::current_dir, path::PathBuf, process::exit};
 
 use gen_utils::{
     common::{fs, git_download_from_github, ToToml},
@@ -6,21 +6,54 @@ use gen_utils::{
 };
 
 use crate::core::{
-    entry::RactToml,
+    entry::{GenUIConf, RactToml},
     log::{AddLogs, TerminalLogger},
 };
 
 pub fn run(name: &str) {
-    match download_plugins_from_github(name) {
-        Ok(_) => {
-            AddLogs::DownloadSuccess(name.to_string())
-                .terminal()
-                .success();
-        }
+    match download_and_update(name) {
+        Ok(_) => {}
         Err(e) => {
             AddLogs::DownloadFailed(e.to_string()).terminal().error();
             exit(2);
         }
+    }
+}
+
+fn download_and_update(name: &str) -> Result<(), Error> {
+    let _ = download_plugins_from_github(name)?;
+    AddLogs::DownloadSuccess(name.to_string())
+        .terminal()
+        .success();
+    // write use in gen_ui.toml
+    return update_plugin_in_toml(name);
+}
+
+/// ## update plugin in gen_ui.toml
+/// if add gen_makepad_http, then write it in gen_ui.toml
+/// ```toml
+/// [plugins]
+/// gen_makepad_http = ".plugins/gen_makepad_http"
+/// ```
+pub fn update_plugin_in_toml(plugin: &str) -> Result<(), Error> {
+    let path = current_dir().unwrap();
+    let ract_toml: RactToml = (&RactToml::read(path.join(".ract"))?).try_into()?;
+    if let Some(compiles) = ract_toml.compiles() {
+        let member = compiles[0];
+        let source_path = path.join(member.source.as_path());
+        // get gen_ui.toml
+        let mut toml = GenUIConf::new(source_path.as_path())?;
+        // write in gen_ui.toml
+        toml.insert_plugin(
+            plugin.to_string(),
+            PathBuf::from(format!(".plugins/{}", plugin)),
+        );
+        // write back
+        return toml.write(source_path.join("gen_ui.toml"));
+    } else {
+        return Err(Error::from(
+            AddLogs::WriteInTomlFailed(plugin.to_string()).to_string(),
+        ));
     }
 }
 
@@ -52,20 +85,6 @@ pub fn download_plugins_from_github(plugin: &str) -> Result<(), Error> {
                     |line| TerminalLogger::new(&line).info(),
                     |line| TerminalLogger::new(&line).warning(),
                 );
-
-                // let download_url = format!("tokens/{}/*", plugin);
-
-                // download_from_github(
-                //     download_url,
-                //     &download_path,
-                //     |line| TerminalLogger::new(&line).info(),
-                //     |line| TerminalLogger::new(&line).warning(),
-                // )?;
-                // // 将下载好的包转移到.plugins目录下并删除.tmp目录
-                // let from_path = download_path.join(".tmp").join("tokens");
-                // fs::move_to(from_path, download_path.as_path())?;
-                // fs::delete_dir(&download_path.join(".tmp"))?;
-                // return Ok(());
             }
         }
         crate::core::entry::FrameworkType::Makepad => {

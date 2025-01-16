@@ -7,6 +7,8 @@ pub enum AddLogs {
     DownloadFailed(String),
     DownloadSuccess(String),
     Downloading(String),
+    WriteInTomlFailed(String),
+    Complete(String),
 }
 
 impl Display for AddLogs {
@@ -17,6 +19,10 @@ impl Display for AddLogs {
             AddLogs::Downloading(name) => {
                 write!(f, "🔸 Downloading plugin: {} . Please wait...", name)
             }
+            AddLogs::WriteInTomlFailed(name) => {
+                write!(f, "❌ Write plugin: {} in gen_ui.toml failed", name)
+            }
+            AddLogs::Complete(name) => write!(f, "🎉 Add plugin: {} success!", name),
         }
     }
 }

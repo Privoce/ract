@@ -37,6 +37,13 @@ impl Conf {
 
         fs::read(toml_path).and_then(|content| (content, path.as_ref().to_path_buf()).try_into())
     }
+    pub fn insert_plugin(&mut self, name: String, path: PathBuf) {
+        if self.plugins.is_none() {
+            self.plugins = Some(HashMap::new());
+        }
+
+        self.plugins.as_mut().unwrap().insert(name, path);
+    }
 }
 
 impl ToToml for Conf {
