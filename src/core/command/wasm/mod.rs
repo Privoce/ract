@@ -1,13 +1,16 @@
 use std::{env::current_dir, path::Path, process::exit};
 
 use gen_utils::{
-    common::fs,
+    common::{fs, ToToml},
     error::{Error, FsError},
 };
 use inquire::Text;
 use toml_edit::DocumentMut;
 
-use crate::core::log::{ProjectLogs, TerminalLogger, WasmLogs};
+use crate::core::{
+    entry::RactToml,
+    log::{ProjectLogs, TerminalLogger, WasmLogs},
+};
 use clap::Args;
 pub mod makepad;
 
@@ -70,17 +73,35 @@ fn run_wasm<P>(path: P, ract_path: P, port: u16) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    let content = fs::read(ract_path.as_ref())?;
-    // get project name from Cargo.toml
-    let cargo_toml = fs::read(path.as_ref().join("Cargo.toml"))?
-        .parse::<DocumentMut>()
-        .map_err(|e| e.to_string())?;
-    let project = cargo_toml["package"]["name"].as_str().unwrap().to_string();
+    fn get_project<P>(path: P) -> Result<String, Error>
+    where
+        P: AsRef<Path>,
+    {
+        // get project name from Cargo.toml
+        let cargo_toml = fs::read(path.as_ref().join("Cargo.toml"))?
+            .parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?;
+        Ok(cargo_toml["package"]["name"].as_str().unwrap().to_string())
+    }
 
-    match content.as_str() {
-        "makepad" => makepad::run(path.as_ref(), &project, port),
-        _ => Err(ProjectLogs::Error("Invalid project kind".to_string())
-            .to_string()
-            .into()),
+    let ract_toml: RactToml = (&RactToml::read(ract_path.as_ref())?).try_into()?;
+
+    match ract_toml.target {
+        crate::core::entry::FrameworkType::GenUI => {
+            if let Some(compiles) = ract_toml.compiles() {
+                let member = compiles[0];
+                let compiled_path = path.as_ref().join(member.target.as_path());
+                let project = get_project(compiled_path.as_path())?;
+                makepad::run(path.as_ref(), &project, port)
+            } else {
+                Err(Error::from(
+                    ProjectLogs::Error("can not find compile target(s)!".to_string()).to_string(),
+                ))
+            }
+        }
+        crate::core::entry::FrameworkType::Makepad => {
+            let project = get_project(path.as_ref())?;
+            makepad::run(path.as_ref(), &project, port)
+        },
     }
 }

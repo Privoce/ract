@@ -12,7 +12,9 @@ use crate::core::{
 
 pub fn run(name: &str) {
     match download_and_update(name) {
-        Ok(_) => {}
+        Ok(_) => {
+            AddLogs::Complete(name.to_string()).terminal().success();
+        }
         Err(e) => {
             AddLogs::DownloadFailed(e.to_string()).terminal().error();
             exit(2);
