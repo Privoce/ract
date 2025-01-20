@@ -333,12 +333,12 @@ where
     InstallLogs::Install("makepad".to_string())
         .terminal()
         .info();
-    // use git clone makepad: git clone --branch rik --depth 1 https://github.com/syf20020816/makepad.git makepad
+    // use git clone makepad: git clone --branch gen_ui --depth 1 https://github.com/syf20020816/makepad.git makepad
     Command::new("git")
         .args(&[
             "clone",
             "--branch",
-            "rik",
+            "gen_ui",
             "--depth",
             "1",
             "https://github.com/syf20020816/makepad.git",
