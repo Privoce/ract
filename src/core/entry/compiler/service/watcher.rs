@@ -106,7 +106,6 @@ where
     config.with_poll_interval(Duration::from_secs(10));
     // [watcher] -------------------------------------------------------------------------------------------
     let mut watcher = RecommendedWatcher::new(tx, config)?;
-    // let mut fs_state = get_current_state(path)?;
 
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
     CompilerLogs::WatcherInit(path.as_ref().to_path_buf())
@@ -122,7 +121,6 @@ where
             Ok(event) => {
                 let compiled_path = event.paths[0].to_path_buf();
                 if !excludes.contains(path.as_ref(), compiled_path.as_path()) {
-                    dbg!(event.kind);
                     tracker.set_path(compiled_path.as_path());
                     tracker.insert(event.kind);
                     if let Some(state) = tracker.state() {

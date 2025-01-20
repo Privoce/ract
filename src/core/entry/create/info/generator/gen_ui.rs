@@ -6,7 +6,10 @@ use gen_utils::{
 };
 
 use crate::core::{
-    constant::{ROOT_GEN, VIEW_MOD_GEN}, entry::{ProjectInfo, RactToml, WorkspaceInfo}, log::{CreateLogs, TerminalLogger}, util::create_workspace
+    constant::{COMPONENT_MOD_GEN, EASY_GEN, GENUI_README, HELLO_GEN, HOME_GEN, ROOT_GEN, VIEW_MOD_GEN},
+    entry::{ProjectInfo, RactToml, WorkspaceInfo},
+    log::{CreateLogs, TerminalLogger},
+    util::create_workspace,
 };
 
 pub fn create<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<PathBuf, Error>
@@ -25,6 +28,8 @@ where
     let cargo_toml = info.workspace_members_toml().to_string();
     // [create a new wrokspace] ----------------------------------------------------
     let _ = create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
+    // [create README.md] ----------------------------------------------------------
+    let _ = fs::write(path.as_path().join("README.md"), GENUI_README)?;
     // [create projects] -----------------------------------------------------------
     for project in &info.members {
         let _ = create_project(path.as_path(), project)?;
@@ -50,14 +55,24 @@ where
             |out| {
                 if out.status.success() {
                     CreateLogs::Cargo.terminal().success();
-                    // [create dir: resources, views, components] ------------------------------------------
                     let ui_dir_path = path.as_ref().join(&info.name);
+                    // [clear main.rs] ---------------------------------------------------------------------
+                    let _ = fs::write(ui_dir_path.join("src").join("main.rs"), "")?;
+                    // [create dir: resources, views, components] ------------------------------------------
                     for path in ["resources", "views", "components"].iter() {
                         let _ = fs::create_dir(ui_dir_path.join(path))?;
                     }
                     // [create basic gen files: views/mod.gen, views/root.gen] -----------------------------
-                    let _ = fs::write(ui_dir_path.join("views").join("mod.gen"), VIEW_MOD_GEN)?;
-                    let _ = fs::write(ui_dir_path.join("views").join("root.gen"), ROOT_GEN)?;
+                    for (dir, file, content) in vec![
+                        ("views", "mod.gen", VIEW_MOD_GEN),
+                        ("views", "root.gen", ROOT_GEN),
+                        ("views", "home.gen", HOME_GEN),
+                        ("components", "mod.gen", COMPONENT_MOD_GEN),
+                        ("components", "easy.gen", EASY_GEN),
+                        ("components", "hello.gen", HELLO_GEN),
+                    ] {
+                        let _ = fs::write(ui_dir_path.join(dir).join(file), content)?;
+                    }
                     // [handle Cargo.toml] -----------------------------------------------------------------
                     let _ = info.write(ui_dir_path.join("Cargo.toml"))?;
                     // [create config files: gen_ui.toml, .gen_ui_cache] -----------------------------------
