@@ -5,6 +5,10 @@ use gen_utils::error::Error;
 pub fn install_rustc() -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     use std::process::Command;
+    use std::process::Stdio;
+    use gen_utils::common::stream_terminal;
+    use crate::core::log::TerminalLogger;
+
     let mut child = Command::new("curl")
         .args(&[
             "--proto",
@@ -44,10 +48,9 @@ pub fn install_rustc() -> Result<(), Error> {
 pub fn install_rustc() -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     use std::process::{Command, Stdio};
-
     use gen_utils::common::stream_terminal;
-
     use crate::core::log::TerminalLogger;
+    
     let mut child = Command::new("curl")
         .args(&[
             "--proto",

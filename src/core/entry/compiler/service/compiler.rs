@@ -354,7 +354,7 @@ impl CompilerImpl for Compiler {
             let res = match event {
                 notify::EventKind::Modify(kind) => match kind {
                     notify::event::ModifyKind::Name(rename_mode) => {
-                        if let RenameMode::From = *rename_mode {
+                        if let notify::event::RenameMode::From = *rename_mode {
                             self.remove(path.to_path_buf()).map(|_| true)
                         } else {
                             self.do_compile(path)
