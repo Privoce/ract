@@ -352,12 +352,13 @@ impl CompilerImpl for Compiler {
         #[cfg(not(target_os = "macos"))]
         let _ = init_watcher(source, &excludes, |path, event| {
             let res = match event {
-                notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
+                fs::FileState::Modified | fs::FileState::Created => {
                     self.do_compile(path)
                 }
-                notify::EventKind::Remove(_) => {
-                    eprintln!("remove file: {:?}", path);
-                    Ok(false)
+                fs::FileState::Deleted => {
+                    // eprintln!("remove file: {:?}", path);
+                    // Ok(false)
+                    self.remove(path.to_path_buf()).map(|_| true)
                 }
                 _ => Ok(false),
             };
@@ -370,7 +371,7 @@ impl CompilerImpl for Compiler {
             let res = match state {
                 fs::FileState::Modified | fs::FileState::Created => self.do_compile(path),
                 fs::FileState::Deleted => {
-                    eprintln!("remove file: {:?}", path);
+                    // eprintln!("remove file: {:?}", path);
                     self.remove(path.to_path_buf()).map(|_| true)
                 }
                 fs::FileState::Renamed => {
