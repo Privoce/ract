@@ -352,15 +352,26 @@ impl CompilerImpl for Compiler {
         #[cfg(not(target_os = "macos"))]
         let _ = init_watcher(source, &excludes, |path, event| {
             let res = match event {
-                notify::EventKind::Modify(_) | notify::EventKind::Create(_) => {
+                notify::EventKind::Modify(kind) => match kind {
+                    notify::event::ModifyKind::Name(rename_mode) => {
+                        if let RenameMode::From = *rename_mode {
+                            self.remove(path.to_path_buf()).map(|_| true)
+                        } else {
+                            self.do_compile(path)
+                        }
+                    }
+                    _ => self.do_compile(path),
+                },
+                notify::EventKind::Create(_) => {
                     self.do_compile(path)
                 }
                 notify::EventKind::Remove(_) => {
                     self.remove(path.to_path_buf()).map(|_| true)
                 }
-                _ => Ok(false),
+                _ => {
+                    Ok(false)
+                }
             };
-
             handle(self, path, res)
         });
 
