@@ -1,4 +1,3 @@
-use crate::core::log::InstallLogs;
 use gen_utils::error::Error;
 
 #[cfg(target_os = "linux")]
@@ -9,6 +8,7 @@ pub fn install_git() -> Result<(), Error> {
 #[cfg(target_os = "macos")]
 pub fn install_git() -> Result<(), Error> {
     // first check brew exists
+    use crate::core::log::InstallLogs;
     use crate::core::log::TerminalLogger;
     use std::process::Command;
     use which::which;

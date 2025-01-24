@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Release V0.1.1 
+
+### Fixes
+
+- Linux build
+- warning in macos
+
 ## Release V0.1.0 
 
 ### General
