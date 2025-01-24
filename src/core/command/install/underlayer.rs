@@ -4,14 +4,14 @@ use std::{
     str::FromStr,
 };
 
-use gen_utils::{common::stream_terminal, error::Error};
+use gen_utils::{common::{fs, stream_terminal}, error::Error};
 use inquire::{Confirm, MultiSelect};
 use which::which;
 
 use crate::core::{
     entry::Tools,
-    util::{gen_components_path, makepad_widgets_path, real_chain_env_toml},
     log::{InstallLogs, TerminalLogger},
+    util::{gen_components_path, makepad_widgets_path, real_chain_env_toml},
 };
 
 pub fn install_makepad(tools: &Tools) -> Result<(), Error> {
@@ -330,11 +330,13 @@ fn clone_makepad<P>(path: P) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
+    fs::delete_dir(path.as_ref().join("makepad"))?;
+
     InstallLogs::Install("makepad".to_string())
         .terminal()
         .info();
     // use git clone makepad: git clone --branch gen_ui --depth 1 https://github.com/syf20020816/makepad.git makepad
-    Command::new("git")
+    let mut child = Command::new("git")
         .args(&[
             "clone",
             "--branch",
@@ -345,20 +347,30 @@ where
             "makepad",
         ])
         .current_dir(path)
-        .output()
-        .map_or_else(
-            |e| Err(e.to_string().into()),
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Confirm("makepad".to_string())
-                        .terminal()
-                        .success();
-                    Ok(())
-                } else {
-                    Err("❌ makepad install failed".to_string().into())
-                }
-            },
-        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    stream_terminal(
+        &mut child,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                InstallLogs::Confirm("makepad".to_string())
+                    .terminal()
+                    .success();
+
+                Ok(())
+            } else {
+                Err("❌ makepad install failed".to_string().into())
+            }
+        },
+    )
 }
 
 fn clone_gen_ui_components<P>(path: P) -> Result<(), Error>
@@ -369,7 +381,7 @@ where
         .terminal()
         .info();
     // https://github.com/Privoce/GenUI-Builtin-Component.git gen_components
-    Command::new("git")
+    let mut child = Command::new("git")
         .args(&[
             "clone",
             "--branch",
@@ -380,18 +392,27 @@ where
             "gen_components",
         ])
         .current_dir(path)
-        .output()
-        .map_or_else(
-            |e| Err(e.to_string().into()),
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Confirm("gen_components".to_string())
-                        .terminal()
-                        .success();
-                    Ok(())
-                } else {
-                    Err("❌ gen_components install failed".to_string().into())
-                }
-            },
-        )
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    stream_terminal(
+        &mut child,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                InstallLogs::Confirm("gen_components".to_string())
+                    .terminal()
+                    .success();
+                Ok(())
+            } else {
+                Err("❌ gen_components install failed".to_string().into())
+            }
+        },
+    )
 }

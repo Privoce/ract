@@ -1,6 +1,5 @@
 use crate::core::log::InstallLogs;
 use gen_utils::error::Error;
-use std::process::Command;
 
 #[cfg(target_os = "linux")]
 pub fn install_git() -> Result<(), Error> {
@@ -10,9 +9,9 @@ pub fn install_git() -> Result<(), Error> {
 #[cfg(target_os = "macos")]
 pub fn install_git() -> Result<(), Error> {
     // first check brew exists
-    use which::which;
-
     use crate::core::log::TerminalLogger;
+    use std::process::Command;
+    use which::which;
 
     let brew = which("brew").is_ok();
     if !brew {
@@ -60,9 +59,9 @@ pub fn install_git() -> Result<(), Error> {
 #[cfg(target_os = "windows")]
 pub fn install_git() -> Result<(), Error> {
     // https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe
-    use std::process::Command;
-    use crate::core::env::exe_path;
     use crate::core::log::TerminalLogger;
+    use crate::core::util::exe_path;
+    use std::process::Command;
     let current_dir = exe_path().join("downloads");
     let res = Command::new("Invoke-WebRequest")
         .args(&[

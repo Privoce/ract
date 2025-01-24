@@ -86,7 +86,7 @@ pub fn install_rustc() -> Result<(), Error> {
 #[cfg(target_os = "windows")]
 pub fn install_rustc() -> Result<(), Error> {
     // Powershell: Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
-    use crate::core::env::exe_path;
+    use crate::core::util::exe_path;
     use crate::core::log::TerminalLogger;
     use std::process::Command;
     // create a downloads folder for the rustup-init.exe, after download, move to the exe_path
