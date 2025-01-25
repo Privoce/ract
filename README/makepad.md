@@ -1,6 +1,6 @@
 # Ract for Makepad
 
-> ![NOTE]
+> [!NOTE]
 > 
 > Whether it is Makepad or GenUI, the usage of `init`, `check`, `install`, `config`, `run`, `wasm` commands is the same
 >
