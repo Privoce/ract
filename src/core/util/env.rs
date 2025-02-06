@@ -21,10 +21,11 @@ pub fn env_path() -> PathBuf {
     exe_path().join(".env")
 }
 
-pub fn exe_path() -> PathBuf {
-    let mut path = current_exe().expect("get current exe path failed");
+pub fn exe_path() -> Result<PathBuf, Error> {
+    let mut path = current_exe()
+    .map_err(|e| Error::from(e.to_string()))?;
     path.pop();
-    path
+    Ok(path)
 }
 
 /// get real chain env path depend on `.env` file

@@ -14,8 +14,11 @@ pub mod install;
 pub mod package;
 /// run the current project
 pub mod run;
+/// update the cli
+pub mod update;
 /// run wasm project
 pub mod wasm;
+
 use clap::Subcommand;
 use create::CreateArgs;
 use wasm::WasmArgs;
@@ -42,4 +45,6 @@ pub enum Commands {
     Pkg,
     /// Add a new plugin to the project.
     Add { name: String },
+    /// Update the CLI to the latest version.
+    Update,
 }

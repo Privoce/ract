@@ -1,6 +1,14 @@
 # CHANGELOG
 
-## Release V0.1.1 
+## Release V0.1.3
+
+### Fixes
+
+### General
+
+---
+
+## Release V0.1.1(2)
 
 ### Fixes
 
@@ -32,6 +40,7 @@
 - fix `.env` set missing
 - Optimize Macos install Bag
 
+---
 
 ## Release V0.0.1 (2024-12-04)
 

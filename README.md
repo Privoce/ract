@@ -1,7 +1,7 @@
 <div align="center">
   <h1>Ract</h1>
 
-  <img src="https://img.shields.io/badge/Ract-0.1.1-orange?style=flat-square&logo=rust&logoColor=%23fff&labelColor=%23DEA584&color=%23DEA584"> 
+  <img src="https://img.shields.io/badge/Ract-0.1.3-orange?style=flat-square&logo=rust&logoColor=%23fff&labelColor=%23DEA584&color=%23DEA584"> 
   <img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square&logoColor=%23fff&labelColor=%2323B898&color=%2323B898">
 </div>
 
@@ -59,7 +59,7 @@ You can choose the following documents for usage
 
 - If you are a GenUI developer
   - [Ract for GenUI](./README/gen_ui.md)
-  - [GenUI Book (Tutorial for Ract)]()
+  - [GenUI Book (Tutorial for Ract)](https://privoce.github.io/GenUI.github.io/tools/ract/introduction)
 - [Ract for Makepad](./README/makepad.md): If you are a Makepad developer
 
 > [!TIP]
@@ -89,6 +89,12 @@ You can choose the following documents for usage
 - **Documentation**: Include a comprehensive book for learning Makepad and GenUI.  
 - **Remote Services**: Enable Ract to call some remote services.
 - **Auto Update**: Automatic updates to new versions.
+
+---
+
+## 🕒 CHANGELOG
+
+see [CHANGELOG](./CHANGELOG.md)
 
 ---
 
