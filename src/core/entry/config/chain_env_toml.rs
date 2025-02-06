@@ -30,6 +30,9 @@ impl ChainEnvToml {
     pub fn gen_components_path(&self) -> Option<&PathBuf> {
         self.dependencies.get("gen_components")
     }
+    pub fn default_chain() -> DefaultChain {
+        DefaultChain
+    }
 }
 
 impl ToToml for ChainEnvToml {
@@ -98,5 +101,16 @@ impl TryFrom<PathBuf> for ChainEnvToml {
 impl Display for ChainEnvToml {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.to_toml().to_string().as_str())
+    }
+}
+
+pub struct DefaultChain;
+
+impl DefaultChain {
+    pub fn makepad_widgets() -> String {
+        "makepad".to_string()
+    }
+    pub fn gen_components() -> String {
+        "gen_components".to_string()
     }
 }

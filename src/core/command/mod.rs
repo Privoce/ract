@@ -16,6 +16,8 @@ pub mod package;
 pub mod run;
 /// update the cli
 pub mod update;
+/// uninstall the cli
+pub mod uninstall;
 /// run wasm project
 pub mod wasm;
 
@@ -47,4 +49,6 @@ pub enum Commands {
     Add { name: String },
     /// Update the CLI to the latest version.
     Update,
+    /// Uninstall the CLI.
+    Uninstall
 }

@@ -9,8 +9,8 @@ use toml_edit::DocumentMut;
 use which::which;
 
 use crate::core::{
-    entry::{Checks, Underlayer, Tools, UnderlayerTools},
-    util::real_chain_env_path,
+    entry::{ChainEnvToml, Checks, Tools, Underlayer, UnderlayerTools},
+   
     log::{CheckLogs, TerminalLogger},
 };
 
@@ -153,7 +153,8 @@ fn check_makepad() -> Result<(Option<String>, Option<String>), Error> {
     };
 
     // get makepad widget path from chain/env.toml
-    let chain_env_path = real_chain_env_path()?;
+    // let chain_env_path = real_chain_env_path()?;
+    let chain_env_path = ChainEnvToml::path()?;
     fs::read(chain_env_path.as_path()).map_or_else(
         |e| Err(e.to_string().into()),
         |content| {

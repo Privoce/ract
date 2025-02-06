@@ -8,7 +8,7 @@ mod framwork;
 mod package;
 
 pub use check::Checks;
-pub use config::Configs;
+pub use config::*;
 pub use create::*;
 pub use tool::*;
 pub use compiler::*;

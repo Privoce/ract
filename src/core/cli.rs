@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use super::command::{add, check, config, init, install, package, run, update, Commands};
+use super::command::{add, check, config, init, install, package, run, uninstall, update, Commands};
 
 #[derive(Parser)]
 #[command(
@@ -33,6 +33,7 @@ impl Cli {
                 Commands::Pkg => package::run(),
                 Commands::Add{name} => add::run(name),
                 Commands::Update => update::run(),
+                Commands::Uninstall => uninstall::run(),
             }
         }
     }

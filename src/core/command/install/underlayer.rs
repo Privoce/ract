@@ -11,7 +11,7 @@ use which::which;
 use crate::core::{
     entry::Tools,
     log::{InstallLogs, TerminalLogger},
-    util::{gen_components_path, makepad_widgets_path, real_chain_env_toml},
+    
 };
 
 pub fn install_makepad(tools: &Tools) -> Result<(), Error> {
