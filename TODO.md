@@ -1,5 +1,4 @@
 - [ ] Fix Windows Package Lack of Resources [issue](https://github.com/Privoce/ract/issues/1)
-- [ ] Packager for GenUI
 ---
 - [ ] i18n
 - [ ] A better way for packaging settings (visualization)

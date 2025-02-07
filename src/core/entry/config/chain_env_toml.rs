@@ -7,6 +7,8 @@ use gen_utils::{
 };
 use toml_edit::{value, DocumentMut, Item, Table};
 
+use crate::core::util::exe_path;
+
 use super::env::Env;
 
 /// # env.toml(chain_env_toml)
@@ -32,6 +34,12 @@ impl ChainEnvToml {
     }
     pub fn default_chain() -> DefaultChain {
         DefaultChain
+    }
+    pub fn write(&self) -> Result<(), Error> {
+        fs::write(self.path.as_path(), self.to_string().as_str())
+    }
+    pub fn options() -> Vec<&'static str> {
+        vec!["makepad-widgets", "gen_components"]
     }
 }
 
@@ -104,13 +112,47 @@ impl Display for ChainEnvToml {
     }
 }
 
+impl Default for ChainEnvToml {
+    fn default() -> Self {
+        let chain = DefaultChain;
+
+        Self {
+            path: chain.path(),
+            version: chain.version(),
+            dependencies: Default::default(),
+        }
+    }
+}
+
 pub struct DefaultChain;
 
 impl DefaultChain {
-    pub fn makepad_widgets() -> String {
-        "makepad".to_string()
+    pub fn makepad_widgets(&self) -> PathBuf {
+        exe_path()
+            .expect("exe path not found")
+            .join("chain")
+            .join("makepad")
     }
-    pub fn gen_components() -> String {
-        "gen_components".to_string()
+    pub fn gen_components(&self) -> PathBuf {
+        exe_path()
+            .expect("exe path not found")
+            .join("chain")
+            .join("gen_components")
+    }
+    pub fn version(&self) -> Version {
+        Version::new(0, 1, 3)
+    }
+    pub fn dependencies(&self) -> HashMap<String, PathBuf> {
+        let chain = DefaultChain;
+        let mut dependencies = HashMap::new();
+        dependencies.insert("makepad-widgets".to_string(), chain.makepad_widgets());
+        dependencies.insert("gen_components".to_string(), chain.gen_components());
+        dependencies
+    }
+    pub fn path(&self) -> PathBuf {
+        exe_path()
+            .expect("exe path not found")
+            .join("chain")
+            .join("env.toml")
     }
 }

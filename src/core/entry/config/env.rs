@@ -1,14 +1,21 @@
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{fmt::Display, path::{Path, PathBuf}, str::FromStr};
 
 use gen_utils::{common::fs, error::Error};
 
 use crate::core::util::exe_path;
+
+use super::ChainEnvToml;
 
 /// Ract的环境配置指向文件(.env)
 /// 这个文件指向了Ract的环境配置文件(env.toml)当然也可以自定义名字
 pub struct Env(pub PathBuf);
 
 impl Env {
+    /// 检查.env文件是否存在或内容是否正确
+    pub fn check() -> bool {
+        Self::read().is_ok()
+    }
+
     /// 读取.env文件
     pub fn read() -> Result<Self, Error> {
         let path = Self::path()?;
@@ -29,6 +36,10 @@ impl Env {
         let exe_path = exe_path()?;
         Ok(exe_path.join(".env"))
     }
+
+    pub fn set<P>(&mut self, path: P) where P: AsRef<Path>{
+        self.0 = path.as_ref().to_path_buf();
+    }
 }
 
 impl TryFrom<&str> for Env {
@@ -44,5 +55,11 @@ impl TryFrom<&str> for Env {
 impl Display for Env {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&fs::path_to_str(self.0.as_path()))
+    }
+}
+
+impl Default for Env {
+    fn default() -> Self {
+        Env(ChainEnvToml::default_chain().path())
     }
 }

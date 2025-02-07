@@ -6,7 +6,8 @@ use super::TerminalLogger;
 pub enum InitLogs {
     Init,
     Confirm,
-    Chain
+    Chain,
+    Env
 }
 
 impl Display for InitLogs {
@@ -15,6 +16,7 @@ impl Display for InitLogs {
             InitLogs::Init => f.write_str("🚀 Start to init ract..."),
             InitLogs::Confirm => f.write_str("🎉 Init ract successfully!"),
             InitLogs::Chain => f.write_str("✅ Chain init successfully!"),
+            InitLogs::Env => f.write_str("✅ Env init successfully!"),
         }
     }
 }
