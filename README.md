@@ -19,14 +19,22 @@ With **minimal arguments** and an **intuitive dialog-based interface**, Ract sup
 
 ---
 
-## 🛠️ Config
+## 🛠️ Config | Install
+
+### Cargo
+
+```shell
+cargo install ract
+```
+
+### Self Install
 
 > [!WARNING]
 > Your computer may prompt security questions, please select Allow
 
 You can configure ract as a global command in the following way：
 
-### Macos | Linux
+#### Macos | Linux
 
 ```shell
 # copy download ract to /usr/local/bin
@@ -47,7 +55,7 @@ source ~/.zshrc
 ract --version
 ```
 
-### Windows
+#### Windows
 
 put `path/to/ract` into System Env
 
@@ -81,6 +89,8 @@ You can choose the following documents for usage
 - **Project Packaging**: Streamlined packaging for distribution.  
 - **Watcher**: Monitor changes for automatic reload.  
 - **Logger**: Advanced logging system for debugging.  
+- **Uninstall**: Clear resources when use `ract uninstall`.
+- **Auto Update**: Automatic updates to new versions.
 
 ### Future Features  
 
@@ -88,7 +98,6 @@ You can choose the following documents for usage
 - **Cross-platform Packaging**: Simplify builds for multiple platforms.  
 - **Documentation**: Include a comprehensive book for learning Makepad and GenUI.  
 - **Remote Services**: Enable Ract to call some remote services.
-- **Auto Update**: Automatic updates to new versions.
 
 ---
 

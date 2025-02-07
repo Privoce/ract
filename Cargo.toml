@@ -37,6 +37,8 @@ gen_utils = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/utils", defaul
     "compiler",
 ] }
 makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
+reqwest = { version = "0.12.12", features = ["blocking", "json"] }
+serde_json = "1.0.138"
 
 # gen_utils = { version = "0.1.0", default-features = false, features = [
 #     "compiler",

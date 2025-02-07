@@ -3,10 +3,10 @@
 - [ ] i18n
 - [ ] A better way for packaging settings (visualization)
 - [ ] Cross Platforms Packaging
-- [ ] Book for Makepad|GenUI
-- [ ] Create Workspace (makepad, genui)
+- [x] Book for Makepad|GenUI
+- [x] Create Workspace (makepad, genui)
 - [ ] Package For Worksapce
-- [ ] powerful .ract file (toml)
+- [x] powerful .ract file (toml)
 - [ ] Multi Compiler threads
 - [ ] Cloud for ract
 - [ ] GUI for ract

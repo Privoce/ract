@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use super::command::{add, check, config, init, install, package, run, uninstall, update, Commands};
+use super::command::{add, check, config, init, install, package, run, uninstall, Commands};
 
 #[derive(Parser)]
 #[command(
@@ -32,7 +32,7 @@ impl Cli {
                 Commands::Wasm(wasm_args) => wasm_args.run(),
                 Commands::Pkg => package::run(),
                 Commands::Add{name} => add::run(name),
-                Commands::Update => update::run(),
+                Commands::Update(args) => args.run(),
                 Commands::Uninstall => uninstall::run(),
             }
         }

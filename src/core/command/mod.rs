@@ -23,6 +23,7 @@ pub mod wasm;
 
 use clap::Subcommand;
 use create::CreateArgs;
+use update::UpdateArgs;
 use wasm::WasmArgs;
 
 #[derive(Subcommand)]
@@ -48,7 +49,7 @@ pub enum Commands {
     /// Add a new plugin to the project.
     Add { name: String },
     /// Update the CLI to the latest version.
-    Update,
+    Update(UpdateArgs),
     /// Uninstall the CLI.
     Uninstall
 }
