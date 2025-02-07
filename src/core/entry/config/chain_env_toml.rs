@@ -41,6 +41,11 @@ impl ChainEnvToml {
     pub fn options() -> Vec<&'static str> {
         vec!["makepad-widgets", "gen_components"]
     }
+    pub fn chain_path(&self) -> PathBuf {
+        let mut path = self.path.to_path_buf();
+        path.pop();
+        path
+    }
 }
 
 impl ToToml for ChainEnvToml {
@@ -119,13 +124,14 @@ impl Default for ChainEnvToml {
         Self {
             path: chain.path(),
             version: chain.version(),
-            dependencies: Default::default(),
+            dependencies: chain.dependencies(),
         }
     }
 }
 
 pub struct DefaultChain;
 
+#[allow(unused)]
 impl DefaultChain {
     pub fn makepad_widgets(&self) -> PathBuf {
         exe_path()

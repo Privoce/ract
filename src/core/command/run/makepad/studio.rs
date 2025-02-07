@@ -9,7 +9,7 @@ use inquire::{Confirm, Text};
 
 use crate::core::{
     command::check::current_states,
-    util::real_chain_env_toml,
+    entry::ChainEnvToml,
     log::{InstallLogs, StudioLogs, TerminalLogger},
 };
 
@@ -34,25 +34,24 @@ fn conf_run() -> Result<(), Error> {
             .into());
     }
 
-    // let platform = Select::new("Which platform do you want to use?", vec!["gui", "web"])
-    //     .prompt()
-    //     .map_err(|e| e.to_string())?;
-
     let is_default = Confirm::new("Do you want to run default studio?")
         .with_default(true)
         .prompt()
         .map_err(|e| e.to_string())?;
 
     let path = if is_default {
-        // get path from env.toml
-        let env_toml = real_chain_env_toml()?;
-        let makepad_studio_path = PathBuf::from_str(
-            &env_toml["dependencies"]["makepad-widgets"]
-                .as_str()
-                .unwrap(),
-        )
-        .unwrap()
-        .join("studio");
+        let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+        let makepad_studio_path = chain_env_toml
+            .makepad_widgets_path()
+            .map_or_else(
+                || {
+                    Err(Error::from(
+                        "can not find [dependencies.makepad-widgets] in env.toml, maybe config broken, use `ract init` to fix it",
+                    ))
+                },
+                |path| Ok(path.join("studio")),
+            )?;
+
         if !makepad_studio_path.exists() {
             Err(Error::from("The path is not exist!"))
         } else {
@@ -71,12 +70,6 @@ fn conf_run() -> Result<(), Error> {
         }
     }?;
 
-    // run in current path or target path
-    // match platform {
-    //     "gui" => run_gui(path),
-    //     "web" => run_web(path),
-    //     _ => Err(Error::from("Invalid option!")),
-    // }
     run_gui(path)
 }
 
@@ -111,40 +104,3 @@ where
         },
     )
 }
-
-// fn run_web<P>(path: P) -> Result<(), Error> where P: AsRef<Path> {
-//     // let user input the port
-//     let port = Text::new("Port for the web studio")
-//         .with_placeholder("The port should in range: [1 ~ 65535], recommend: [8010 ~ 65535]")
-//         .with_default("8010")
-//         .prompt()
-//         .map_or_else(
-//             |e| Err(Error::from(e.to_string())),
-//             |port| {
-//                 // validate the port
-//                 port.parse::<u16>()
-//                     .map_err(|_| Error::from("Invalid port!"))
-//             },
-//         )?
-//         .to_string();
-
-//     // cargo makepad wasm --port={$port} run -p studio --release
-//     let mut child = Command::new("cargo")
-//         .args(&[
-//             "makepad",
-//             "wasm",
-//             "--port=",
-//             &port,
-//             "run",
-//             "-p",
-//             "studio",
-//             "--release",
-//         ])
-//         .current_dir(path)
-//         .stdout(Stdio::piped())
-//         .stderr(Stdio::piped())
-//         .spawn()
-//         .map_err(|e| e.to_string())?;
-
-//     stream_terminal(&mut child)
-// }

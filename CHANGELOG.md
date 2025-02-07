@@ -4,7 +4,13 @@
 
 ### Fixes
 
+
 ### General
+
+- better env.toml
+- config struct for `.env`
+- config struct for `env.toml`
+
 
 ---
 

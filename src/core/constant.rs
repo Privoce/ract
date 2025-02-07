@@ -4,12 +4,6 @@ Cargo.lock
 **/*.DS_Store
 "#;
 
-pub const DEFAULT_ENV_TOML: &str = r#"
-[dependencies]
-makepad-widgets = "${makepad-widgets}"
-gen_components = "${gen_components}"
-"#;
-
 pub const MAKEPAD_LIB_RS: &str = r#"pub use makepad_widgets;
 pub mod app;
 "#;

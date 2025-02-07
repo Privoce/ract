@@ -1,12 +1,10 @@
-use std::{fmt::Display, path::PathBuf, str::FromStr};
-
+use std::{fmt::Display, str::FromStr};
 use gen_utils::{
     common::{DepType, RustDependence},
     error::Error,
 };
 use toml_edit::{value, Item, Table};
-
-// use crate::core::util::real_chain_env_toml;
+use super::ChainEnvToml;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FrameworkType {
@@ -40,19 +38,14 @@ impl FrameworkType {
             FrameworkType::Makepad => {
                 let mut toml = Table::new();
                 // read dependencies from ract chain
-                let env_toml = real_chain_env_toml()?;
-                let makepad_widgets = env_toml
-                    .get("dependencies")
-                    .and_then(|deps| deps.get("makepad-widgets").and_then(|value| value.as_str()))
-                    .map_or_else(
-                        || {
-                            Err(Error::from(
-                                "can not find [dependencies.makepad-widgets] in env.toml",
-                            ))
-                        },
-                        |s| Ok(s.to_string()),
-                    )?;
-                let makepad_widgets_path = PathBuf::from(makepad_widgets).join("widgets");
+                let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+                let makepad_widgets_path = chain_env_toml
+                .makepad_widgets_path()
+                .map_or_else(||Err(
+                    Error::from(
+                        "can not find [dependencies.makepad-widgets] in env.toml, maybe config broken, use `ract init` to fix it",
+                    )
+                ), |path| Ok(path.join("widgets")))?;
                 let mut rust_dep = RustDependence::new("makepad-widgets");
                 let _ = rust_dep.set_ty(DepType::local(makepad_widgets_path));
                 let (key, item) = rust_dep.to_table_kv();

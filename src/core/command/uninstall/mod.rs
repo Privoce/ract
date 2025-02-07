@@ -1,6 +1,9 @@
 use std::process::exit;
 
-use gen_utils::error::Error;
+use gen_utils::{
+    common::{cargo_install_list, fs, shadow_cmd},
+    error::Error,
+};
 use inquire::Confirm;
 
 use crate::core::{log::TerminalLogger, util::exe_path};
@@ -31,12 +34,20 @@ pub fn run() -> () {
 }
 
 pub fn uninstall_all() -> Result<(), Error> {
-    let exe_path = exe_path();
+    let exe_path = exe_path()?;
     // [配置文件] -----------------------------------------------------------------------------
-
+    fs::delete(exe_path.join(".env"))?;
     // [chain目录] ---------------------------------------------------------------------------
-
+    fs::delete_dir(exe_path.join("chain"))?;
     // [Ract可执行文件] -----------------------------------------------------------------------
-
+    // - [用户可能是用cargo安装的，所以需要用cargo检查是否有ract] ----------------------------------
+    let cargo_bins = cargo_install_list()?;
+    if cargo_bins.contains_key("ract") {
+        // 执行cargo uninstall ract
+        let _ = shadow_cmd("cargo", ["uninstall", "ract"], Some(exe_path.as_path()))?;
+    } else {
+        let ract_path = exe_path.join("ract");
+        fs::delete(&ract_path)?;
+    }
     Ok(())
 }

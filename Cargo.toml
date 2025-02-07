@@ -33,12 +33,12 @@ sha2 = "0.10.8"
 walkdir = "2.5.0"
 
 # ----------------- GenUI -------------------------------------------
-# gen_utils = { path = "../../../gen_ui/GenUI/gen/utils", default-features = false, features = [
-#     "compiler",
-# ] }
-# makepad_gen_plugin = { path = "../../../gen_ui/GenUI/gen/generator/makepad" }
-
-gen_utils = { version = "0.1.0", default-features = false, features = [
+gen_utils = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/utils", default-features = false, features = [
     "compiler",
 ] }
-makepad_gen_plugin = "0.1.0"
+makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
+
+# gen_utils = { version = "0.1.0", default-features = false, features = [
+#     "compiler",
+# ] }
+# makepad_gen_plugin = "0.1.0"
