@@ -68,3 +68,20 @@ fn ask_for_update(force: bool) -> Result<(), Error> {
 
     Ok(())
 }
+
+pub fn check_auto_update()-> Result<(), Error> {
+    let mut chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+    let (is_update, _version) = chain_env_toml
+        .check()
+        .map_err(|e| Error::from(e.to_string()))?;
+
+    if is_update{
+        // 需要进行更新
+        if chain_env_toml.auto_update{
+            // 自动更新
+            return update();
+        }
+    }
+
+    Ok(())
+}

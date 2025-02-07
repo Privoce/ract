@@ -7,7 +7,7 @@ use gen_utils::{
 };
 use toml_edit::{value, DocumentMut, Formatted, InlineTable, Item, Table, Value};
 
-use crate::core::util::exe_path;
+use crate::core::{log::TerminalLogger, util::exe_path};
 
 use super::env::Env;
 
@@ -325,6 +325,7 @@ impl TryFrom<&Item> for Check {
 
 /// 使用reqwest查询crate.io上的最新版本
 fn search_latest_version() -> Result<Version, Box<dyn std::error::Error>> {
+    TerminalLogger::new("🔍 Searching for the latest version...").info();
     let url = "https://crates.io/api/v1/crates/ract";
     // 增加header(user-agent)
     let response = reqwest::blocking::Client::new()
