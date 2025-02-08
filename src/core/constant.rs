@@ -79,7 +79,7 @@ impl MatchEvent for App{
     fn handle_actions(&mut self, cx: &mut Cx, actions:&Actions){
         if self.ui.button(id!(button1)).clicked(&actions) {
             self.counter += 1;
-            self.ui.label(id!(label1)).set_text_and_redraw(cx, &format!("Counter: {}", self.counter));
+            self.ui.label(id!(label1)).set_text(cx, &format!("Counter: {}", self.counter));
         }
     }
 }
