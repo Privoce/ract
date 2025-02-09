@@ -164,7 +164,7 @@ impl Conf {
         // do makepad configs ---------------------------------------------------------------------
         // [icons] --------------------------------------------------------------------------------
         self.icons = Some(vec![
-            PathBuf::from_str("./packaging/app_icon_128.png").unwrap()
+            PathBuf::from_str("./package/app_icon_128.png").unwrap()
         ]);
         // [before_packaging_command|before_each_package_command] ---------------------------------
         let command = BEFORE_COMMAND.replace("${name}", &self.name);
@@ -186,17 +186,17 @@ impl Conf {
                 "{}/depends_deb.txt",
                 path_to_str(self.out_dir.as_path())
             )]),
-            desktop_template: Some(format!("./packaging/{}.desktop", &self.name)),
+            desktop_template: Some(format!("./package/{}.desktop", &self.name)),
             files: None,
             priority: None,
             section: None,
         });
 
         self.macos = Some(MacOsConfig {
-            entitlements: Some("./packaging/Entitlements.plist".to_string()),
+            entitlements: Some("./package/Entitlements.plist".to_string()),
             exception_domain: None,
             frameworks: None,
-            info_plist_path: Some("./packaging/macos_info.plist".to_string()),
+            info_plist_path: Some("./package/macos_info.plist".to_string()),
             minimum_system_version: Some("11.0".to_string()),
             provider_short_name: None,
             signing_identity: None,
@@ -205,7 +205,7 @@ impl Conf {
         self.dmg = Some(DmgConfig {
             app_folder_position: Some(Position { x: 760, y: 250 }),
             app_position: Some(Position { x: 200, y: 250 }),
-            background: Some("./packaging/dmg_background.png".to_string()),
+            background: Some("./package/dmg_background.png".to_string()),
             window_position: None,
             window_size: Some(Size {
                 width: 960,
@@ -363,6 +363,7 @@ impl Display for Conf {
     }
 }
 
+// ------ 准备替换为 cargo build --release ---------------------------------------------------------
 #[cfg(not(target_os = "windows"))]
 const BEFORE_COMMAND: &str = r#"
 cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
@@ -373,6 +374,10 @@ cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
 
 #[cfg(target_os = "windows")]
 const BEFORE_COMMAND: &str = r#"cargo run --manifest-path packaging/command/Cargo.toml ${cmd} --force-makepad --binary-name ${name} --path-to-binary ./target/release/${name}.exe"#;
+
+
+// -------------------------------------------------------------------------------------------------
+
 
 #[cfg(test)]
 mod test_conf {

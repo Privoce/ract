@@ -156,7 +156,7 @@ where
     pack_conf.homepage = homepage;
     let generator = pack_conf.makepad(path.as_ref());
     // generate the packaging project and Packager.toml for makepad
-    let _ = generator.makepad(pack_conf)?;
+    let _ = generator.generate(pack_conf)?;
     PackageLogs::PackageResourced.terminal().success();
     // ask user need to pack or stop
     let confirm = Confirm::new("Do you want to package the project now?")

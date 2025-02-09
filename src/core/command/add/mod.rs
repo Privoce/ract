@@ -1,7 +1,7 @@
 use std::{env::current_dir, path::PathBuf, process::exit};
 
 use gen_utils::{
-    common::{fs, git_download_from_github, ToToml},
+    common::{fs, git_download_plugin_from_github, ToToml},
     error::Error,
 };
 
@@ -80,7 +80,7 @@ pub fn download_plugins_from_github(plugin: &str) -> Result<(), Error> {
                 // 从github仓库中下载指定的包，例如: ract add gen_makepad_http
                 AddLogs::Downloading(plugin.to_string()).terminal().info();
 
-                return git_download_from_github(
+                return git_download_plugin_from_github(
                     plugin,
                     true,
                     download_path,
