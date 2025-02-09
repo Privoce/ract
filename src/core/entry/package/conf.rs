@@ -348,6 +348,13 @@ impl Conf {
 
         table
     }
+
+    pub fn as_table_section(&self) -> (String, toml_edit::Item) {
+        (
+            "package.metadata.packager".to_string(),
+            toml_edit::Item::Table(self.to_toml_table()),
+        )
+    }
 }
 
 impl Display for Conf {
@@ -356,12 +363,16 @@ impl Display for Conf {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 const BEFORE_COMMAND: &str = r#"
 cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
     --force-makepad \
     --binary-name ${name} \
     --path-to-binary ./target/release/${name}
 "#;
+
+#[cfg(target_os = "windows")]
+const BEFORE_COMMAND: &str = r#"cargo run --manifest-path packaging/command/Cargo.toml ${cmd} --force-makepad --binary-name ${name} --path-to-binary ./target/release/${name}.exe"#;
 
 #[cfg(test)]
 mod test_conf {

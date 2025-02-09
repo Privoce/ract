@@ -7,6 +7,7 @@ use gen_utils::{
     common::{fs, stream_terminal, ToToml},
     error::Error,
 };
+use toml_edit::DocumentMut;
 
 use crate::core::{entry::FrameworkType, log::TerminalLogger};
 
@@ -28,17 +29,29 @@ impl Generator {
         }
     }
 
-    pub fn generate(&self, target: FrameworkType, conf: PackageConf) -> Result<(), Error> {
-        match target {
-            FrameworkType::GenUI => unimplemented!("GenUI packaging is not supported yet"),
-            FrameworkType::Makepad => self.makepad(conf),
-        }
+    // pub fn generate(&self, target: FrameworkType, conf: PackageConf) -> Result<(), Error> {
+    //     match target {
+    //         FrameworkType::GenUI => unimplemented!("GenUI packaging is not supported yet"),
+    //         FrameworkType::Makepad => self.makepad(conf),
+    //     }
+    // }
+
+    /// patch package configuration to Cargo.toml
+    fn patch_to_cargo_toml(&self, conf: &PackageConf) -> Result<(), Error> {
+        let path = self.path.join("Cargo.toml");
+        let mut cargo_toml = fs::read(path.as_path())?
+            .parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?;
+        let (key, value) = conf.as_table_section();
+        cargo_toml.insert(&key, value);
+        // write back to Cargo.toml
+        fs::write(path.as_path(), &cargo_toml.to_string())
     }
 
     /// generate the packaging project for makepad
     pub fn makepad(&self, conf: PackageConf) -> Result<(), Error> {
-        // [Packager.toml] -------------------------------------------------------------------
-        let _ = conf.write(self.path.join("Packager.toml"))?;
+        // [patch to Cargo] -------------------------------------------------------------------
+        self.patch_to_cargo_toml(&conf)?;
         // git clone --branch ract  https://github.com/syf20020816/robius-packaging-commands.git command
         let mut child = Command::new("git")
             .args(&[

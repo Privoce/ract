@@ -6,7 +6,7 @@ use std::{
 };
 
 use gen_utils::{
-    common::{fs, stream_terminal},
+    common::{exec_cmd, fs, stream_terminal},
     error::Error,
 };
 use inquire::{Confirm, Select, Text};
@@ -23,49 +23,21 @@ pub fn run() {
     PackageLogs::Welcome.terminal().rust();
     PackageLogs::Desc.terminal().info();
 
-    let _ = run_packager().map_err(|e| {
+    let _ = package().map_err(|e| {
         TerminalLogger::new(&e.to_string()).error();
         exit(2);
     });
 }
 
-fn run_packager() -> Result<(), Error> {
+fn package() -> Result<(), Error> {
     // [check cargo-packager is installed] -----------------------------------------------
-    let _ = check_and_install_packager()?;
+    let _ = check_or_install_packager()?;
     // [init cargo-packager] -------------------------------------------------------------
-    let _ = init_packager()?;
+    let _ = init_or_package()?;
     Ok(())
 }
 
-fn check_and_install_packager() -> Result<(), Error> {
-    // check if cargo-packager is installed
-    if which("cargo-packager").is_ok() {
-        Ok(())
-    } else {
-        // cargo install cargo-packager --locked
-        PackageLogs::UnInstalled.terminal().warning();
-        Command::new("cargo")
-            .args(&["install", "cargo-packager", "--locked"])
-            .output()
-            .map_or_else(
-                |e| Err(Error::from(e.to_string())),
-                |out| {
-                    if out.status.success() {
-                        PackageLogs::Installed.terminal().success();
-                        Ok(())
-                    } else {
-                        Err(PackageLogs::InstallErr(
-                            String::from_utf8_lossy(&out.stderr).to_string(),
-                        )
-                        .to_string()
-                        .into())
-                    }
-                },
-            )
-    }
-}
-
-fn init_packager() -> Result<(), Error> {
+fn init_or_package() -> Result<(), Error> {
     PackageLogs::Init.terminal().info();
     // ask user need to init or not
     Select::new("Select how to package the project", vec!["init", "skip"])
@@ -82,6 +54,37 @@ fn init_packager() -> Result<(), Error> {
                 }
             },
         )
+}
+
+pub fn check_or_install_packager() -> Result<(), Error> {
+    // check if cargo-packager is installed
+    if which("cargo-packager").is_ok() {
+        Ok(())
+    } else {
+        // cargo install cargo-packager --locked
+        PackageLogs::UnInstalled.terminal().warning();
+        exec_cmd(
+            "cargo",
+            ["install", "cargo-packager", "--locked"],
+            Option::<&Path>::None,
+        )
+        .status()
+        .map_or_else(
+            |e| Err(Error::from(e.to_string())),
+            |status| {
+                if status.success() {
+                    PackageLogs::Installed.terminal().success();
+                    Ok(())
+                } else {
+                    Err(
+                        PackageLogs::InstallErr("cargo-packager install fail!".to_string())
+                            .to_string()
+                            .into(),
+                    )
+                }
+            },
+        )
+    }
 }
 
 fn generate_packager_toml<P>(path: P) -> Result<(), Error>

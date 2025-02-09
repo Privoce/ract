@@ -52,6 +52,7 @@ impl PackageLogs {
 const DESC: &str = r#"
 🔸 ract will check `cargo-packager` is installed or not
 🔸 ract will help you install `cargo-packager`
+🔸 ract does not currently support cross-compilation, if you need, please use our remote service (Comming Soon)
 🔸 about configuration: https://docs.crabnebula.dev/packager/
 "#;
 
