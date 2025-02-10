@@ -6,8 +6,8 @@ use std::{
 };
 
 use gen_utils::{
-    common::{exec_cmd, fs, stream_terminal},
-    error::Error,
+    common::{exec_cmd, fs, stream_terminal, ToToml},
+    error::{ConvertError, Error, ParseError},
 };
 use inquire::{Confirm, Select, Text};
 use toml_edit::DocumentMut;
@@ -45,11 +45,17 @@ fn init_or_package() -> Result<(), Error> {
         .map_or_else(
             |e| Err(e.to_string().into()),
             |option| {
-                // let path = current_dir().unwrap();
-                // generate a Packager.toml
                 match option {
-                    "init" => generate_packager_toml(),
-                    "skip" => run_cargo_packager(path.as_path()),
+                    "init" => {
+                        // generate a Packager.toml
+                        let (path, dist_path) = generate_packager_toml()?;
+                        // run cargo-packager
+                        run_cargo_packager(path, dist_path)
+                    }
+                    "skip" => {
+                        let (path, dist_path) = get_target_and_dist()?;
+                        run_cargo_packager(path, dist_path)
+                    }
                     _ => Err("Invalid option".into()),
                 }
             },
@@ -87,33 +93,33 @@ pub fn check_or_install_packager() -> Result<(), Error> {
     }
 }
 
-fn generate_packager_toml() -> Result<(), Error> {
+/// generate a Packager.toml
+/// return (path_to_package, dist_path)
+fn generate_packager_toml() -> Result<(PathBuf, PathBuf), Error> {
     // [get ract.toml] -----------------------------------------------------------------------------
     let ract_path = RactToml::path();
 
-    if ract_path.exists() {
+    let (path, framework) = if ract_path.exists() {
         let ract: RactToml = ract_path.try_into()?;
-
-        match &ract.target {
-            FrameworkType::GenUI => {
-                let path = ract.first_compile()?;
-            }
-            FrameworkType::Makepad => {}
-        }
+        (
+            match &ract.target {
+                FrameworkType::GenUI => ract.first_compile()?.target.to_path_buf(),
+                FrameworkType::Makepad => current_dir().unwrap(),
+            },
+            Some(ract.target),
+        )
     } else {
         // maybe user use ract in other rust project
-        generate_normal_packager_toml()
-    }
-    Ok(())
-}
-
-/// generate the Packager.toml for
-fn generate_normal_packager_toml() -> Result<(), Error> {
-    let path = current_dir().map_err(|e| e.to_string())?;
-    let conf = generate_package_conf(path)?;
-
-
-    Ok(())
+        (current_dir().unwrap(), None)
+    };
+    // [get package configuration] ----------------------------------------------------------------
+    let mut conf = generate_package_conf(path.as_path())?;
+    let dist_path = conf.out_dir.to_path_buf();
+    // [write to Cargo.toml] -----------------------------------------------------------------------
+    let generator = conf.generator(path.as_path(), framework);
+    let _ = generator.generate(conf)?;
+    PackageLogs::PackageResourced.terminal().success();
+    Ok((path, dist_path))
 }
 
 fn generate_package_conf<P>(path: P) -> Result<PackageConf, Error>
@@ -186,15 +192,12 @@ where
     Ok(pack_conf)
 }
 
-fn generate_packager_toml2<P>(path: P) -> Result<(), Error>
+fn run_cargo_packager<P, D>(path: P, dist: D) -> Result<(), Error>
 where
     P: AsRef<Path>,
+    D: AsRef<Path>,
 {
-    let generator = pack_conf.makepad(path.as_ref());
-    // generate the packaging project and Packager.toml for makepad
-    let dist_path = pack_conf.out_dir.to_path_buf();
-    let _ = generator.generate(pack_conf)?;
-    PackageLogs::PackageResourced.terminal().success();
+    PackageLogs::Start.terminal().info();
     // ask user need to pack or stop
     let confirm = Confirm::new("Do you want to package the project now?")
         .with_help_message(
@@ -204,20 +207,10 @@ where
         .prompt()
         .unwrap();
 
-    if confirm {
-        // run cargo packager
-        run_cargo_packager(path.as_ref(), dist_path)
-    } else {
-        Ok(())
+    if !confirm {
+        return Ok(());
     }
-}
 
-fn run_cargo_packager<P, D>(path: P, dist: D) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-    D: AsRef<Path>,
-{
-    PackageLogs::Start.terminal().info();
     // [before package] ---------------------------------------------------------------------------
     let dist_resources_path = dist.as_ref().join("resources");
     fs::create_dir(&dist_resources_path)?;
@@ -247,4 +240,33 @@ where
             }
         },
     )
+}
+
+fn get_target_and_dist() -> Result<(PathBuf, PathBuf), Error> {
+    // [get conf from target project Cargo.toml] ---------------------------------------------------
+    let ract = RactToml::try_from(RactToml::path())?;
+    let target_path = ract.first_compile()?.target.to_path_buf();
+
+    let dist_path = PackageConf::read(target_path.as_path())?
+        .get("package.metadata.packager.out_dir")
+        .map_or_else(
+            || {
+                Err(Error::Parse(ParseError::new(
+                    "package.metadata.packager.out_dir",
+                    gen_utils::error::ParseType::Toml,
+                )))
+            },
+            |path| {
+                path.as_str()
+                    .and_then(|p| PathBuf::from_str(p).ok())
+                    .ok_or_else(|| {
+                        Error::Convert(ConvertError::FromTo {
+                            from: "&str".to_string(),
+                            to: "PathBuf".to_string(),
+                        })
+                    })
+            },
+        )?;
+
+    Ok((target_path, dist_path))
 }

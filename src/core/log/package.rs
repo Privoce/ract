@@ -34,7 +34,7 @@ impl Display for PackageLogs {
                 f.write_fmt(format_args!("❌ Install cargo-packager failed!\n: {}", s))
             },
             PackageLogs::Init => f.write_str(INIT_MSG),
-            PackageLogs::PackageResourced => f.write_str("🎉 Package resources has been generated!\nYou can see a `Packager.toml` for packaging settings and a `packaging dir` for package resources!"),
+            PackageLogs::PackageResourced => f.write_str("🎉 Package resources has been generated!\nYou can see a `Cargo.toml` for packaging settings and a `packaging dir` for package resources!"),
             PackageLogs::Error => f.write_str("❌ Package failed! Please check the error message!"),
             PackageLogs::Configing => f.write_str("🚀 Processing packaged resources..."),
         }

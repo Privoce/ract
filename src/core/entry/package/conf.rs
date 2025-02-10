@@ -12,8 +12,7 @@ use crate::core::{entry::FrameworkType, log::LogLevel};
 
 use super::{
     AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation, MacOsConfig, NsisConfig,
-    PackageFormat, PackageGenerator, PacmanConfig, Position, Resource, Size, WindowsConfig,
-    WixConfig,
+    PackageFormat, PackageGenerator, PacmanConfig, Resource, WindowsConfig, WixConfig,
 };
 
 /// cargo packager configuration
@@ -125,7 +124,6 @@ impl Conf {
         }];
         // [out dir] -----------------------------------------------------------------------------
         let out_dir = PathBuf::from("./dist");
-
         // [icons] --------------------------------------------------------------------------------
         let icons = Some(vec![
             PathBuf::from_str("./package/app_icon_128.png").unwrap()
@@ -141,6 +139,11 @@ impl Conf {
             priority: None,
             section: None,
         });
+        // [resources] -----------------------------------------------------------------------------
+        let resources = Some(vec![Resource::new_obj(
+            out_dir.as_path().join("resources").join(&name),
+            &name,
+        )]);
 
         Self {
             name,
@@ -173,39 +176,41 @@ impl Conf {
             file_associations: None,
             formats: None,
             target_triple: None,
-            resources: None,
+            resources,
         }
     }
     /// ## Generate a package generator for the package
     /// if framework is None, it will generate a package generator for normal package which without additional `rces, before-packaging-command...` items
-    pub fn generator<P>(&mut self, path: P, framework: Option<FrameworkType>) -> PackageGenerators
+    pub fn generator<P>(&mut self, path: P, framework: Option<FrameworkType>) -> PackageGenerator
     where
         P: AsRef<Path>,
     {
-        // [resources] -----------------------------------------------------------------------------
-        let src_path_pre = self.out_dir.as_path().join("resources");
         match framework {
             Some(f) => match f {
-                FrameworkType::GenUI => todo!(),
-                FrameworkType::Makepad => self.makepad(path),
+                FrameworkType::GenUI => {
+                    // change out_dir to ../
+                    self.out_dir = PathBuf::from("../dist");
+                    // do not need use makepad_widgets resources (smaller package, about reduce 30MB)
+                    self.resources.as_mut().unwrap().push(Resource::new_obj(
+                        self.out_dir
+                            .as_path()
+                            .join("resources")
+                            .join("gen_components"),
+                        "gen_components",
+                    ));
+                }
+                FrameworkType::Makepad => {
+                    self.resources.as_mut().unwrap().push(Resource::new_obj(
+                        self.out_dir
+                            .as_path()
+                            .join("resources")
+                            .join("makepad_widgets"),
+                        "makepad_widgets",
+                    ));
+                }
             },
-            None => {
-                let project_name = self.name.to_string();
-                self.resources = Some(vec![
-                    Resource::new_obj(src_path_pre.join("makepad_widgets"), "makepad_widgets"),
-                    Resource::new_obj(src_path_pre.join(&project_name), &project_name),
-                ]);
-            }
-        }
-    }
-
-    pub fn makepad<P>(&mut self, path: P) -> PackageGenerator
-    where
-        P: AsRef<Path>,
-    {
-        // do makepad configs ---------------------------------------------------------------------
-
-        // generate packing project for makepad ---------------------------------------------------
+            None => {}
+        };
         PackageGenerator::new(path)
     }
 
@@ -347,38 +352,4 @@ impl Display for Conf {
     }
 }
 
-// ------ 准备替换为 cargo build --release ---------------------------------------------------------
-#[cfg(not(target_os = "windows"))]
-const BEFORE_COMMAND: &str = r#"
-cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
-    --force-makepad \
-    --binary-name ${name} \
-    --path-to-binary ./target/release/${name}
-"#;
-
-#[cfg(target_os = "windows")]
-const BEFORE_COMMAND: &str = r#"cargo run --manifest-path packaging/command/Cargo.toml ${cmd} --force-makepad --binary-name ${name} --path-to-binary ./target/release/${name}.exe"#;
-
-// -------------------------------------------------------------------------------------------------
-
-#[cfg(test)]
-mod test_conf {
-    use std::str::FromStr;
-
-    use super::Conf;
-
-    #[test]
-    fn to_toml() {
-        let mut conf = Conf::new(
-            "test".to_string(),
-            "0.1.0".to_string(),
-            "Test".to_string(),
-            "com.test".to_string(),
-            Some(vec!["test".to_string()]),
-            Some(std::path::PathBuf::from_str("./LICENSE").unwrap()),
-        );
-        let _ = conf.makepad("./test");
-
-        println!("{}", conf.to_string());
-    }
-}
+const BEFORE_COMMAND: &str = "cargo build --release";
