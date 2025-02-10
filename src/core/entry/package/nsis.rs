@@ -5,7 +5,7 @@ use toml_edit::{value, Formatted, Item, Table, Value};
 /// # NsisConfig
 ///
 /// The NSIS format configuration.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct NsisConfig {
     /// List of paths where your app stores data.
     /// This options tells the uninstaller to provide the user with an option (disabled by default)
@@ -38,6 +38,27 @@ pub struct NsisConfig {
     pub sidebar_image: Option<String>,
     /// A custom .nsi template to use.
     pub template: Option<String>,
+}
+
+impl Default for NsisConfig {
+    fn default() -> Self {
+        Self {
+            appdata_paths: Some(vec![
+                "$APPDATA/$PUBLISHER/$PRODUCTNAME".to_string(),
+                "$LOCALAPPDATA/$PRODUCTNAME".to_string(),
+            ]),
+            compression: Default::default(),
+            custom_language_files: Default::default(),
+            display_language_selector: Default::default(),
+            header_image: Default::default(),
+            installer_icon: Default::default(),
+            install_mode: Default::default(),
+            languages: Default::default(),
+            preinstall_section: Default::default(),
+            sidebar_image: Default::default(),
+            template: Default::default(),
+        }
+    }
 }
 
 impl From<&NsisConfig> for Item {

@@ -8,7 +8,7 @@ use std::{
 use gen_utils::common::{fs::path_to_str, ToToml};
 use toml_edit::{value, Array, DocumentMut, Table};
 
-use crate::core::log::LogLevel;
+use crate::core::{entry::FrameworkType, log::LogLevel};
 
 use super::{
     AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation, MacOsConfig, NsisConfig,
@@ -114,6 +114,7 @@ impl Conf {
         authors: Option<Vec<String>>,
         license: Option<PathBuf>,
     ) -> Self {
+        // [binaries] -----------------------------------------------------------------------------
         let binaries = vec![Binary {
             main: true,
             path: current_dir()
@@ -122,13 +123,32 @@ impl Conf {
                 .join("release")
                 .join(&name),
         }];
+        // [out dir] -----------------------------------------------------------------------------
+        let out_dir = PathBuf::from("./dist");
+
+        // [icons] --------------------------------------------------------------------------------
+        let icons = Some(vec![
+            PathBuf::from_str("./package/app_icon_128.png").unwrap()
+        ]);
+        // [platforms] -----------------------------------------------------------------------------
+        let deb = Some(DebianConfig {
+            depends: Some(vec![format!(
+                "{}/depends_deb.txt",
+                path_to_str(out_dir.as_path())
+            )]),
+            desktop_template: Some(format!("./package/{}.desktop", &name)),
+            files: None,
+            priority: None,
+            section: None,
+        });
+
         Self {
             name,
             version,
             product_name,
             identifier,
             log_level: None,
-            icons: None,
+            icons,
             authors,
             publisher: None,
             category: None,
@@ -138,16 +158,16 @@ impl Conf {
             homepage: None,
             enabled: true,
             license_file: license,
-            out_dir: PathBuf::from_str("./dist").unwrap(),
-            deb: None,
-            dmg: None,
-            macos: None,
-            nsis: None,
+            out_dir,
+            deb,
+            dmg: Some(DmgConfig::default()),
+            macos: Some(MacOsConfig::default()),
+            nsis: Some(NsisConfig::default()),
             pacman: None,
-            windows: None,
+            windows: Some(WindowsConfig::default()),
             wix: None,
-            before_each_package_command: None,
-            before_packaging_command: None,
+            before_each_package_command: Some(BEFORE_COMMAND.to_string()),
+            before_packaging_command: Some(BEFORE_COMMAND.to_string()),
             binaries,
             external_binaries: None,
             file_associations: None,
@@ -156,71 +176,35 @@ impl Conf {
             resources: None,
         }
     }
+    /// ## Generate a package generator for the package
+    /// if framework is None, it will generate a package generator for normal package which without additional `rces, before-packaging-command...` items
+    pub fn generator<P>(&mut self, path: P, framework: Option<FrameworkType>) -> PackageGenerators
+    where
+        P: AsRef<Path>,
+    {
+        // [resources] -----------------------------------------------------------------------------
+        let src_path_pre = self.out_dir.as_path().join("resources");
+        match framework {
+            Some(f) => match f {
+                FrameworkType::GenUI => todo!(),
+                FrameworkType::Makepad => self.makepad(path),
+            },
+            None => {
+                let project_name = self.name.to_string();
+                self.resources = Some(vec![
+                    Resource::new_obj(src_path_pre.join("makepad_widgets"), "makepad_widgets"),
+                    Resource::new_obj(src_path_pre.join(&project_name), &project_name),
+                ]);
+            }
+        }
+    }
 
     pub fn makepad<P>(&mut self, path: P) -> PackageGenerator
     where
         P: AsRef<Path>,
     {
         // do makepad configs ---------------------------------------------------------------------
-        // [icons] --------------------------------------------------------------------------------
-        self.icons = Some(vec![
-            PathBuf::from_str("./package/app_icon_128.png").unwrap()
-        ]);
-        // [before_packaging_command|before_each_package_command] ---------------------------------
-        let command = BEFORE_COMMAND.replace("${name}", &self.name);
-        self.before_each_package_command = Some(command.replace("${cmd}", "before-each-package"));
-        self.before_packaging_command = Some(command.replace("${cmd}", "before-packaging"));
-        // [resources] -----------------------------------------------------------------------------
-        let src_path_pre = PathBuf::from_str(
-            format!("{}/resources", path_to_str(self.out_dir.as_path())).as_str(),
-        )
-        .unwrap();
-        let project_name = self.name.to_string();
-        self.resources = Some(vec![
-            Resource::new_obj(src_path_pre.join("makepad_widgets"), "makepad_widgets"),
-            Resource::new_obj(src_path_pre.join(&project_name), &project_name),
-        ]);
-        // [platforms] -----------------------------------------------------------------------------
-        self.deb = Some(DebianConfig {
-            depends: Some(vec![format!(
-                "{}/depends_deb.txt",
-                path_to_str(self.out_dir.as_path())
-            )]),
-            desktop_template: Some(format!("./package/{}.desktop", &self.name)),
-            files: None,
-            priority: None,
-            section: None,
-        });
 
-        self.macos = Some(MacOsConfig {
-            entitlements: Some("./package/Entitlements.plist".to_string()),
-            exception_domain: None,
-            frameworks: None,
-            info_plist_path: Some("./package/macos_info.plist".to_string()),
-            minimum_system_version: Some("11.0".to_string()),
-            provider_short_name: None,
-            signing_identity: None,
-        });
-
-        self.dmg = Some(DmgConfig {
-            app_folder_position: Some(Position { x: 760, y: 250 }),
-            app_position: Some(Position { x: 200, y: 250 }),
-            background: Some("./package/dmg_background.png".to_string()),
-            window_position: None,
-            window_size: Some(Size {
-                width: 960,
-                height: 540,
-            }),
-        });
-
-        let mut nsis = NsisConfig::default();
-        nsis.appdata_paths = Some(vec![
-            "$APPDATA/$PUBLISHER/$PRODUCTNAME".to_string(),
-            "$LOCALAPPDATA/$PRODUCTNAME".to_string(),
-        ]);
-        self.nsis = Some(nsis);
-
-        self.windows = Some(WindowsConfig::default());
         // generate packing project for makepad ---------------------------------------------------
         PackageGenerator::new(path)
     }
@@ -375,9 +359,7 @@ cargo run --manifest-path packaging/command/Cargo.toml ${cmd} \
 #[cfg(target_os = "windows")]
 const BEFORE_COMMAND: &str = r#"cargo run --manifest-path packaging/command/Cargo.toml ${cmd} --force-makepad --binary-name ${name} --path-to-binary ./target/release/${name}.exe"#;
 
-
 // -------------------------------------------------------------------------------------------------
-
 
 #[cfg(test)]
 mod test_conf {

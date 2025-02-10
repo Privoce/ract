@@ -28,6 +28,20 @@ pub struct MacOsConfig {
     pub signing_identity: Option<String>,
 }
 
+impl Default for MacOsConfig {
+    fn default() -> Self {
+        MacOsConfig {
+            entitlements: Some("./package/Entitlements.plist".to_string()),
+            exception_domain: None,
+            frameworks: None,
+            info_plist_path: Some("./package/macos_info.plist".to_string()),
+            minimum_system_version: Some("11.0".to_string()),
+            provider_short_name: None,
+            signing_identity: None,
+        }
+    }
+}
+
 impl Display for MacOsConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(Item::from(self).to_string().as_str())

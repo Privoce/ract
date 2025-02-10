@@ -6,7 +6,7 @@ use super::{Position, Size};
 
 /// # DmgConfig
 /// The Apple Disk Image (.dmg) configuration.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DmgConfig {
     /// Position of application folder on window.
     pub app_folder_position: Option<Position>,
@@ -18,6 +18,21 @@ pub struct DmgConfig {
     pub window_position: Option<Position>,
     /// Size of volume window.
     pub window_size: Option<Size>,
+}
+
+impl Default for DmgConfig {
+    fn default() -> Self {
+        DmgConfig {
+            app_folder_position: Some(Position { x: 760, y: 250 }),
+            app_position: Some(Position { x: 200, y: 250 }),
+            background: Some("./package/dmg_background.png".to_string()),
+            window_position: None,
+            window_size: Some(Size {
+                width: 960,
+                height: 540,
+            }),
+        }
+    }
 }
 
 impl Display for DmgConfig {

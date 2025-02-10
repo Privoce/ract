@@ -126,7 +126,7 @@ impl TryFrom<(String, PathBuf)> for Conf {
                                     to: "toml::String, gen_ui.toml [plugins]".to_string(),
                                 }))
                             },
-                            |s| Ok(fs::relative_to_absolute(path.as_path(), s)),
+                            |s| Ok(fs::relative_with_prefix(path.as_path(), s)),
                         )?;
 
                         map.insert(k.to_string(), path);

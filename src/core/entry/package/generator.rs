@@ -1,15 +1,12 @@
-use std::{
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
+use std::path::{Path, PathBuf};
 
 use gen_utils::{
-    common::{fs, git_download_from_github, stream_terminal, ToToml},
+    common::{fs, git_download_from_github},
     error::Error,
 };
 use toml_edit::DocumentMut;
 
-use crate::core::{entry::FrameworkType, log::TerminalLogger};
+use crate::core::log::TerminalLogger;
 
 use super::{MacOsConfig, PackageConf};
 
@@ -29,13 +26,6 @@ impl Generator {
         }
     }
 
-    // pub fn generate(&self, target: FrameworkType, conf: PackageConf) -> Result<(), Error> {
-    //     match target {
-    //         FrameworkType::GenUI => unimplemented!("GenUI packaging is not supported yet"),
-    //         FrameworkType::Makepad => self.makepad(conf),
-    //     }
-    // }
-
     /// patch package configuration to Cargo.toml
     fn patch_to_cargo_toml(&self, conf: &PackageConf) -> Result<(), Error> {
         let path = self.path.join("Cargo.toml");
@@ -49,19 +39,18 @@ impl Generator {
     }
 
     /// handle resources for packaging
-    /// 1. generate needed resources
     fn handle_resources(&self, conf: PackageConf) -> Result<(), Error> {
         // [git download from github] --------------------------------------------------------
         let tmp_path = self.path.join(".tmp");
         let from_path = tmp_path.join("resources").join("package");
         let to_path = self.path.join("package");
         let _ = git_download_from_github(
-            "https://github.com/Privoce/ract.git", 
-            "dev_v0.1.3", 
+            "https://github.com/Privoce/ract.git",
+            "dev_v0.1.3",
             "resources/package/*",
-            self.path.as_path(), 
-            |line| TerminalLogger::new(&line).info(), 
-            |line| TerminalLogger::new(&line).warning()
+            self.path.as_path(),
+            |line| TerminalLogger::new(&line).info(),
+            |line| TerminalLogger::new(&line).warning(),
         )?;
         // - [move resources] ----------------------------------------------------------------
         fs::move_to(from_path, to_path)?;
@@ -88,9 +77,6 @@ impl Generator {
         ] {
             let _ = fs::write(path, &content);
         }
-
-
-
         Ok(())
     }
 

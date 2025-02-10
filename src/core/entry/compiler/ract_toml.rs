@@ -1,4 +1,5 @@
 use std::{
+    env::current_dir,
     fmt::Display,
     path::{Path, PathBuf},
     str::FromStr,
@@ -53,6 +54,15 @@ impl RactToml {
             members
         })
     }
+    pub fn first_compile(&self) -> Result<&Member, Error> {
+        self.compiles().map_or_else(
+            || Err(Error::from("compiles is not set")),
+            |members| Ok(members[0]),
+        )
+    }
+    pub fn path() -> PathBuf {
+        current_dir().unwrap().join(".ract")
+    }
     /// ## makepad project
     /// if target is makepad, members and compiles must be None
     /// do not need to care about members and compiles
@@ -73,6 +83,17 @@ impl RactToml {
             members,
             compiles,
         }
+    }
+}
+
+impl TryFrom<PathBuf> for RactToml {
+    type Error = Error;
+
+    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+        let toml = fs::read(value.as_path())?
+            .parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?;
+        Self::try_from(&toml)
     }
 }
 
