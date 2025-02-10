@@ -1,10 +1,10 @@
-use std::{fmt::Display, str::FromStr};
+use super::{ChainEnvToml, Resource};
 use gen_utils::{
     common::{DepType, RustDependence},
     error::Error,
 };
+use std::{fmt::Display, str::FromStr};
 use toml_edit::{value, Item, Table};
-use super::ChainEnvToml;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FrameworkType {
@@ -23,6 +23,31 @@ impl Display for FrameworkType {
 }
 
 impl FrameworkType {
+    pub fn resources_in_ract(&self) -> Vec<Resource> {
+        match self {
+            FrameworkType::GenUI => {
+                vec![
+                    Resource::new_obj("gen_components", "../dist/resources/gen_components"),
+                    Resource::new_obj("makepad-widgets", "../dist/resources/makepad_widgets"),
+                ]
+            }
+            FrameworkType::Makepad => vec![Resource::new_obj(
+                "makepad-widgets",
+                "./dist/resources/makepad_widgets",
+            )],
+        }
+    }
+    /// back all copy items
+    pub fn copys() -> Vec<&'static str> {
+        vec!["gen_components", "makepad-widgets"]
+    }
+    /// copy items for different framework (resources for packaging)
+    pub fn copy_items(&self) -> Vec<&'static str> {
+        match self {
+            FrameworkType::GenUI => Self::copys(),
+            FrameworkType::Makepad => vec!["makepad-widgets"],
+        }
+    }
     pub fn options() -> Vec<&'static str> {
         vec!["gen_ui", "makepad"]
     }

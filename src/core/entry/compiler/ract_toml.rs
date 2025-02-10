@@ -11,7 +11,7 @@ use gen_utils::{
 };
 use toml_edit::{value, Array, DocumentMut, Formatted, InlineTable, Value};
 
-use crate::core::entry::{FrameworkType, ProjectInfo};
+use crate::core::entry::{FrameworkType, ProjectInfo, Resource};
 
 /// # RactToml
 /// each project has a .ract file to point the project kind and help ract to compile the project
@@ -36,6 +36,7 @@ pub struct RactToml {
     /// - if compiles length is 1, compile the project in the members by index
     /// - if compiles length is more than 1, use multiple threads to compile the projects
     pub compiles: Option<Vec<usize>>,
+    pub resources: Vec<Resource>,
 }
 
 impl RactToml {
@@ -82,6 +83,7 @@ impl RactToml {
             target,
             members,
             compiles,
+            resources: target.resources_in_ract(),
         }
     }
 }
@@ -100,9 +102,7 @@ impl TryFrom<&PathBuf> for RactToml {
 impl ToToml for RactToml {
     fn to_toml(&self) -> toml_edit::DocumentMut {
         let mut doc = DocumentMut::new();
-
         doc.insert("target", self.target.into());
-
         if let Some(members) = self.members.as_ref() {
             let mut arr = Array::new();
             for member in members {
@@ -118,6 +118,12 @@ impl ToToml for RactToml {
             }
             doc.insert("compiles", value(arr));
         }
+
+        let mut arr = Array::new();
+        for resource in self.resources.iter() {
+            arr.push(resource);
+        }
+        doc.insert("resources", value(arr));
 
         doc
     }
@@ -190,10 +196,27 @@ impl TryFrom<&DocumentMut> for RactToml {
             None
         };
 
+        let resources = value.get("resources").map_or_else(
+            || Err(Error::from("can not get resources in .ract")),
+            |arr| {
+                arr.as_array().map_or_else(
+                    || Err(Error::from("resources must be a array")),
+                    |arr| {
+                        let mut resources = vec![];
+                        for item in arr.iter() {
+                            resources.push(Resource::try_from(item)?);
+                        }
+                        Ok(resources)
+                    },
+                )
+            },
+        )?;
+
         Ok(Self {
             target,
             members,
             compiles,
+            resources,
         })
     }
 }
@@ -220,7 +243,7 @@ impl From<&Member> for Value {
         let mut table = InlineTable::new();
 
         table.insert(
-            "source",
+            "src",
             Value::String(Formatted::new(fs::path_to_str(member.source.as_path()))),
         );
         table.insert(
@@ -250,7 +273,7 @@ impl TryFrom<&Value> for Member {
             .as_inline_table()
             .ok_or_else(|| Error::from("Member must be a inline table".to_string()))?;
 
-        let source = table.get("source").map_or_else(
+        let source = table.get("src").map_or_else(
             || Err(Error::from("can not get source in member".to_string())),
             |v| {
                 v.as_str().map_or_else(

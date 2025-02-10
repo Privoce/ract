@@ -32,14 +32,14 @@ impl Generator {
         let mut cargo_toml = fs::read(path.as_path())?
             .parse::<DocumentMut>()
             .map_err(|e| e.to_string())?;
-        let (key, value) = conf.as_table_section();
-        cargo_toml.insert(&key, value);
+        // patch to Cargo.toml
+        conf.patch_to_cargo_toml(&mut cargo_toml);
         // write back to Cargo.toml
         fs::write(path.as_path(), &cargo_toml.to_string())
     }
 
     /// handle resources for packaging
-    fn handle_resources(&self, conf: PackageConf) -> Result<(), Error> {
+    fn handle_resources(&self, conf: &PackageConf) -> Result<(), Error> {
         // [git download from github] --------------------------------------------------------
         let tmp_path = self.path.join(".tmp");
         let from_path = tmp_path.join("resources").join("package");
@@ -81,9 +81,9 @@ impl Generator {
     }
 
     /// generate the packaging needed resources
-    pub fn generate(&self, conf: PackageConf) -> Result<(), Error> {
+    pub fn generate(&self, conf: &PackageConf) -> Result<(), Error> {
         // [patch to Cargo] -------------------------------------------------------------------
-        self.patch_to_cargo_toml(&conf)?;
+        self.patch_to_cargo_toml(conf)?;
         // [handle resources] -----------------------------------------------------------------
         self.handle_resources(conf)
     }

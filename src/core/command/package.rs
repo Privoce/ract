@@ -1,20 +1,22 @@
 use std::{
+    collections::HashMap,
     env::current_dir,
     path::{Path, PathBuf},
     process::exit,
     str::FromStr,
 };
 
+use cargo_metadata::MetadataCommand;
 use gen_utils::{
-    common::{exec_cmd, fs, stream_cmd, stream_terminal, ToToml},
-    error::{ConvertError, Error, ParseError},
+    common::{exec_cmd, fs, stream_cmd, stream_terminal},
+    error::Error,
 };
 use inquire::{Confirm, Select, Text};
 use toml_edit::DocumentMut;
 use which::which;
 
 use crate::core::{
-    entry::{FrameworkType, PackageConf, RactToml},
+    entry::{FrameworkType, PackageConf, RactToml, Resource},
     log::{PackageLogs, TerminalLogger},
 };
 
@@ -99,7 +101,7 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
     // [get ract.toml] -----------------------------------------------------------------------------
     let ract_path = RactToml::path();
 
-    let (path, framework) = if ract_path.exists() {
+    let (path, framework, resources) = if ract_path.exists() {
         let ract: RactToml = (&ract_path).try_into()?;
         (
             match &ract.target {
@@ -107,19 +109,23 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
                 FrameworkType::Makepad => current_dir().unwrap(),
             },
             Some(ract.target),
+            ract.resources,
         )
     } else {
         // maybe user use ract in other rust project
-        (current_dir().unwrap(), None)
+        (
+            current_dir().unwrap(),
+            None,
+            FrameworkType::GenUI.resources_in_ract(),
+        )
     };
     // [get package configuration] ----------------------------------------------------------------
     let mut conf = generate_package_conf(path.as_path())?;
-    let dist_path = conf.out_dir.to_path_buf();
     // [write to Cargo.toml] -----------------------------------------------------------------------
     let generator = conf.generator(path.as_path(), framework);
-    let _ = generator.generate(conf)?;
+    let _ = generator.generate(&conf)?;
     PackageLogs::PackageResourced.terminal().success();
-    Ok(PackageInfo::new(path, dist_path, framework))
+    Ok(PackageInfo::new(path, conf, framework, resources))
 }
 
 fn generate_package_conf<P>(path: P) -> Result<PackageConf, Error>
@@ -206,12 +212,15 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     if !confirm {
         return Ok(());
     }
-    let PackageInfo { path, dist, framework } = info;
-
+    let resources = info.zip_resources();
+    let PackageInfo { path, conf, .. } = info;
     // [before package] ---------------------------------------------------------------------------
-    let dist_resources_path = dist.as_path().join("resources");
+    let dist_resources_path = conf.dist_resources();
     fs::create_dir(&dist_resources_path)?;
-
+    // [copy resources] ---------------------------------------------------------------------------
+    let _ = copy_resources(resources)?;
+    fs::copy(path.join("resources"), dist_resources_path.join(conf.name))?;
+    TerminalLogger::new("copy all resources to dist resources successful").success();
     // [run cargo-packager] -----------------------------------------------------------------------
     let mut child =
         stream_cmd("cargo", ["packager", "--release"], Some(path)).map_err(|e| e.to_string())?;
@@ -233,62 +242,98 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     )
 }
 
+fn copy_resources(resources: Option<HashMap<String, (PathBuf, PathBuf)>>) -> Result<(), Error> {
+    if let Some(resources) = resources {
+        let cargo_meta = MetadataCommand::new().exec().map_err(|e| e.to_string())?;
+        let _ = cargo_meta.packages.iter().for_each(|package| {
+            resources.get(&package.name).map(|(to_path, _)| {
+                package.manifest_path.parent().map(|path| {
+                    let from_path = path.join("resources");
+                    // do copy, from_path -> to_path
+                    let _ = fs::copy(from_path, to_path);
+                })
+            });
+        });
+    }
+    Ok(())
+}
+
 fn get_target_and_dist() -> Result<PackageInfo, Error> {
     let ract_path = RactToml::path();
     // [get conf from target project Cargo.toml] ---------------------------------------------------
-    let (target_path, framework) = if !ract_path.exists() {
-        (current_dir().unwrap().join("Cargo.toml"), None)
+    let (target_path, framework, resources) = if !ract_path.exists() {
+        (
+            current_dir().unwrap(),
+            None,
+            FrameworkType::GenUI.resources_in_ract(),
+        )
     } else {
         let ract = RactToml::try_from(&ract_path)?;
         (
-            ract.first_compile()?
-                .target
-                .to_path_buf()
-                .join("Cargo.toml"),
+            ract.first_compile()?.target.to_path_buf(),
             Some(ract.target),
+            ract.resources,
         )
     };
 
-    let dist_path = PackageConf::read(target_path.as_path())?
-        .get("package.metadata.packager.out_dir")
-        .map_or_else(
-            || {
-                Err(Error::Parse(ParseError::new(
-                    "package.metadata.packager.out_dir",
-                    gen_utils::error::ParseType::Toml,
-                )))
-            },
-            |path| {
-                path.as_str()
-                    .and_then(|p| PathBuf::from_str(p).ok())
-                    .ok_or_else(|| {
-                        Error::Convert(ConvertError::FromTo {
-                            from: "&str".to_string(),
-                            to: "PathBuf".to_string(),
-                        })
-                    })
-            },
-        )?;
+    let conf = PackageConf::from_cargo_toml(&target_path.join("Cargo.toml"))?;
 
-    Ok(PackageInfo::new(target_path, dist_path, framework))
+    Ok(PackageInfo::new(target_path, conf, framework, resources))
 }
 
+#[allow(unused)]
 struct PackageInfo {
+    /// target project path
     path: PathBuf,
-    dist: PathBuf,
+    conf: PackageConf,
+    resources: Vec<Resource>,
     framework: Option<FrameworkType>,
 }
 
 impl PackageInfo {
-    pub fn new<P1, P2>(path: P1, dist: P2, framework: Option<FrameworkType>) -> Self
+    pub fn new<P>(
+        path: P,
+        conf: PackageConf,
+        framework: Option<FrameworkType>,
+        resources: Vec<Resource>,
+    ) -> Self
     where
-        P1: AsRef<Path>,
-        P2: AsRef<Path>,
+        P: AsRef<Path>,
     {
         Self {
             path: path.as_ref().to_path_buf(),
-            dist: dist.as_ref().to_path_buf(),
+            conf,
             framework,
+            resources,
         }
+    }
+
+    /// ## zip ract resources and package conf resources
+    /// two resources:
+    /// 1. ract: {src: PathBuf, target: String}
+    /// 2. package: {src: PathBuf, target: String}
+    /// ract.target = package.src -> insert(ract.src, package)
+    pub fn zip_resources(&self) -> Option<HashMap<String, (PathBuf, PathBuf)>> {
+        self.conf.resources.as_ref().map(|pkg_resources| {
+            self.resources
+                .iter()
+                .fold(HashMap::new(), |mut acc, ract_resource| {
+                    if let Resource::Obj { src, target } = ract_resource {
+                        let ract_ident = fs::path_to_str(src);
+                        let ract_target = PathBuf::from(target);
+                        for pkg_resource in pkg_resources {
+                            if let Resource::Obj { src, target } = pkg_resource {
+                                if ract_target.eq(src) {
+                                    acc.insert(
+                                        ract_ident.to_string(),
+                                        (src.to_path_buf(), PathBuf::from(target)),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    acc
+                })
+        })
     }
 }

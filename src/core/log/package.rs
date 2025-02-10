@@ -59,5 +59,5 @@ const DESC: &str = r#"
 const INIT_MSG: &str = r#"
 🔸 init: ract will help you init an easy config for packaging
 🔸 skip: ract will directly run package by configurations
-❗️ If you want to define more details, please modify the Packager.toml yourself
+❗️ If you want to define more details, please modify the Cargo.toml yourself
 "#;

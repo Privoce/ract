@@ -10,7 +10,7 @@ use gen_utils::{
     common::{fs::path_to_str, ToToml},
     error::ConvertError,
 };
-use toml_edit::{value, Array, DocumentMut, Item, Table};
+use toml_edit::{value, Array, DocumentMut, Table};
 
 use crate::core::{entry::FrameworkType, log::LogLevel};
 
@@ -183,6 +183,11 @@ impl Conf {
             resources,
         }
     }
+
+    pub fn dist_resources(&self) -> PathBuf {
+        self.out_dir.join("resources")
+    }
+
     /// ## Generate a package generator for the package
     /// if framework is None, it will generate a package generator for normal package which without additional `rces, before-packaging-command...` items
     pub fn generator<P>(&mut self, path: P, framework: Option<FrameworkType>) -> PackageGenerator
@@ -268,28 +273,6 @@ impl Conf {
         if let Some(copyright) = self.copyright.as_ref() {
             table.insert("copyright", value(copyright));
         }
-        // [platforms] -----------------------------------------------------------------------------
-        if let Some(deb) = self.deb.as_ref() {
-            table.insert("deb", deb.into());
-        }
-        if let Some(dmg) = self.dmg.as_ref() {
-            table.insert("dmg", dmg.into());
-        }
-        if let Some(macos) = self.macos.as_ref() {
-            table.insert("macos", macos.into());
-        }
-        if let Some(nsis) = self.nsis.as_ref() {
-            table.insert("nsis", nsis.into());
-        }
-        if let Some(pacman) = self.pacman.as_ref() {
-            table.insert("pacman", pacman.into());
-        }
-        if let Some(windows) = self.windows.as_ref() {
-            table.insert("windows", windows.into());
-        }
-        if let Some(wix) = self.wix.as_ref() {
-            table.insert("wix", wix.into());
-        }
         // [commands] -------------------------------------------------------------------------------
         if let Some(before_each_package_command) = self.before_each_package_command.as_ref() {
             table.insert(
@@ -342,11 +325,48 @@ impl Conf {
         table
     }
 
-    pub fn as_table_section(&self) -> (String, toml_edit::Item) {
-        (
-            "package.metadata.packager".to_string(),
-            toml_edit::Item::Table(self.to_toml_table()),
-        )
+    fn patch_platform_table(&self, table: &mut DocumentMut) -> () {
+        if let Some(deb) = self.deb.as_ref() {
+            table.insert("deb", deb.into());
+        }
+        if let Some(dmg) = self.dmg.as_ref() {
+            table.insert("dmg", dmg.into());
+        }
+        if let Some(macos) = self.macos.as_ref() {
+            table.insert("macos", macos.into());
+        }
+        if let Some(nsis) = self.nsis.as_ref() {
+            table.insert("nsis", nsis.into());
+        }
+        if let Some(pacman) = self.pacman.as_ref() {
+            table.insert("pacman", pacman.into());
+        }
+        if let Some(windows) = self.windows.as_ref() {
+            table.insert("windows", windows.into());
+        }
+        if let Some(wix) = self.wix.as_ref() {
+            table.insert("wix", wix.into());
+        }
+    }
+
+    pub fn patch_to_cargo_toml(&self, cargo_toml: &mut DocumentMut) -> () {
+        cargo_toml
+            .get_mut("package")
+            .and_then(|v| v.as_table_mut())
+            .map(|v| {
+                let mut table = Table::new();
+                table.insert("packager", toml_edit::Item::Table(self.to_toml_table()));
+                v.insert("metadata", toml_edit::Item::Table(table));
+            });
+
+        self.patch_platform_table(cargo_toml);
+    }
+
+    pub fn from_cargo_toml<P>(path: P) -> Result<Self, Error>
+    where
+        P: AsRef<Path>,
+    {
+        (&Self::read(&path)?).try_into()
     }
 }
 
@@ -356,10 +376,10 @@ impl Display for Conf {
     }
 }
 
-impl TryFrom<&Item> for Conf {
+impl TryFrom<&DocumentMut> for Conf {
     type Error = Error;
 
-    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+    fn try_from(doc_mut: &DocumentMut) -> Result<Self, Self::Error> {
         fn get_to_str(table: &Table, key: &str) -> Result<String, Error> {
             table
                 .get(key)
@@ -367,9 +387,14 @@ impl TryFrom<&Item> for Conf {
                 .ok_or_else(|| err_from_to(key, "String"))
         }
 
-        let table = value
-            .as_table()
-            .ok_or_else(|| err_from_to("&toml_edit::Item", "toml_edit::Table"))?;
+        let table = doc_mut
+            .get("package.metadata.packager")
+            .and_then(|v| v.as_table())
+            .map_or_else(
+                || Err(Error::from("can not get package in toml")),
+                |v| Ok(v),
+            )?;
+
         let name = get_to_str(table, "name")?;
         let version = get_to_str(table, "version")?;
         let product_name = get_to_str(table, "product-name")?;
@@ -434,41 +459,6 @@ impl TryFrom<&Item> for Conf {
             .and_then(|v| v.as_str().map(|s| PathBuf::from(s)))
             .ok_or_else(|| err_from_to("out-dir", "PathBuf"))?;
 
-        let deb = table
-            .get("deb")
-            .map(|v| DebianConfig::try_from(v))
-            .transpose()?;
-
-        let dmg = table
-            .get("dmg")
-            .map(|v| DmgConfig::try_from(v))
-            .transpose()?;
-
-        let macos = table
-            .get("macos")
-            .map(|v| MacOsConfig::try_from(v))
-            .transpose()?;
-
-        let nsis = table
-            .get("nsis")
-            .map(|v| NsisConfig::try_from(v))
-            .transpose()?;
-
-        let pacman = table
-            .get("pacman")
-            .map(|v| PacmanConfig::try_from(v))
-            .transpose()?;
-
-        let windows = table
-            .get("windows")
-            .map(|v| WindowsConfig::try_from(v))
-            .transpose()?;
-
-        let wix = table
-            .get("wix")
-            .map(|v| WixConfig::try_from(v))
-            .transpose()?;
-
         let before_each_package_command = table
             .get("before-each-package-command")
             .and_then(|v| v.as_str().map(|s| s.to_string()));
@@ -532,6 +522,41 @@ impl TryFrom<&Item> for Conf {
                     .ok()
             })
         });
+
+        let deb = doc_mut
+            .get("deb")
+            .map(|v| DebianConfig::try_from(v))
+            .transpose()?;
+
+        let dmg = doc_mut
+            .get("dmg")
+            .map(|v| DmgConfig::try_from(v))
+            .transpose()?;
+
+        let macos = doc_mut
+            .get("macos")
+            .map(|v| MacOsConfig::try_from(v))
+            .transpose()?;
+
+        let nsis = doc_mut
+            .get("nsis")
+            .map(|v| NsisConfig::try_from(v))
+            .transpose()?;
+
+        let pacman = doc_mut
+            .get("pacman")
+            .map(|v| PacmanConfig::try_from(v))
+            .transpose()?;
+
+        let windows = doc_mut
+            .get("windows")
+            .map(|v| WindowsConfig::try_from(v))
+            .transpose()?;
+
+        let wix = doc_mut
+            .get("wix")
+            .map(|v| WixConfig::try_from(v))
+            .transpose()?;
 
         Ok(Self {
             name,
