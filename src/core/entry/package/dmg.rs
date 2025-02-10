@@ -68,3 +68,53 @@ impl From<&DmgConfig> for Item {
         toml_edit::Item::Table(table)
     }
 }
+
+impl TryFrom<&Item> for DmgConfig {
+    type Error = gen_utils::error::Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut app_folder_position = None;
+        let mut app_position = None;
+        let mut background = None;
+        let mut window_position = None;
+        let mut window_size = None;
+
+        if let Some(table) = value.as_table() {
+            for (k, v) in table.iter() {
+                match k {
+                    "app-folder-position" => {
+                        app_folder_position = Some(Position::try_from(v)?);
+                    }
+                    "app-position" => {
+                        app_position = Some(Position::try_from(v)?);
+                    }
+                    "background" => {
+                        background = Some(v.as_str().unwrap().to_string());
+                    }
+                    "window-position" => {
+                        window_position = Some(Position::try_from(v)?);
+                    }
+                    "window-size" => {
+                        window_size = Some(Size::try_from(v)?);
+                    }
+                    _ => {
+                        return Err(gen_utils::error::Error::Parse(
+                            gen_utils::error::ParseError::new(
+                                format!("Invalid key: {}", k).as_str(),
+                                gen_utils::error::ParseType::Toml,
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(DmgConfig {
+            app_folder_position,
+            app_position,
+            background,
+            window_position,
+            window_size,
+        })
+    }
+}

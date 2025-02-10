@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use gen_utils::error::{ParseError, ParseType};
 use toml_edit::{value, Array, Item, Table};
 
 /// # PacmanConfig
@@ -76,5 +77,98 @@ impl From<&PacmanConfig> for Item {
         }
         table.set_implicit(false);
         Item::Table(table)
+    }
+}
+
+impl TryFrom<&Item> for PacmanConfig {
+    type Error = gen_utils::error::Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut conflicts = None;
+        let mut depends = None;
+        let mut files = None;
+        let mut provides = None;
+        let mut replaces = None;
+        let mut source = None;
+
+        if let Item::Table(table) = value {
+            for (k, v) in table.iter() {
+                match k {
+                    "conflicts" => {
+                        let mut confs = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| confs.push(s.to_string()));
+                                }
+                            }
+                        }
+                        conflicts = Some(confs);
+                    }
+                    "depends" => {
+                        let mut deps = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| deps.push(s.to_string()));
+                                }
+                            }
+                        }
+                        depends = Some(deps);
+                    }
+                    "files" => {
+                        files = v.as_str().map(|s| s.to_string());
+                    }
+                    "provides" => {
+                        let mut provs = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| provs.push(s.to_string()));
+                                }
+                            }
+                        }
+                        provides = Some(provs);
+                    }
+                    "replaces" => {
+                        let mut reps = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| reps.push(s.to_string()));
+                                }
+                            }
+                        }
+                        replaces = Some(reps);
+                    }
+                    "source" => {
+                        let mut srcs = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| srcs.push(s.to_string()));
+                                }
+                            }
+                        }
+                        source = Some(srcs);
+                    }
+                    _ => {
+                        return Err(gen_utils::error::Error::Parse(ParseError::new(
+                            format!("Invalid key: {}", k).as_str(),
+                            ParseType::Toml,
+                        )));
+                    }
+                }
+            }
+        }
+
+        Ok(PacmanConfig {
+            conflicts,
+            depends,
+            files,
+            provides,
+            replaces,
+            source,
+        })
     }
 }

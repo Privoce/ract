@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use toml_edit::{value, Array, Formatted, InlineTable, Value};
-
 use super::BundleTypeRole;
+use gen_utils::error::{ConvertError, Error};
+use toml_edit::{value, Array, Formatted, InlineTable, Value};
 
 /// # A file association configuration
 pub struct FileAssociation {
@@ -54,5 +54,65 @@ impl From<&FileAssociation> for Value {
 
         table.insert("role", Value::String(Formatted::new(v.role.to_string())));
         Value::InlineTable(table)
+    }
+}
+
+impl TryFrom<&Value> for FileAssociation {
+    type Error = Error;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        let table = value.as_inline_table().ok_or_else(|| {
+            Error::Convert(gen_utils::error::ConvertError::FromTo {
+                from: "&toml_edit::Value".to_string(),
+                to: "FileAssociation".to_string(),
+            })
+        })?;
+
+        let description = table
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let extensions = table.get("ext").map_or_else(
+            || Err(Error::from("ext is required")),
+            |v| {
+                v.as_array().map_or_else(
+                    || {
+                        Err(Error::Convert(ConvertError::FromTo {
+                            from: "&toml_edit::Value".to_string(),
+                            to: "Array".to_string(),
+                        }))
+                    },
+                    |arr| {
+                        let mut exts = Vec::new();
+                        for ext in arr.iter() {
+                            ext.as_str().map(|s| exts.push(s.to_string()));
+                        }
+                        Ok(exts)
+                    },
+                )
+            },
+        )?;
+
+        let mime_type = table
+            .get("mime-type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let name = table
+            .get("name")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let role = table.get("role").map_or_else(
+            || Err(Error::from("can not get role in file association")),
+            |v| BundleTypeRole::try_from(v),
+        )?;
+
+        Ok(Self {
+            description,
+            extensions,
+            mime_type,
+            name,
+            role,
+        })
     }
 }

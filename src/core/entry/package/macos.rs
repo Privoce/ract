@@ -176,3 +176,68 @@ fn val(ty: &str, v: Option<&str>) -> String {
         None => format!("<{}/>", ty),
     }
 }
+
+impl TryFrom<&Item> for MacOsConfig {
+    type Error = gen_utils::error::Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut entitlements = None;
+        let mut exception_domain = None;
+        let mut frameworks = None;
+        let mut info_plist_path = None;
+        let mut minimum_system_version = None;
+        let mut provider_short_name = None;
+        let mut signing_identity = None;
+
+        if let Item::Table(table) = value {
+            for (k, v) in table.iter() {
+                match k {
+                    "entitlements" => {
+                        entitlements = v.as_str().map(|s| s.to_string());
+                    }
+                    "exception-domain" => {
+                        exception_domain = v.as_str().map(|s| s.to_string());
+                    }
+                    "frameworks" => {
+                        let arr = v.as_array().unwrap();
+                        let mut vec = Vec::new();
+                        for f in arr.iter() {
+                            f.as_str().map(|s| vec.push(s.to_string()));
+                        }
+                        frameworks = Some(vec);
+                    }
+                    "info-plist-path" => {
+                        info_plist_path = v.as_str().map(|s| s.to_string());
+                    }
+                    "minimum-system-version" => {
+                        minimum_system_version = v.as_str().map(|s| s.to_string());
+                    }
+                    "provider-short-name" => {
+                        provider_short_name = v.as_str().map(|s| s.to_string());
+                    }
+                    "signing-identity" => {
+                        signing_identity = v.as_str().map(|s| s.to_string());
+                    }
+                    _ => {
+                        return Err(gen_utils::error::Error::Parse(
+                            gen_utils::error::ParseError::new(
+                                format!("Invalid key: {}", k).as_str(),
+                                gen_utils::error::ParseType::Toml,
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(MacOsConfig {
+            entitlements,
+            exception_domain,
+            frameworks,
+            info_plist_path,
+            minimum_system_version,
+            provider_short_name,
+            signing_identity,
+        })
+    }
+}

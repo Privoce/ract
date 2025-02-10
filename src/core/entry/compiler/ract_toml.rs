@@ -86,10 +86,10 @@ impl RactToml {
     }
 }
 
-impl TryFrom<PathBuf> for RactToml {
+impl TryFrom<&PathBuf> for RactToml {
     type Error = Error;
 
-    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+    fn try_from(value: &PathBuf) -> Result<Self, Self::Error> {
         let toml = fs::read(value.as_path())?
             .parse::<DocumentMut>()
             .map_err(|e| e.to_string())?;

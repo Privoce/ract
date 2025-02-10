@@ -5,8 +5,12 @@ use std::{
     str::FromStr,
 };
 
-use gen_utils::common::{fs::path_to_str, ToToml};
-use toml_edit::{value, Array, DocumentMut, Table};
+use gen_utils::error::Error;
+use gen_utils::{
+    common::{fs::path_to_str, ToToml},
+    error::ConvertError,
+};
+use toml_edit::{value, Array, DocumentMut, Item, Table};
 
 use crate::core::{entry::FrameworkType, log::LogLevel};
 
@@ -352,4 +356,224 @@ impl Display for Conf {
     }
 }
 
+impl TryFrom<&Item> for Conf {
+    type Error = Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        fn get_to_str(table: &Table, key: &str) -> Result<String, Error> {
+            table
+                .get(key)
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .ok_or_else(|| err_from_to(key, "String"))
+        }
+
+        let table = value
+            .as_table()
+            .ok_or_else(|| err_from_to("&toml_edit::Item", "toml_edit::Table"))?;
+        let name = get_to_str(table, "name")?;
+        let version = get_to_str(table, "version")?;
+        let product_name = get_to_str(table, "product-name")?;
+        let identifier = get_to_str(table, "identifier")?;
+
+        let log_level = table
+            .get("log-level")
+            .and_then(|v| v.as_str().map(|s| LogLevel::from_str(s).unwrap()));
+
+        let icons = table.get("icons").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| i.as_str().map(|s| PathBuf::from(s)))
+                    .collect::<Option<Vec<PathBuf>>>()
+            })
+        });
+
+        let authors = table.get("authors").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| i.as_str().map(|s| s.to_string()))
+                    .collect::<Option<Vec<String>>>()
+            })
+        });
+
+        let publisher = table
+            .get("publisher")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let category = table
+            .get("category")
+            .map(|v| AppCategory::try_from(v))
+            .transpose()?;
+
+        let copyright = table
+            .get("copyright")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let description = table
+            .get("description")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let long_description = table
+            .get("long-description")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let homepage = table
+            .get("homepage")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let enabled = table
+            .get("enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+
+        let license_file = table
+            .get("license-file")
+            .and_then(|v| v.as_str().map(|s| PathBuf::from(s)));
+
+        let out_dir = table
+            .get("out-dir")
+            .and_then(|v| v.as_str().map(|s| PathBuf::from(s)))
+            .ok_or_else(|| err_from_to("out-dir", "PathBuf"))?;
+
+        let deb = table
+            .get("deb")
+            .map(|v| DebianConfig::try_from(v))
+            .transpose()?;
+
+        let dmg = table
+            .get("dmg")
+            .map(|v| DmgConfig::try_from(v))
+            .transpose()?;
+
+        let macos = table
+            .get("macos")
+            .map(|v| MacOsConfig::try_from(v))
+            .transpose()?;
+
+        let nsis = table
+            .get("nsis")
+            .map(|v| NsisConfig::try_from(v))
+            .transpose()?;
+
+        let pacman = table
+            .get("pacman")
+            .map(|v| PacmanConfig::try_from(v))
+            .transpose()?;
+
+        let windows = table
+            .get("windows")
+            .map(|v| WindowsConfig::try_from(v))
+            .transpose()?;
+
+        let wix = table
+            .get("wix")
+            .map(|v| WixConfig::try_from(v))
+            .transpose()?;
+
+        let before_each_package_command = table
+            .get("before-each-package-command")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let before_packaging_command = table
+            .get("before-packaging-command")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let binaries = table.get("binaries").map_or_else(
+            || Err(Error::from("can not get binaries in member")),
+            |v| {
+                v.as_array().map_or_else(
+                    || Err(err_from_to("binaries", "Array")),
+                    |arr| {
+                        let mut binaries = Vec::new();
+                        for i in arr.iter() {
+                            let binary = Binary::try_from(i)?;
+                            binaries.push(binary);
+                        }
+                        Ok(binaries)
+                    },
+                )
+            },
+        )?;
+
+        let external_binaries = table.get("external-binaries").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| i.as_str().map(|s| s.to_string()))
+                    .collect::<Option<Vec<String>>>()
+            })
+        });
+
+        let file_associations = table.get("file-associations").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| FileAssociation::try_from(i))
+                    .collect::<Result<Vec<FileAssociation>, Error>>()
+                    .ok()
+            })
+        });
+
+        let formats = table.get("formats").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| PackageFormat::try_from(i))
+                    .collect::<Result<Vec<PackageFormat>, Error>>()
+                    .ok()
+            })
+        });
+
+        let target_triple = table
+            .get("target-triple")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let resources = table.get("resources").and_then(|v| {
+            v.as_array().and_then(|v| {
+                v.iter()
+                    .map(|i| Resource::try_from(i))
+                    .collect::<Result<Vec<Resource>, Error>>()
+                    .ok()
+            })
+        });
+
+        Ok(Self {
+            name,
+            version,
+            product_name,
+            identifier,
+            log_level,
+            icons,
+            authors,
+            publisher,
+            category,
+            copyright,
+            description,
+            long_description,
+            homepage,
+            enabled,
+            license_file,
+            out_dir,
+            deb,
+            dmg,
+            macos,
+            nsis,
+            pacman,
+            windows,
+            wix,
+            before_each_package_command,
+            before_packaging_command,
+            binaries,
+            external_binaries,
+            file_associations,
+            formats,
+            target_triple,
+            resources,
+        })
+    }
+}
+
 const BEFORE_COMMAND: &str = "cargo build --release";
+
+fn err_from_to(from: &str, to: &str) -> Error {
+    Error::Convert(ConvertError::FromTo {
+        from: from.to_string(),
+        to: to.to_string(),
+    })
+}

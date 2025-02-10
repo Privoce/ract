@@ -1,6 +1,6 @@
+use gen_utils::error::Error;
+use gen_utils::{common::fs::path_to_str, error::ConvertError};
 use std::{fmt::Display, path::PathBuf};
-
-use gen_utils::common::fs::path_to_str;
 use toml_edit::{value, Array, Formatted, InlineTable, Item, Table, Value};
 
 /// # WixConfig
@@ -122,6 +122,139 @@ impl Display for WixConfig {
     }
 }
 
+impl TryFrom<&Item> for WixConfig {
+    type Error = Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut banner_path = None;
+        let mut component_group_refs = None;
+        let mut component_refs = None;
+        let mut custom_action_refs = None;
+        let mut dialog_image_path = None;
+        let mut feature_group_refs = None;
+        let mut feature_refs = None;
+        let mut fips_compliant = false;
+        let mut fragment_paths = None;
+        let mut fragments = None;
+        let mut languages = None;
+        let mut merge_modules = None;
+        let mut merge_refs = None;
+        let mut template = None;
+
+        if let Item::Table(table) = value {
+            for (k, v) in table.iter() {
+                match k {
+                    "banner-path" => {
+                        banner_path = v.as_str().map(|s| s.to_string());
+                    }
+                    "component-group-refs" => {
+                        let mut arr = Vec::new();
+                        for c in v.as_array().unwrap().iter() {
+                            c.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        component_group_refs = Some(arr);
+                    }
+                    "component-refs" => {
+                        let mut arr = Vec::new();
+                        for c in v.as_array().unwrap().iter() {
+                            c.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        component_refs = Some(arr);
+                    }
+                    "custom-action-refs" => {
+                        let mut arr = Vec::new();
+                        for c in v.as_array().unwrap().iter() {
+                            c.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        custom_action_refs = Some(arr);
+                    }
+                    "dialog-image-path" => {
+                        dialog_image_path = v.as_str().map(|s| s.to_string());
+                    }
+                    "feature-group-refs" => {
+                        let mut arr = Vec::new();
+                        for f in v.as_array().unwrap().iter() {
+                            f.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        feature_group_refs = Some(arr);
+                    }
+                    "feature-refs" => {
+                        let mut arr = Vec::new();
+                        for f in v.as_array().unwrap().iter() {
+                            f.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        feature_refs = Some(arr);
+                    }
+                    "fips-compliant" => {
+                        fips_compliant = v.as_bool().unwrap();
+                    }
+                    "fragment-paths" => {
+                        let mut arr = Vec::new();
+                        for f in v.as_array().unwrap().iter() {
+                            f.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        fragment_paths = Some(arr);
+                    }
+                    "fragments" => {
+                        let mut arr = Vec::new();
+                        for f in v.as_array().unwrap().iter() {
+                            f.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        fragments = Some(arr);
+                    }
+                    "languages" => {
+                        let mut arr = Vec::new();
+                        for l in v.as_array().unwrap().iter() {
+                            arr.push(WixLanguage::try_from(l)?);
+                        }
+                        languages = Some(arr);
+                    }
+                    "merge-modules" => {
+                        let mut arr = Vec::new();
+                        for m in v.as_array().unwrap().iter() {
+                            m.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        merge_modules = Some(arr);
+                    }
+                    "merge-refs" => {
+                        let mut arr = Vec::new();
+                        for m in v.as_array().unwrap().iter() {
+                            m.as_str().map(|s| arr.push(s.to_string()));
+                        }
+                        merge_refs = Some(arr);
+                    }
+                    "template" => {
+                        template = v.as_str().map(|s| s.to_string());
+                    }
+                    _ => {
+                        return Err(Error::Parse(gen_utils::error::ParseError::new(
+                            format!("Invalid key: {}", k).as_str(),
+                            gen_utils::error::ParseType::Toml,
+                        )));
+                    }
+                }
+            }
+        }
+
+        Ok(WixConfig {
+            banner_path,
+            component_group_refs,
+            component_refs,
+            custom_action_refs,
+            dialog_image_path,
+            feature_group_refs,
+            feature_refs,
+            fips_compliant,
+            fragment_paths,
+            fragments,
+            languages,
+            merge_modules,
+            merge_refs,
+            template,
+        })
+    }
+}
+
 /// # WixLanguage
 #[derive(Debug, Clone)]
 pub enum WixLanguage {
@@ -131,6 +264,49 @@ pub enum WixLanguage {
         /// path to .wxl file
         path: Option<PathBuf>,
     },
+}
+
+impl TryFrom<&Value> for WixLanguage {
+    type Error = Error;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        value.as_inline_table().map_or_else(
+            || {
+                value.as_str().map_or_else(
+                    || {
+                        Err(Error::Convert(ConvertError::FromTo {
+                            from: "&toml_edit::Item".to_string(),
+                            to: "WixLanguage".to_string(),
+                        }))
+                    },
+                    |s| Ok(WixLanguage::String(s.to_string())),
+                )
+            },
+            |t| {
+                let identifier = t.get("identifier").and_then(|v| v.as_str()).map_or_else(
+                    || {
+                        Err(Error::Convert(ConvertError::FromTo {
+                            from: "&toml_edit::Item".to_string(),
+                            to: "WixLanguage.identifier".to_string(),
+                        }))
+                    },
+                    |s| Ok(s.to_string()),
+                )?;
+
+                let path = t.get("path").and_then(|v| v.as_str()).map_or_else(
+                    || {
+                        Err(Error::Convert(ConvertError::FromTo {
+                            from: "&toml_edit::Item".to_string(),
+                            to: "WixLanguage.path".to_string(),
+                        }))
+                    },
+                    |s| Ok(Some(PathBuf::from(s.to_string()))),
+                )?;
+
+                Ok(WixLanguage::Obj { identifier, path })
+            },
+        )
+    }
 }
 
 impl Display for WixLanguage {
@@ -151,10 +327,7 @@ impl From<&WixLanguage> for Value {
                     Value::String(Formatted::new(identifier.to_string())),
                 );
                 if let Some(p) = path {
-                    v.insert(
-                        "path",
-                        Value::String(Formatted::new(path_to_str(p))),
-                    );
+                    v.insert("path", Value::String(Formatted::new(path_to_str(p))));
                 }
 
                 Value::InlineTable(v)

@@ -1,5 +1,5 @@
+use gen_utils::error::Error;
 use std::fmt::Display;
-
 use toml_edit::{value, Formatted, Item, Table, Value};
 
 /// # NsisConfig
@@ -116,6 +116,94 @@ impl Display for NsisConfig {
     }
 }
 
+impl TryFrom<&Item> for NsisConfig {
+    type Error = Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut appdata_paths = None;
+        let mut compression = None;
+        let mut custom_language_files = None;
+        let mut display_language_selector = false;
+        let mut header_image = None;
+        let mut installer_icon = None;
+        let mut install_mode = None;
+        let mut languages = None;
+        let mut preinstall_section = None;
+        let mut sidebar_image = None;
+        let mut template = None;
+
+        if let Some(v) = value.as_table() {
+            if let Some(appdata_paths_value) = v.get("appdata-paths") {
+                let mut paths = Vec::new();
+                for p in appdata_paths_value.as_array().unwrap().iter() {
+                    p.as_str().map(|s| paths.push(s.to_string()));
+                }
+                appdata_paths = Some(paths);
+            }
+
+            if let Some(compression_value) = v.get("compression") {
+                compression = Some(NsisCompression::try_from(compression_value)?);
+            }
+
+            if let Some(custom_language_files_value) = v.get("custom-language-files") {
+                custom_language_files = custom_language_files_value.as_str().map(|s| s.to_string());
+            }
+
+            if let Some(display_language_selector_value) = v.get("display-language-selector") {
+                display_language_selector = display_language_selector_value
+                    .as_bool()
+                    .map_or(false, |b| b);
+            }
+
+            if let Some(header_image_value) = v.get("header-image") {
+                header_image = header_image_value.as_str().map(|s| s.to_string());
+            }
+
+            if let Some(installer_icon_value) = v.get("installer-icon") {
+                installer_icon = installer_icon_value.as_str().map(|s| s.to_string());
+            }
+
+            if let Some(install_mode_value) = v.get("install-mode") {
+                install_mode = Some(NSISInstallerMode::try_from(install_mode_value)?);
+            }
+
+            if let Some(languages_value) = v.get("languages") {
+                let mut langs = Vec::new();
+                for l in languages_value.as_array().unwrap().iter() {
+                    l.as_str().map(|s| langs.push(s.to_string()));
+                }
+                languages = Some(langs);
+            }
+
+            if let Some(preinstall_section_value) = v.get("preinstall-section") {
+                preinstall_section = preinstall_section_value.as_str().map(|s| s.to_string());
+            }
+
+            if let Some(sidebar_image_value) = v.get("sidebar-image") {
+                sidebar_image = sidebar_image_value.as_str().map(|s| s.to_string());
+            }
+
+            if let Some(template_value) = v.get("template") {
+                template = template_value.as_str().map(|s| s.to_string());
+            }
+        }
+
+        Ok(NsisConfig {
+            appdata_paths,
+            compression,
+            custom_language_files,
+            display_language_selector,
+            header_image,
+            installer_icon,
+            install_mode,
+            languages,
+            preinstall_section,
+            sidebar_image,
+            template,
+        })
+    }
+}
+
 /// # NSISInstallerMode
 ///
 /// One of the following:
@@ -149,6 +237,21 @@ impl From<&NSISInstallerMode> for Value {
 impl Display for NSISInstallerMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(value(self).to_string().as_str())
+    }
+}
+
+impl TryFrom<&Item> for NSISInstallerMode {
+    type Error = Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        value
+            .as_str()
+            .map_or(Err(Error::from("Invalid NSISInstallerMode")), |v| match v {
+                "currentUser" => Ok(NSISInstallerMode::CurrentUser),
+                "perMachine" => Ok(NSISInstallerMode::PerMachine),
+                "both" => Ok(NSISInstallerMode::Both),
+                _ => Err(Error::from("Invalid NSISInstallerMode")),
+            })
     }
 }
 
@@ -190,5 +293,21 @@ impl From<&NsisCompression> for Value {
             }
             .to_string(),
         ))
+    }
+}
+
+impl TryFrom<&Item> for NsisCompression {
+    type Error = Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        value
+            .as_str()
+            .map_or(Err(Error::from("Invalid NsisCompression")), |v| match v {
+                "lzma" => Ok(NsisCompression::LZMA),
+                "zlib" => Ok(NsisCompression::Zlib),
+                "bzip2" => Ok(NsisCompression::Bzip2),
+                "off" => Ok(NsisCompression::Off),
+                _ => Err(Error::from("Invalid NsisCompression")),
+            })
     }
 }

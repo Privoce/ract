@@ -47,3 +47,69 @@ impl From<&DebianConfig> for Item {
         Item::Table(table)
     }
 }
+
+impl TryFrom<&Item> for DebianConfig {
+    type Error = gen_utils::error::Error;
+
+    fn try_from(value: &Item) -> Result<Self, Self::Error> {
+        let mut depends = None;
+        let mut desktop_template = None;
+        let mut files = None;
+        let mut priority = None;
+        let mut section = None;
+
+        if let Item::Table(table) = value {
+            for (k, v) in table.iter() {
+                match k {
+                    "depends" => {
+                        let mut deps = Vec::new();
+                        if let Item::Value(v) = v {
+                            if let Some(arr) = v.as_array() {
+                                for a in arr.iter() {
+                                    a.as_str().map(|s| deps.push(s.to_string()));
+                                }
+                            }
+                        }
+                        depends = Some(deps);
+                    }
+                    "desktop-template" => {
+                        if let Item::Value(v) = v {
+                            desktop_template = v.as_str().map(|s| s.to_string());
+                        }
+                    }
+                    "files" => {
+                        if let Item::Value(v) = v {
+                            files = v.as_str().map(|s| s.to_string());
+                        }
+                    }
+                    "priority" => {
+                        if let Item::Value(v) = v {
+                            priority = v.as_str().map(|s| s.to_string());
+                        }
+                    }
+                    "section" => {
+                        if let Item::Value(v) = v {
+                            section = v.as_str().map(|s| s.to_string());
+                        }
+                    }
+                    _ => {
+                        return Err(gen_utils::error::Error::Parse(
+                            gen_utils::error::ParseError::new(
+                                format!("Invalid key: {}", k).as_str(),
+                                gen_utils::error::ParseType::Toml,
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(DebianConfig {
+            depends,
+            desktop_template,
+            files,
+            priority,
+            section,
+        })
+    }
+}
