@@ -46,7 +46,7 @@ impl From<&DmgConfig> for Item {
         let mut table = Table::new();
 
         if let Some(app_folder_position) = v.app_folder_position.as_ref() {
-            table.insert("app-folder-position", value(app_folder_position));
+            table.insert("application-folder-positio", value(app_folder_position));
         }
 
         if let Some(app_position) = v.app_position.as_ref() {
@@ -82,7 +82,7 @@ impl TryFrom<&Item> for DmgConfig {
         if let Some(table) = value.as_table() {
             for (k, v) in table.iter() {
                 match k {
-                    "app-folder-position" => {
+                    "application-folder-positio" => {
                         app_folder_position = Some(Position::try_from(v)?);
                     }
                     "app-position" => {

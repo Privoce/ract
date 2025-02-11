@@ -174,7 +174,7 @@ impl Conf {
             windows: Some(WindowsConfig::default()),
             wix: None,
             before_each_package_command: None,
-            before_packaging_command: Some(BEFORE_COMMAND.to_string()),
+            before_packaging_command: None,
             binaries,
             external_binaries: None,
             file_associations: None,
@@ -283,6 +283,29 @@ impl Conf {
         if let Some(before_packaging_command) = self.before_packaging_command.as_ref() {
             table.insert("before-packaging-command", value(before_packaging_command));
         }
+        // [platforms] ------------------------------------------------------------------------------
+        if let Some(deb) = self.deb.as_ref() {
+            table.insert("deb", deb.into());
+        }
+        if let Some(dmg) = self.dmg.as_ref() {
+            table.insert("dmg", dmg.into());
+        }
+        if let Some(macos) = self.macos.as_ref() {
+            table.insert("macos", macos.into());
+        }
+        if let Some(nsis) = self.nsis.as_ref() {
+            table.insert("nsis", nsis.into());
+        }
+        if let Some(pacman) = self.pacman.as_ref() {
+            table.insert("pacman", pacman.into());
+        }
+        if let Some(windows) = self.windows.as_ref() {
+            table.insert("windows", windows.into());
+        }
+        if let Some(wix) = self.wix.as_ref() {
+            table.insert("wix", wix.into());
+        }
+
         // [other] ---------------------------------------------------------------------------------
         let mut binaries_val = Array::new();
         for binary in &self.binaries {
@@ -325,30 +348,6 @@ impl Conf {
         table
     }
 
-    fn patch_platform_table(&self, table: &mut DocumentMut) -> () {
-        if let Some(deb) = self.deb.as_ref() {
-            table.insert("deb", deb.into());
-        }
-        if let Some(dmg) = self.dmg.as_ref() {
-            table.insert("dmg", dmg.into());
-        }
-        if let Some(macos) = self.macos.as_ref() {
-            table.insert("macos", macos.into());
-        }
-        if let Some(nsis) = self.nsis.as_ref() {
-            table.insert("nsis", nsis.into());
-        }
-        if let Some(pacman) = self.pacman.as_ref() {
-            table.insert("pacman", pacman.into());
-        }
-        if let Some(windows) = self.windows.as_ref() {
-            table.insert("windows", windows.into());
-        }
-        if let Some(wix) = self.wix.as_ref() {
-            table.insert("wix", wix.into());
-        }
-    }
-
     pub fn patch_to_cargo_toml(&self, cargo_toml: &mut DocumentMut) -> () {
         cargo_toml
             .get_mut("package")
@@ -358,8 +357,6 @@ impl Conf {
                 table.insert("packager", toml_edit::Item::Table(self.to_toml_table()));
                 v.insert("metadata", toml_edit::Item::Table(table));
             });
-
-        self.patch_platform_table(cargo_toml);
     }
 
     pub fn from_cargo_toml<P>(path: P) -> Result<Self, Error>
@@ -522,37 +519,37 @@ impl TryFrom<&DocumentMut> for Conf {
             })
         });
 
-        let deb = doc_mut
+        let deb = table
             .get("deb")
             .map(|v| DebianConfig::try_from(v))
             .transpose()?;
 
-        let dmg = doc_mut
+        let dmg = table
             .get("dmg")
             .map(|v| DmgConfig::try_from(v))
             .transpose()?;
 
-        let macos = doc_mut
+        let macos = table
             .get("macos")
             .map(|v| MacOsConfig::try_from(v))
             .transpose()?;
 
-        let nsis = doc_mut
+        let nsis = table
             .get("nsis")
             .map(|v| NsisConfig::try_from(v))
             .transpose()?;
 
-        let pacman = doc_mut
+        let pacman = table
             .get("pacman")
             .map(|v| PacmanConfig::try_from(v))
             .transpose()?;
 
-        let windows = doc_mut
+        let windows = table
             .get("windows")
             .map(|v| WindowsConfig::try_from(v))
             .transpose()?;
 
-        let wix = doc_mut
+        let wix = table
             .get("wix")
             .map(|v| WixConfig::try_from(v))
             .transpose()?;
@@ -592,8 +589,6 @@ impl TryFrom<&DocumentMut> for Conf {
         })
     }
 }
-
-const BEFORE_COMMAND: &str = "cargo build --release";
 
 fn err_from_to(from: &str, to: &str) -> Error {
     Error::Convert(ConvertError::FromTo {
