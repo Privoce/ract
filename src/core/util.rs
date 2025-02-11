@@ -1,8 +1,8 @@
-use std::path::Path;
-use std::{env::current_exe, path::PathBuf};
 use crate::core::{entry::RactToml, log::CreateLogs};
 use gen_utils::common::{fs, ToToml};
 use gen_utils::error::Error;
+use std::path::Path;
+use std::{env::current_exe, path::PathBuf};
 use toml_edit::DocumentMut;
 
 pub fn exe_path() -> Result<PathBuf, Error> {
@@ -51,14 +51,14 @@ where
             .parse::<DocumentMut>()
             .map_err(|e| e.to_string())?;
         if toml.get("workspace").is_some() {
-            Ok(true)
+            return Ok(true);
         } else {
             let pre_path = path
                 .as_ref()
                 .parent()
                 .ok_or_else(|| Error::from("can not get parent path"))?;
             // handle
-            handle(pre_path, count)
+            return handle(pre_path, count);
         }
     }
 

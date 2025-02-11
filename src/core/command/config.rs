@@ -8,6 +8,7 @@ use gen_utils::{
 };
 use inquire::{Select, Text};
 use std::{path::PathBuf, process::exit, str::FromStr};
+use toml_edit::DocumentMut;
 
 pub fn run() -> () {
     ConfigLogs::Welcome.terminal().rust();
@@ -105,7 +106,31 @@ fn config_env_toml() -> Result<(), Error> {
         // 修改依赖路径
         chain_env_toml
             .dependencies
-            .insert(key.to_string(), dep_path);
+            .insert(key.to_string(), dep_path.to_path_buf());
+
+        // 如果修改的是makepad-widgets，那么需要更改gen_components中对makepad-widgets的引用
+        if key == "makepad-widgets" {
+            let _ = chain_env_toml
+                .dependencies
+                .get("gen_components")
+                .map_or_else(
+                    || {
+                        Err(Error::Env(EnvError::Get {
+                            key: "gen_components".to_string(),
+                        }))
+                    },
+                    |path| {
+                        let path = path.join("Cargo.toml");
+                        let mut cargo_toml = fs::read(path.as_path())?
+                            .parse::<DocumentMut>()
+                            .map_err(|e| e.to_string())?;
+                        // change makepad-widgets from dependencies == dep_path
+                        cargo_toml["dependencies"]["makepad-widgets"] =
+                            toml_edit::value(fs::path_to_str(&dep_path));
+                        fs::write(path.as_path(), &cargo_toml.to_string())
+                    },
+                )?;
+        }
 
         return chain_env_toml.write();
     }
