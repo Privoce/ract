@@ -3,6 +3,7 @@ use std::{env::current_exe, path::PathBuf};
 use crate::core::{entry::RactToml, log::CreateLogs};
 use gen_utils::common::{fs, ToToml};
 use gen_utils::error::Error;
+use toml_edit::DocumentMut;
 
 pub fn exe_path() -> Result<PathBuf, Error> {
     let mut path = current_exe().map_err(|e| Error::from(e.to_string()))?;
@@ -30,4 +31,36 @@ where
         }
         Err(e) => Err(e.to_string().into()),
     }
+}
+
+// judget current path is rust workspace or not
+pub fn is_workspace<P>(path: P) -> bool
+where
+    P: AsRef<Path>,
+{
+    fn handle<P>(path: P, mut count: usize) -> Result<bool, Error>
+    where
+        P: AsRef<Path>,
+    {
+        count += 1;
+        if count > 2 {
+            return Ok(false);
+        }
+        let cargo_toml = path.as_ref().join("Cargo.toml");
+        let toml = fs::read(cargo_toml)?
+            .parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?;
+        if toml.get("workspace").is_some() {
+            Ok(true)
+        } else {
+            let pre_path = path
+                .as_ref()
+                .parent()
+                .ok_or_else(|| Error::from("can not get parent path"))?;
+            // handle
+            handle(pre_path, count)
+        }
+    }
+
+    handle(path, 0).unwrap_or(false)
 }

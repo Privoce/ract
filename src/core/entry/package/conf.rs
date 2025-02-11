@@ -12,7 +12,7 @@ use gen_utils::{
 };
 use toml_edit::{value, Array, DocumentMut, Table};
 
-use crate::core::{entry::FrameworkType, log::LogLevel};
+use crate::core::{entry::FrameworkType, log::LogLevel, util::is_workspace};
 
 use super::{
     AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation, MacOsConfig, NsisConfig,
@@ -118,14 +118,18 @@ impl Conf {
         license: Option<PathBuf>,
     ) -> Self {
         // [binaries] -----------------------------------------------------------------------------
-        let binaries = vec![Binary {
-            main: true,
-            path: current_dir()
-                .unwrap()
-                .join("target")
-                .join("release")
-                .join(&name),
-        }];
+        let current_path = current_dir().unwrap();
+        let path = if is_workspace(current_path.as_path()) {
+            // get father
+            current_path.parent().unwrap().to_path_buf()
+        } else {
+            current_path
+        }
+        .join("target")
+        .join("release")
+        .join(&name);
+
+        let binaries = vec![Binary { main: true, path }];
         // [out dir] -----------------------------------------------------------------------------
         let out_dir = PathBuf::from("./dist");
         // [icons] --------------------------------------------------------------------------------

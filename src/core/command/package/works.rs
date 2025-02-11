@@ -1,11 +1,8 @@
-use gen_utils::common::{exec_cmd, fs};
-use gen_utils::error::Error;
-use toml_edit::DocumentMut;
-
-use std::path::Path;
-
 use crate::core::entry::{FrameworkType, PackageFormat};
 use crate::core::log::TerminalLogger;
+use gen_utils::common::exec_cmd;
+use gen_utils::error::Error;
+use std::path::Path;
 
 #[cfg(target_os = "windows")]
 pub fn specify_platform_with_works<P>(
@@ -47,6 +44,7 @@ pub fn specify_platform_with_works<P>(
 where
     P: AsRef<Path>,
 {
+    use crate::core::util::is_workspace;
     use gen_utils::common::exec_cmd;
 
     fn strip<P>(path: P, binary_path: &str) -> Result<(), Error>
@@ -154,6 +152,8 @@ where
         common::{stream_cmd, stream_terminal},
         error::{ParseError, ParseType},
     };
+
+    use crate::core::util::is_workspace;
 
     // [check invalid package formats] ---------------------------------------------------------
     let invalid_format = formats.iter().any(|f| match f {
@@ -305,36 +305,4 @@ where
         .map_err(|e| e.to_string())?;
 
     Ok(())
-}
-
-// judget current path is rust workspace or not
-fn is_workspace<P>(path: P) -> bool
-where
-    P: AsRef<Path>,
-{
-    fn handle<P>(path: P, mut count: usize) -> Result<bool, Error>
-    where
-        P: AsRef<Path>,
-    {
-        count += 1;
-        if count > 2 {
-            return Ok(false);
-        }
-        let cargo_toml = path.as_ref().join("Cargo.toml");
-        let toml = fs::read(cargo_toml)?
-            .parse::<DocumentMut>()
-            .map_err(|e| e.to_string())?;
-        if toml.get("workspace").is_some() {
-            Ok(true)
-        } else {
-            let pre_path = path
-                .as_ref()
-                .parent()
-                .ok_or_else(|| Error::from("can not get parent path"))?;
-            // handle
-            handle(pre_path, count)
-        }
-    }
-
-    handle(path, 0).unwrap_or(false)
 }
