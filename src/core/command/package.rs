@@ -1,11 +1,17 @@
 use std::{
     collections::HashMap,
     env::current_dir,
+    ffi::OsStr,
     path::{Path, PathBuf},
     process::exit,
     str::FromStr,
 };
 
+use crate::core::entry::PackageFormat;
+use crate::core::{
+    entry::{FrameworkType, PackageConf, RactToml, Resource},
+    log::{PackageLogs, TerminalLogger},
+};
 use cargo_metadata::MetadataCommand;
 use gen_utils::{
     common::{exec_cmd, fs, stream_cmd, stream_terminal},
@@ -14,11 +20,6 @@ use gen_utils::{
 use inquire::{Confirm, Select, Text};
 use toml_edit::DocumentMut;
 use which::which;
-
-use crate::core::{
-    entry::{FrameworkType, PackageConf, RactToml, Resource},
-    log::{PackageLogs, TerminalLogger},
-};
 
 /// use cargo packager to package the makepad project
 pub fn run() {
@@ -199,7 +200,6 @@ where
 }
 
 fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
-    PackageLogs::Start.terminal().info();
     // ask user need to pack or stop
     let confirm = Confirm::new("Do you want to package the project now?")
         .with_help_message(
@@ -212,15 +212,23 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     if !confirm {
         return Ok(());
     }
+    PackageLogs::Start.terminal().info();
     let resources = info.zip_resources();
-    let PackageInfo { path, conf, .. } = info;
+    let PackageInfo {
+        path,
+        conf,
+        framework,
+        ..
+    } = info;
     // [before package] ---------------------------------------------------------------------------
     let dist_resources_path = conf.dist_resources();
     fs::create_dir(&dist_resources_path)?;
     // [copy resources] ---------------------------------------------------------------------------
     let _ = copy_resources(resources)?;
-    fs::copy(path.join("resources"), dist_resources_path.join(conf.name))?;
+    fs::copy(path.join("resources"), dist_resources_path.join(&conf.name))?;
     TerminalLogger::new("copy all resources to dist resources successful").success();
+    // [specify platform and do some works] -------------------------------------------------------
+    specify_platform_with_works(path.as_path(), conf.formats.as_ref(), &conf.name, framework)?;
     // [run cargo-packager] -----------------------------------------------------------------------
     let mut child =
         stream_cmd("cargo", ["packager", "--release"], Some(path)).map_err(|e| e.to_string())?;
@@ -336,4 +344,108 @@ impl PackageInfo {
                 })
         })
     }
+}
+
+#[cfg(target_os = "windows")]
+fn specify_platform_with_works() {}
+
+#[cfg(target_os = "macos")]
+fn specify_platform_with_works<P>(
+    path: P,
+    formats: Option<&Vec<PackageFormat>>,
+    name: &str,
+    framework: Option<FrameworkType>,
+) -> Result<(), Error>
+where
+    P: AsRef<Path>,
+{
+    use gen_utils::error::{ParseError, ParseType};
+
+    if let Some(formats) = formats {
+        // [check invalid package formats] ---------------------------------------------------------
+        let invalid_format = formats.iter().any(|f| match f {
+            PackageFormat::Default | PackageFormat::App | PackageFormat::Dmg => false,
+            _ => true,
+        });
+
+        if invalid_format {
+            return Err(Error::Parse(ParseError::new(
+                &format!(
+                    "Invalid package formats in Macos: {}",
+                    formats
+                        .iter()
+                        .map(|f| f.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                ),
+                ParseType::Conf,
+            )));
+        }
+        // [cargo build] ----------------------------------------------------------------------------
+        let extra_args = [];
+        let mut extra_envs = vec![];
+
+        if framework.is_some() {
+            extra_envs.extend(vec![
+                ("MAKEPAD".to_string(), "app_bundle".to_string()),
+                ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
+            ]);
+        }
+
+        cargo_build(path.as_ref(), extra_args, extra_envs)?;
+
+        // [nstall_name_tool] --------------------------------------------------------------------------
+        let binary_name = format!("./target/release/{}", name);
+        let mut cmd = stream_cmd(
+            "install_name_tool",
+            ["-add_rpath", "@executable_path/../Frameworks", &binary_name],
+            Some(path.as_ref()),
+        )
+        .map_err(|e| e.to_string())?;
+
+        return stream_terminal(
+            &mut cmd,
+            |line| TerminalLogger::new(&line).info(),
+            |line| TerminalLogger::new(&line).warning(),
+        )
+        .map_or_else(
+            |e| Err(e),
+            |status| {
+                if status.success() {
+                    Ok(())
+                } else {
+                    Err(Error::from("install_name_tool failed!"))
+                }
+            },
+        );
+    }
+
+    Ok(())
+}
+
+fn cargo_build<P, I, E>(path: P, extra_args: I, extra_envs: E) -> Result<(), Error>
+where
+    P: AsRef<Path>,
+    I: IntoIterator<Item = String>,
+    E: IntoIterator<Item = (String, String)>,
+{
+    let mut args = vec!["build".to_string(), "--release".to_string()];
+    args.extend(extra_args);
+
+    TerminalLogger::new("running cargo build, please wait ...").info();
+
+    exec_cmd("cargo", args, Some(path))
+        .envs(extra_envs)
+        .status()
+        .map_or_else(
+            |e| Err(Error::from(e.to_string())),
+            |status| {
+                if status.success() {
+                    TerminalLogger::new("cargo build successful").success();
+                    Ok(())
+                } else {
+                    Err(Error::from("cargo build failed!"))
+                }
+            },
+        )
 }

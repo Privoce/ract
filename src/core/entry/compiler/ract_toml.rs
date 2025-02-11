@@ -55,11 +55,16 @@ impl RactToml {
             members
         })
     }
-    pub fn first_compile(&self) -> Result<&Member, Error> {
-        self.compiles().map_or_else(
-            || Err(Error::from("compiles is not set")),
-            |members| Ok(members[0]),
-        )
+    pub fn first_compile(&self) -> Result<Member, Error> {
+        if let Some(members) = self.compiles() {
+            return Ok(members[0].clone());
+        } else {
+            let path = current_dir().map_err(|e| Error::from(e.to_string()))?;
+            return Ok(Member {
+                source: path.to_path_buf(),
+                target: path,
+            });
+        }
     }
     pub fn path() -> PathBuf {
         current_dir().unwrap().join(".ract")

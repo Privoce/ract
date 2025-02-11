@@ -173,7 +173,7 @@ impl Conf {
             pacman: None,
             windows: Some(WindowsConfig::default()),
             wix: None,
-            before_each_package_command: Some(BEFORE_COMMAND.to_string()),
+            before_each_package_command: None,
             before_packaging_command: Some(BEFORE_COMMAND.to_string()),
             binaries,
             external_binaries: None,
@@ -387,11 +387,10 @@ impl TryFrom<&DocumentMut> for Conf {
                 .ok_or_else(|| err_from_to(key, "String"))
         }
 
-        let table = doc_mut
-            .get("package.metadata.packager")
-            .and_then(|v| v.as_table())
+        let table = doc_mut["package"]["metadata"]["packager"]
+            .as_table()
             .map_or_else(
-                || Err(Error::from("can not get package in toml")),
+                || Err(err_from_to("toml [package.metadata.packager]", "Table")),
                 |v| Ok(v),
             )?;
 
