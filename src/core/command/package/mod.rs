@@ -1,15 +1,19 @@
+mod info;
+mod works;
+
+use info::*;
 use std::{
     collections::HashMap,
     env::current_dir,
-    ffi::OsStr,
     path::{Path, PathBuf},
     process::exit,
     str::FromStr,
 };
+use works::*;
 
 use crate::core::entry::PackageFormat;
 use crate::core::{
-    entry::{FrameworkType, PackageConf, RactToml, Resource},
+    entry::{FrameworkType, PackageConf, RactToml},
     log::{PackageLogs, TerminalLogger},
 };
 use cargo_metadata::MetadataCommand;
@@ -17,6 +21,7 @@ use gen_utils::{
     common::{exec_cmd, fs, stream_cmd, stream_terminal},
     error::Error,
 };
+
 use inquire::{Confirm, Select, Text};
 use toml_edit::DocumentMut;
 use which::which;
@@ -228,7 +233,18 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     fs::copy(path.join("resources"), dist_resources_path.join(&conf.name))?;
     TerminalLogger::new("copy all resources to dist resources successful").success();
     // [specify platform and do some works] -------------------------------------------------------
-    specify_platform_with_works(path.as_path(), conf.formats.as_ref(), &conf.name, framework)?;
+    let formats = conf
+        .formats
+        .as_ref()
+        .cloned()
+        .unwrap_or(vec![PackageFormat::Default]);
+    specify_platform_with_works(
+        path.as_path(),
+        conf.out_dir.as_path(),
+        formats,
+        &conf.name,
+        framework,
+    )?;
     // [run cargo-packager] -----------------------------------------------------------------------
     let mut child =
         stream_cmd("cargo", ["packager", "--release"], Some(path)).map_err(|e| e.to_string())?;
@@ -287,165 +303,4 @@ fn get_target_and_dist() -> Result<PackageInfo, Error> {
     let conf = PackageConf::from_cargo_toml(&target_path.join("Cargo.toml"))?;
 
     Ok(PackageInfo::new(target_path, conf, framework, resources))
-}
-
-#[allow(unused)]
-struct PackageInfo {
-    /// target project path
-    path: PathBuf,
-    conf: PackageConf,
-    resources: Vec<Resource>,
-    framework: Option<FrameworkType>,
-}
-
-impl PackageInfo {
-    pub fn new<P>(
-        path: P,
-        conf: PackageConf,
-        framework: Option<FrameworkType>,
-        resources: Vec<Resource>,
-    ) -> Self
-    where
-        P: AsRef<Path>,
-    {
-        Self {
-            path: path.as_ref().to_path_buf(),
-            conf,
-            framework,
-            resources,
-        }
-    }
-
-    /// ## zip ract resources and package conf resources
-    /// two resources:
-    /// 1. ract: {src: PathBuf, target: String}
-    /// 2. package: {src: PathBuf, target: String}
-    /// ract.target = package.src -> insert(ract.src, package)
-    pub fn zip_resources(&self) -> Option<HashMap<String, (PathBuf, PathBuf)>> {
-        self.conf.resources.as_ref().map(|pkg_resources| {
-            self.resources
-                .iter()
-                .fold(HashMap::new(), |mut acc, ract_resource| {
-                    if let Resource::Obj { src, target } = ract_resource {
-                        let ract_ident = fs::path_to_str(src);
-                        let ract_target = PathBuf::from(target);
-                        for pkg_resource in pkg_resources {
-                            if let Resource::Obj { src, target } = pkg_resource {
-                                if ract_target.eq(src) {
-                                    acc.insert(
-                                        ract_ident.to_string(),
-                                        (src.to_path_buf(), PathBuf::from(target)),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    acc
-                })
-        })
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn specify_platform_with_works() {}
-
-#[cfg(target_os = "macos")]
-fn specify_platform_with_works<P>(
-    path: P,
-    formats: Option<&Vec<PackageFormat>>,
-    name: &str,
-    framework: Option<FrameworkType>,
-) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-{
-    use gen_utils::error::{ParseError, ParseType};
-
-    if let Some(formats) = formats {
-        // [check invalid package formats] ---------------------------------------------------------
-        let invalid_format = formats.iter().any(|f| match f {
-            PackageFormat::Default | PackageFormat::App | PackageFormat::Dmg => false,
-            _ => true,
-        });
-
-        if invalid_format {
-            return Err(Error::Parse(ParseError::new(
-                &format!(
-                    "Invalid package formats in Macos: {}",
-                    formats
-                        .iter()
-                        .map(|f| f.to_string())
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                ),
-                ParseType::Conf,
-            )));
-        }
-        // [cargo build] ----------------------------------------------------------------------------
-        let extra_args = [];
-        let mut extra_envs = vec![];
-
-        if framework.is_some() {
-            extra_envs.extend(vec![
-                ("MAKEPAD".to_string(), "app_bundle".to_string()),
-                ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
-            ]);
-        }
-
-        cargo_build(path.as_ref(), extra_args, extra_envs)?;
-
-        // [nstall_name_tool] --------------------------------------------------------------------------
-        let binary_name = format!("./target/release/{}", name);
-        let mut cmd = stream_cmd(
-            "install_name_tool",
-            ["-add_rpath", "@executable_path/../Frameworks", &binary_name],
-            Some(path.as_ref()),
-        )
-        .map_err(|e| e.to_string())?;
-
-        return stream_terminal(
-            &mut cmd,
-            |line| TerminalLogger::new(&line).info(),
-            |line| TerminalLogger::new(&line).warning(),
-        )
-        .map_or_else(
-            |e| Err(e),
-            |status| {
-                if status.success() {
-                    Ok(())
-                } else {
-                    Err(Error::from("install_name_tool failed!"))
-                }
-            },
-        );
-    }
-
-    Ok(())
-}
-
-fn cargo_build<P, I, E>(path: P, extra_args: I, extra_envs: E) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-    I: IntoIterator<Item = String>,
-    E: IntoIterator<Item = (String, String)>,
-{
-    let mut args = vec!["build".to_string(), "--release".to_string()];
-    args.extend(extra_args);
-
-    TerminalLogger::new("running cargo build, please wait ...").info();
-
-    exec_cmd("cargo", args, Some(path))
-        .envs(extra_envs)
-        .status()
-        .map_or_else(
-            |e| Err(Error::from(e.to_string())),
-            |status| {
-                if status.success() {
-                    TerminalLogger::new("cargo build successful").success();
-                    Ok(())
-                } else {
-                    Err(Error::from("cargo build failed!"))
-                }
-            },
-        )
 }
