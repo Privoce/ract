@@ -29,7 +29,7 @@ impl Default for DmgConfig {
             window_position: None,
             window_size: Some(Size {
                 width: 960,
-                height: 550,
+                height: 560,
             }),
         }
     }
