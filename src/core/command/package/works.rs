@@ -1,5 +1,6 @@
-use gen_utils::common::exec_cmd;
+use gen_utils::common::{exec_cmd, fs};
 use gen_utils::error::Error;
+use toml_edit::DocumentMut;
 
 use std::path::Path;
 
@@ -41,7 +42,7 @@ pub fn specify_platform_with_works<P>(
     dist_path: P,
     formats: Vec<PackageFormat>,
     name: &str,
-    _framework: Option<FrameworkType>,
+    framework: Option<FrameworkType>,
 ) -> Result<(), Error>
 where
     P: AsRef<Path>,
@@ -76,7 +77,23 @@ where
             },
         )
     }
-    let binary_path = format!("./target/release/{}", &name);
+
+    let prefix = if let Some(framework) = framework {
+        match framework {
+            FrameworkType::GenUI => ".",
+            FrameworkType::Makepad => {
+                if is_workspace(path.as_ref()) {
+                    ".."
+                } else {
+                    "."
+                }
+            }
+        }
+    } else {
+        "."
+    };
+
+    let binary_path = format!("{}/target/release/{}", prefix, &name);
     for format in formats {
         match format {
             PackageFormat::Default | PackageFormat::AppImage => {
@@ -122,7 +139,6 @@ where
     Ok(())
 }
 
-
 #[cfg(target_os = "macos")]
 pub fn specify_platform_with_works<P>(
     path: P,
@@ -162,17 +178,28 @@ where
     let extra_args = [];
     let mut extra_envs = vec![];
 
-    if framework.is_some() {
+    let prefix = if let Some(framework) = framework {
         extra_envs.extend(vec![
             ("MAKEPAD".to_string(), "app_bundle".to_string()),
             ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
         ]);
-    }
-
+        match framework {
+            FrameworkType::GenUI => ".",
+            FrameworkType::Makepad => {
+                if is_workspace(path.as_ref()) {
+                    ".."
+                } else {
+                    "."
+                }
+            }
+        }
+    } else {
+        "."
+    };
     cargo_build(path.as_ref(), extra_args, extra_envs)?;
 
     // [nstall_name_tool] --------------------------------------------------------------------------
-    let binary_path = format!("./target/release/{}", &name);
+    let binary_path = format!("{}/target/release/{}", prefix, &name);
     let mut cmd = stream_cmd(
         "install_name_tool",
         ["-add_rpath", "@executable_path/../Frameworks", &binary_path],
@@ -278,4 +305,36 @@ where
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+// judget current path is rust workspace or not
+fn is_workspace<P>(path: P) -> bool
+where
+    P: AsRef<Path>,
+{
+    fn handle<P>(path: P, mut count: usize) -> Result<bool, Error>
+    where
+        P: AsRef<Path>,
+    {
+        count += 1;
+        if count > 2 {
+            return Ok(false);
+        }
+        let cargo_toml = path.as_ref().join("Cargo.toml");
+        let toml = fs::read(cargo_toml)?
+            .parse::<DocumentMut>()
+            .map_err(|e| e.to_string())?;
+        if toml.get("workspace").is_some() {
+            Ok(true)
+        } else {
+            let pre_path = path
+                .as_ref()
+                .parent()
+                .ok_or_else(|| Error::from("can not get parent path"))?;
+            // handle
+            handle(pre_path, count)
+        }
+    }
+
+    handle(path, 0).unwrap_or(false)
 }

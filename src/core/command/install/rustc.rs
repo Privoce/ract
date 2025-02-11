@@ -93,7 +93,7 @@ pub fn install_rustc() -> Result<(), Error> {
     use crate::core::log::TerminalLogger;
     use std::process::Command;
     // create a downloads folder for the rustup-init.exe, after download, move to the exe_path
-    let current_dir = exe_path().join("downloads");
+    let current_dir = exe_path()?.join("downloads");
     let res = Command::new("Invoke-WebRequest")
         .args(&[
             "-Uri",

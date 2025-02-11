@@ -63,7 +63,7 @@ pub fn install_git() -> Result<(), Error> {
     use crate::core::util::exe_path;
     use std::process::Command;
     use crate::core::log::InstallLogs;
-    let current_dir = exe_path().join("downloads");
+    let current_dir = exe_path()?.join("downloads");
     let res = Command::new("Invoke-WebRequest")
         .args(&[
             "-Uri",
