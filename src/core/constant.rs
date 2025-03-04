@@ -142,26 +142,30 @@ import!{
     crate::components::hello::*;
 }
 
-#[prop]
+#[component]
 pub struct Home{
     num: u32
 }
 
-// init instance prop
-let mut prop = default_prop!{
-    Home{
-        num: 0
+// init prop
+impl Default for Home{
+    fn default() -> Self{
+        Self{
+            num: 0
+        }
     }
-};
+}
 
-fn click_btn(){
-    let mut num = prop.get_num();
-    num += 1;
-    prop.set_num(num);
-    // use c_ref! you can get component ref
-    let header = c_ref!(header);
-    let num = prop.get_num();
-    header.set_my_text(format!("Clicked: {}", num));
+impl Home{
+    fn click_btn(&mut self){
+        let mut num = self.get_num();
+        num += 1;
+        self.set_num(num);
+        // use c_ref! you can get component ref
+        let header = c_ref!(header);
+        let num = self.get_num();
+        header.set_my_text(format!("Clicked: {}", num));
+    }
 }
 </script>
 
@@ -186,16 +190,18 @@ pub const HELLO_GEN: &str = r###"<template>
 </template>
 
 <script>
-#[prop]
+#[component]
 pub struct Hello{
     my_text: String
 }
 
-let prop = default_prop!{
-    Hello{
-        my_text: "Clicked: 0".to_string()
+impl Default for Hello{
+    fn default() -> Self{
+        Self{
+            my_text: "Clicked: 0".to_string()
+        }
     }
-};
+}
 </script>
 
 <style>
