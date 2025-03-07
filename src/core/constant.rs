@@ -158,13 +158,9 @@ impl Default for Home{
 
 impl Home{
     fn click_btn(&mut self){
-        let mut num = self.get_num();
-        num += 1;
-        self.set_num(num);
-        // use c_ref! you can get component ref
-        let header = c_ref!(header);
-        let num = self.get_num();
-        header.set_my_text(format!("Clicked: {}", num));
+        let mut header = c_ref!(header);
+        self.num += 1;
+        header.set_my_text(format!("Clicked: {}", self.num));
     }
 }
 </script>

@@ -74,11 +74,13 @@ impl ChainEnvToml {
         // 如果本地版本低于最新版本，则需要更新
         if latest_version > self.version {
             self.is_latest = false;
-            // 更新check的last_time
-            self.check.last_time = chrono::Utc::now().timestamp();
         } else {
             self.is_latest = true;
         }
+        // 更新check的last_time, 用于下次检测, (目前默认为无论版本是否是旧版本都更新last_time, 用户可能不希望频繁检测)
+        self.check.last_time = chrono::Utc::now().timestamp();
+        // 写回env.toml
+        self.write()?;
         Ok((
             !self.is_latest,
             Some((self.version.to_string(), latest_version.to_string())),
