@@ -1,11 +1,9 @@
-- [ ] Fix Windows Package Lack of Resources [issue](https://github.com/Privoce/ract/issues/1)
----
 - [ ] i18n
 - [ ] A better way for packaging settings (visualization)
 - [ ] Cross Platforms Packaging
 - [x] Book for Makepad|GenUI
 - [x] Create Workspace (makepad, genui)
-- [ ] Package For Worksapce
+- [x] Package For Worksapce
 - [x] powerful .ract file (toml)
 - [ ] Multi Compiler threads
 - [ ] Cloud for ract

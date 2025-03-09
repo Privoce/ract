@@ -46,7 +46,7 @@ impl Generator {
         let to_path = self.path.join("package");
         let _ = git_download_from_github(
             "https://github.com/Privoce/ract.git",
-            "dev_v0.1.3",
+            "main",
             "resources/package/*",
             self.path.as_path(),
             |line| TerminalLogger::new(&line).info(),

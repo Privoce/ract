@@ -36,16 +36,16 @@ serde_json = "1.0.138"
 cargo_metadata = "0.19.1"
 
 # ----------------- GenUI -------------------------------------------
-gen_utils = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/utils", default-features = false, features = [
-    "compiler",
-] }
-makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
-
-
-# gen_utils = { version = "0.1.0", default-features = false, features = [
+# gen_utils = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/utils", default-features = false, features = [
 #     "compiler",
 # ] }
-# makepad_gen_plugin = "0.1.0"
+# makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
+
+
+gen_utils = { version = "0.1.1", default-features = false, features = [
+    "compiler",
+] }
+makepad_gen_plugin = "0.1.1"
 
 # goblin only use when target_os = "linux"
 [target.'cfg(target_os = "linux")'.dependencies]

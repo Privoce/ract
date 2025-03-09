@@ -4,12 +4,26 @@
 
 ### Fixes
 
+- Windows packaging resources missing
+- fix makepad template `set_text_and_redraw` -> `set_text`
+- fix unlinked `gen_components` dep
+- fix makepad-widgets dynamic configuration loss
 
 ### General
 
 - better env.toml
 - config struct for `.env`
 - config struct for `env.toml`
+- commands
+  - uninstall
+  - update
+- support package `gen_ui`, `makepad` project
+- new `.dmg` packing brackground picture
+- support package usuall project (not `gen_ui` or `makeapd`)
+- under normal circumstances, `ract` can be packaged in multiple ways on the current platform, such as macos (dmg and app)
+- integrate `robius-packaging-commands` in ract
+  - use goblin crate instead of reading ldd output for parsing (only linux)
+- remove `before-each-package-command` and `before-packaging-commands` and use internal processing instead
 
 
 ---
