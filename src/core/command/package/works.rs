@@ -101,7 +101,7 @@ where
                     [],
                     [("MAKEPAD_PACKAGE_DIR".to_string(), format!("lib/{}", name))],
                 )?;
-                let _ = strip(path.as_ref(), binary_path)?;
+                let _ = strip(path.as_ref(), &binary_path)?;
             }
             PackageFormat::Pacman => {
                 cargo_build(
@@ -112,7 +112,7 @@ where
                         format!("/usr/lib/{}", name),
                     )],
                 )?;
-                let _ = strip(path.as_ref(), binary_path)?;
+                let _ = strip(path.as_ref(), &binary_path)?;
             }
             PackageFormat::Deb => {
                 // [in deb] ------------------------------------------------------------------------------
@@ -125,8 +125,8 @@ where
                     )],
                 )?;
                 // use goblin to get the shared libraries
-                deblib(binary_path, dist_path.as_ref())?;
-                let _ = strip(path.as_ref(), binary_path)?;
+                deblib(&binary_path, dist_path.as_ref())?;
+                let _ = strip(path.as_ref(), &binary_path)?;
             }
             _ => {
                 return Err(Error::from("Invalid package formats in Linux"));
