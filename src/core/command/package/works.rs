@@ -143,17 +143,19 @@ pub fn specify_platform_with_works<P>(
     _dist_path: P,
     formats: Vec<PackageFormat>,
     name: &str,
-    framework: Option<FrameworkType>,
+    _framework: Option<FrameworkType>,
 ) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
+    use std::env::current_dir;
+
     use gen_utils::{
-        common::{stream_cmd, stream_terminal},
+        common::{fs::path_to_str, stream_cmd, stream_terminal},
         error::{ParseError, ParseType},
     };
 
-    use crate::core::util::is_workspace;
+    // use crate::core::util::is_workspace;
 
     // [check invalid package formats] ---------------------------------------------------------
     let invalid_format = formats.iter().any(|f| match f {
@@ -178,28 +180,20 @@ where
     let extra_args = [];
     let mut extra_envs = vec![];
 
-    let prefix = if let Some(framework) = framework {
-        extra_envs.extend(vec![
-            ("MAKEPAD".to_string(), "app_bundle".to_string()),
-            ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
-        ]);
-        match framework {
-            FrameworkType::GenUI => ".",
-            FrameworkType::Makepad => {
-                if is_workspace(path.as_ref()) {
-                    ".."
-                } else {
-                    "."
-                }
-            }
-        }
-    } else {
-        "."
-    };
+    extra_envs.extend(vec![
+        ("MAKEPAD".to_string(), "app_bundle".to_string()),
+        ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
+    ]);
     cargo_build(path.as_ref(), extra_args, extra_envs)?;
 
     // [nstall_name_tool] --------------------------------------------------------------------------
-    let binary_path = format!("{}/target/release/{}", prefix, &name);
+    let binary_path = path_to_str(
+        current_dir()
+            .map_err(|e| Error::from(e.to_string()))?
+            .join("target")
+            .join("release")
+            .join(name),
+    );
     let mut cmd = stream_cmd(
         "install_name_tool",
         ["-add_rpath", "@executable_path/../Frameworks", &binary_path],
