@@ -126,7 +126,7 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
         )
     };
     // [get package configuration] ----------------------------------------------------------------
-    let mut conf = generate_package_conf(path.as_path())?;
+    let mut conf = generate_package_conf(path.as_path(), framework.as_ref())?;
     // [write to Cargo.toml] -----------------------------------------------------------------------
     let generator = conf.generator(path.as_path(), framework);
     let _ = generator.generate(&conf)?;
@@ -134,7 +134,7 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
     Ok(PackageInfo::new(path, conf, framework, resources))
 }
 
-fn generate_package_conf<P>(path: P) -> Result<PackageConf, Error>
+fn generate_package_conf<P>(path: P, framework: Option<&FrameworkType>) -> Result<PackageConf, Error>
 where
     P: AsRef<Path>,
 {
@@ -195,7 +195,7 @@ where
         .prompt_skippable()
         .unwrap();
     PackageLogs::Configing.terminal().info();
-    let mut pack_conf = PackageConf::new(name, version, product_name, identifier, authors, license);
+    let mut pack_conf = PackageConf::new(name, version, product_name, identifier, authors, license, framework);
     pack_conf.publisher = publisher;
     pack_conf.description = desc.clone();
     pack_conf.long_description = desc;

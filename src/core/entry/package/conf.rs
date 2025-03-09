@@ -116,14 +116,19 @@ impl Conf {
         identifier: String,
         authors: Option<Vec<String>>,
         license: Option<PathBuf>,
+        framework: Option<&FrameworkType>,
     ) -> Self {
         // [binaries] -----------------------------------------------------------------------------
         let current_path = current_dir().unwrap();
-        let path = if is_workspace(current_path.as_path()) {
-            // get father
-            current_path.parent().unwrap().to_path_buf()
-        } else {
+        let path = if let Some(FrameworkType::GenUI) = framework {
             current_path
+        } else {
+            if is_workspace(current_path.as_path()) {
+                // get father
+                current_path.parent().unwrap().to_path_buf()
+            } else {
+                current_path
+            }
         }
         .join("target")
         .join("release")

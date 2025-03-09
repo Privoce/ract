@@ -232,7 +232,7 @@ Welcome to the GenUI Project! This project is built with the Ract tool and serve
 |-------------------------------|-----------------------|
 | **GenUI**                     | v0.1.1                |
 | **Makepad**                   | gen_ui (branch)       |
-| **Ract**                      | v0.1.5                |
+| **Ract**                      | v0.1.6                |
 | **GenUI Built-in Component**  | v0.2.2                |
 
 ---

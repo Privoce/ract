@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Release V0.1.5
+## Release V0.1.6
 
 ### Fixes
 
