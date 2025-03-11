@@ -9,3 +9,4 @@
 - [ ] Cloud for ract
 - [ ] GUI for ract
 - [ ] GenUI App Browser(app store)
+- [ ] Copy resources

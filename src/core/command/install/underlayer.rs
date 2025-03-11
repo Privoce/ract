@@ -131,7 +131,19 @@ where
 {
     // xcode-select --install
     // cargo makepad apple ios install-toolchain
-    if check_xcode_select().unwrap_or_default() {
+    if which("xcode-select").is_ok() {
+        // 如果已安装，可以继续判断是否设置了开发者目录
+        // 检查是否设置了开发者目录
+        let xcode_path_check = Command::new("xcode-select")
+            .args(&["-p"])
+            .output()
+            .map_or(false, |out| out.status.success());
+
+        if !xcode_path_check {
+            TerminalLogger::new("❗️ Xcode command line tools are installed but not properly configured. Please run 'xcode-select --install' to complete setup.").warning();
+            exit(2);
+        }
+
         if check_cargo_makepad() {
             return Command::new("cargo")
             .args(&["makepad", "apple", "ios", "install-toolchain"])
@@ -162,33 +174,6 @@ where
         TerminalLogger::new("❗️ xcode-select is not installed, please install it first!").error();
         exit(2);
     }
-}
-
-fn check_xcode_select() -> Result<bool, Error> {
-    Command::new("xcode-select")
-        .args(&["--install"])
-        .output()
-        .map_or_else(
-            |_| {
-                InstallLogs::UnInstalled("xcode-select".to_string())
-                    .terminal()
-                    .warning();
-                Ok(false)
-            },
-            |out| {
-                if out.status.success() {
-                    InstallLogs::Installed("xcode-select".to_string())
-                        .terminal()
-                        .success();
-                    Ok(true)
-                } else {
-                    InstallLogs::UnInstalled("xcode-select".to_string())
-                        .terminal()
-                        .warning();
-                    Ok(false)
-                }
-            },
-        )
 }
 
 fn install_wasm_build<P>(path: P) -> Result<(), Error>
