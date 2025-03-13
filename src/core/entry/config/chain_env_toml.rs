@@ -232,7 +232,7 @@ impl DefaultChain {
             .join("gen_components")
     }
     pub fn version(&self) -> Version {
-        Version::new(0, 1, 6)
+        Version::new(0, 1, 7)
     }
     pub fn dependencies(&self) -> HashMap<String, PathBuf> {
         let chain = DefaultChain;

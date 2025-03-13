@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Release V0.1.7
+
+### Fixes
+
+- fix install_name_tool path point error
+- fix check xcode-select
+- fix package resources path error
+
+
 ## Release V0.1.6
 
 ### Fixes
