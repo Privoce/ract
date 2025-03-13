@@ -250,12 +250,6 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
         dist_resources_path.join(&conf.name).join("resources"),
     )?;
     TerminalLogger::new("copy all resources to dist resources successful").success();
-    // dbg!(
-    //     &dist_resources_path,
-    //     conf.path(framework.as_ref()),
-    //     dist_resources_path.join(&conf.name).join("resources")
-    // );
-    // todo!();
     // [specify platform and do some works] -------------------------------------------------------
     let formats = conf
         .formats
@@ -292,21 +286,28 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
 
 fn copy_resources(
     resources: Option<HashMap<String, (PathBuf, PathBuf)>>,
-    prefix: PathBuf,
+    prefix: Option<PathBuf>,
 ) -> Result<(), Error> {
     if let Some(resources) = resources {
         let cargo_meta = MetadataCommand::new().exec().map_err(|e| e.to_string())?;
         let _ = cargo_meta.packages.iter().for_each(|package| {
             resources.get(&package.name).map(|(to_path, _)| {
                 package.manifest_path.parent().map(|path| {
+                    let to_path = if let Some(prefix) = prefix.as_ref() {
+                        prefix.join(to_path)
+                    } else {
+                        to_path.to_path_buf()
+                    }
+                    .join("resources");
+                    let from_path = path.join("resources");
                     TerminalLogger::new(&format!(
                         "copy resources from {} to {}",
-                        path_to_str(path.join("resources")),
-                        path_to_str(to_path.join("resources"))
+                        path_to_str(from_path.as_path()),
+                        path_to_str(to_path.as_path())
                     ))
                     .info();
                     // do copy, from_path -> to_path
-                    let _ = fs::copy(path.join("resources"), to_path.join("resources"));
+                    let _ = fs::copy(from_path, to_path);
                 })
             });
         });

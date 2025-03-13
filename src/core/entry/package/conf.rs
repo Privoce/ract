@@ -192,7 +192,7 @@ impl Conf {
             resources,
         }
     }
-    pub fn path(&self, framework: Option<&FrameworkType>) -> PathBuf {
+    pub fn dist_path(&self, framework: Option<&FrameworkType>) -> PathBuf {
         if let Some(FrameworkType::GenUI) = framework {
             current_dir()
                 .unwrap()
@@ -202,8 +202,15 @@ impl Conf {
             self.out_dir.to_path_buf()
         }
     }
+    pub fn path(&self, framework: Option<&FrameworkType>) -> Option<PathBuf> {
+        if let Some(FrameworkType::GenUI) = framework {
+            Some(PathBuf::from(self.name.as_str()))
+        } else {
+            None
+        }
+    }
     pub fn dist_resources(&self, framework: Option<&FrameworkType>) -> PathBuf {
-        self.path(framework).join("resources")
+        self.dist_path(framework).join("resources")
     }
 
     /// ## Generate a package generator for the package

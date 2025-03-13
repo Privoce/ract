@@ -180,10 +180,7 @@ where
     let extra_args = [];
     let mut extra_envs = vec![];
 
-    extra_envs.extend(vec![
-        ("MAKEPAD".to_string(), "app_bundle".to_string()),
-        ("MAKEPAD_PACKAGE_DIR".to_string(), ".".to_string()),
-    ]);
+    extra_envs.extend(vec![("MAKEPAD".to_string(), "app_bundle".to_string())]);
     cargo_build(path.as_ref(), extra_args, extra_envs)?;
 
     // [install_name_tool] --------------------------------------------------------------------------
