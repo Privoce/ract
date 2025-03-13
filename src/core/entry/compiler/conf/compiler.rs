@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use gen_utils::error::{ConvertError, Error};
+use gen_utils::{err_from_to, error::Error};
 use toml_edit::{value, Item, Table};
 
 use crate::core::{
@@ -65,11 +65,7 @@ impl TryFrom<&Item> for CompilerConf {
             });
         }
 
-        Err(ConvertError::FromTo {
-            from: "toml::Item".to_string(),
-            to: "toml::Table, toml format not correct".to_string(),
-        }
-        .into())
+        Err(err_from_to!("toml::Item" => "toml::Table, toml format not correct"))
     }
 }
 

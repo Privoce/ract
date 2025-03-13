@@ -186,7 +186,7 @@ where
     ]);
     cargo_build(path.as_ref(), extra_args, extra_envs)?;
 
-    // [nstall_name_tool] --------------------------------------------------------------------------
+    // [install_name_tool] --------------------------------------------------------------------------
     let binary_path = path_to_str(
         current_dir()
             .map_err(|e| Error::from(e.to_string()))?
@@ -210,6 +210,7 @@ where
         |e| Err(e),
         |status| {
             if status.success() {
+                TerminalLogger::new("install_name_tool successful").success();
                 Ok(())
             } else {
                 Err(Error::from("install_name_tool failed!"))

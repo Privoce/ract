@@ -18,7 +18,11 @@ use crate::core::{
 };
 use cargo_metadata::MetadataCommand;
 use gen_utils::{
-    common::{exec_cmd, fs, stream_cmd, stream_terminal},
+    common::{
+        exec_cmd,
+        fs::{self, path_to_str},
+        stream_cmd, stream_terminal,
+    },
     error::Error,
 };
 
@@ -134,7 +138,10 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
     Ok(PackageInfo::new(path, conf, framework, resources))
 }
 
-fn generate_package_conf<P>(path: P, framework: Option<&FrameworkType>) -> Result<PackageConf, Error>
+fn generate_package_conf<P>(
+    path: P,
+    framework: Option<&FrameworkType>,
+) -> Result<PackageConf, Error>
 where
     P: AsRef<Path>,
 {
@@ -195,7 +202,15 @@ where
         .prompt_skippable()
         .unwrap();
     PackageLogs::Configing.terminal().info();
-    let mut pack_conf = PackageConf::new(name, version, product_name, identifier, authors, license, framework);
+    let mut pack_conf = PackageConf::new(
+        name,
+        version,
+        product_name,
+        identifier,
+        authors,
+        license,
+        framework,
+    );
     pack_conf.publisher = publisher;
     pack_conf.description = desc.clone();
     pack_conf.long_description = desc;
@@ -226,12 +241,21 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
         ..
     } = info;
     // [before package] ---------------------------------------------------------------------------
-    let dist_resources_path = conf.dist_resources();
+    let dist_resources_path = conf.dist_resources(framework.as_ref());
     fs::create_dir(&dist_resources_path)?;
     // [copy resources] ---------------------------------------------------------------------------
-    let _ = copy_resources(resources)?;
-    fs::copy(path.join("resources"), dist_resources_path.join(&conf.name))?;
+    let _ = copy_resources(resources, conf.path(framework.as_ref()))?;
+    fs::copy(
+        path.join("resources"),
+        dist_resources_path.join(&conf.name).join("resources"),
+    )?;
     TerminalLogger::new("copy all resources to dist resources successful").success();
+    // dbg!(
+    //     &dist_resources_path,
+    //     conf.path(framework.as_ref()),
+    //     dist_resources_path.join(&conf.name).join("resources")
+    // );
+    // todo!();
     // [specify platform and do some works] -------------------------------------------------------
     let formats = conf
         .formats
@@ -266,15 +290,23 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     )
 }
 
-fn copy_resources(resources: Option<HashMap<String, (PathBuf, PathBuf)>>) -> Result<(), Error> {
+fn copy_resources(
+    resources: Option<HashMap<String, (PathBuf, PathBuf)>>,
+    prefix: PathBuf,
+) -> Result<(), Error> {
     if let Some(resources) = resources {
         let cargo_meta = MetadataCommand::new().exec().map_err(|e| e.to_string())?;
         let _ = cargo_meta.packages.iter().for_each(|package| {
             resources.get(&package.name).map(|(to_path, _)| {
                 package.manifest_path.parent().map(|path| {
-                    let from_path = path.join("resources");
+                    TerminalLogger::new(&format!(
+                        "copy resources from {} to {}",
+                        path_to_str(path.join("resources")),
+                        path_to_str(to_path.join("resources"))
+                    ))
+                    .info();
                     // do copy, from_path -> to_path
-                    let _ = fs::copy(from_path, to_path);
+                    let _ = fs::copy(path.join("resources"), to_path.join("resources"));
                 })
             });
         });

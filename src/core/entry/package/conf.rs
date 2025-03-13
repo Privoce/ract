@@ -192,9 +192,18 @@ impl Conf {
             resources,
         }
     }
-
-    pub fn dist_resources(&self) -> PathBuf {
-        self.out_dir.join("resources")
+    pub fn path(&self, framework: Option<&FrameworkType>) -> PathBuf {
+        if let Some(FrameworkType::GenUI) = framework {
+            current_dir()
+                .unwrap()
+                .join(self.name.as_str())
+                .join(self.out_dir.as_path())
+        } else {
+            self.out_dir.to_path_buf()
+        }
+    }
+    pub fn dist_resources(&self, framework: Option<&FrameworkType>) -> PathBuf {
+        self.path(framework).join("resources")
     }
 
     /// ## Generate a package generator for the package
