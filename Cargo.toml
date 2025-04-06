@@ -1,6 +1,6 @@
 [package]
 name = "ract"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 authors = ["Will SHENG<syf20020816@outlook.com>"]
 description = "Ract is a conversational CLI tool written in Rust, providing an all-in-one solution for integrating dependencies, setting up environments, generating project templates, running, and packaging projects with frameworks like GenUI and Makepad. Simplify your development workflow with minimal arguments and intuitive dialogs. 🚀"
@@ -42,10 +42,10 @@ cargo_metadata = "0.19.1"
 # makepad_gen_plugin = { path = "/Users/shengyifei/projects/gen_ui/GenUI/gen/generator/makepad" }
 
 
-gen_utils = { version = "0.1.1", default-features = false, features = [
+gen_utils = { version = "0.1.2", default-features = false, features = [
     "compiler",
 ] }
-makepad_gen_plugin = "0.1.1"
+makepad_gen_plugin = "0.1.2"
 
 # goblin only use when target_os = "linux"
 [target.'cfg(target_os = "linux")'.dependencies]

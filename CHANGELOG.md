@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Release V0.1.8
+
+### General
+
+- Update deps:
+  - makepad_gen_plugin
+  - gen_utils
+
 ## Release V0.1.7
 
 ### Fixes
