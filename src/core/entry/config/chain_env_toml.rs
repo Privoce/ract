@@ -352,9 +352,10 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn from_conf() -> Result<Language, Error> {
-        ChainEnvToml::only_parse_lang()
+    pub fn from_conf() -> Language {
+        ChainEnvToml::only_parse_lang().unwrap_or_default()
     }
+
     pub fn as_str(&self) -> &str {
         match self {
             Language::Zh => "zh_CN",

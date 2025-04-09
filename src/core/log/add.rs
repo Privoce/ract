@@ -2,9 +2,9 @@ use std::{error::Error, fmt::Display, process::exit};
 
 use rust_i18n::t;
 
-use crate::core::{entry::Language, util::ResultErr};
+use crate::core::{entry::Language};
 
-use super::TerminalLogger;
+use super::{LogExt, TerminalLogger};
 
 #[derive(Debug, Clone)]
 pub enum AddLogs {
@@ -31,8 +31,10 @@ impl Display for AddLogs {
     }
 }
 
-impl AddLogs {
-    pub fn terminal(&self, lang: &Language) -> TerminalLogger {
+impl Error for AddLogs {}
+
+impl LogExt for AddLogs {
+    fn terminal(&self, lang: &Language) -> TerminalLogger {
         TerminalLogger {
             output: match self {
                 AddLogs::DownloadFailed(reason) => t!(
@@ -53,17 +55,6 @@ impl AddLogs {
                 ),
                 AddLogs::Complete(name) => t!("add.complete", locale = lang.as_str(), name = name),
             },
-        }
-    }
-}
-
-impl Error for AddLogs {}
-
-impl<T> ResultErr for Result<T, AddLogs> {
-    fn export_err(&self, lang: &Language) -> () {
-        if let Err(e) = self {
-            e.terminal(lang).error();
-            exit(1);
         }
     }
 }

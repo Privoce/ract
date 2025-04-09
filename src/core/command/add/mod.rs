@@ -7,18 +7,17 @@ use gen_utils::{
 
 use crate::core::{
     entry::{GenUIConf, Language, RactToml},
-    log::{AddLogs, TerminalLogger},
+    log::{AddLogs, LogExt, TerminalLogger},
 };
 
 pub fn run(name: &str) {
     let lang = Language::from_conf();
     match download_and_update(name) {
         Ok(_) => {
-            AddLogs::Complete(name.to_string()).terminal().success();
+            AddLogs::Complete(name.to_string()).terminal(&lang).success();
         }
         Err(e) => {
-            AddLogs::DownloadFailed(e.to_string()).terminal().error();
-            exit(2);
+            AddLogs::DownloadFailed(e.to_string()).terminal(&lang).error();
         }
     }
 }
