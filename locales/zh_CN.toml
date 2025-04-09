@@ -1,0 +1,14 @@
+_version = 1
+
+[add]
+write_in_toml_fail = "❌ 将 %{name} 写入 `gen_ui.toml` 文件失败!"
+complete = "🎉 添加插件: %{name} 成功!"
+
+[add.download]
+success = "🎉 下载插件: %{name} 成功!"
+failed = "❌ 下载插件失败, 原因: %{reason}"
+waiting = "🔸 正在下载插件: %{name} 请等待..."
+
+[check]
+select_which = "您需要检测哪个选项?"
+

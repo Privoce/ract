@@ -31,7 +31,7 @@ impl Cli {
                 Commands::Studio => run::makepad::studio::run(),
                 Commands::Wasm(wasm_args) => wasm_args.run(),
                 Commands::Pkg => package::run(),
-                Commands::Add{name} => add::run(name),
+                Commands::Add { name } => add::run(name),
                 Commands::Update(args) => args.run(),
                 Commands::Uninstall => uninstall::run(),
             }

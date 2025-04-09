@@ -1,10 +1,14 @@
+use std::borrow::Cow;
+
 use colored::Colorize;
 
-pub struct TerminalLogger {
-    pub output: String,
+use super::Logs;
+
+pub struct TerminalLogger<'a> {
+    pub output: Cow<'a, str>,
 }
 
-impl TerminalLogger {
+impl<'a> TerminalLogger<'a> {
     pub fn info(&self) {
         println!("{}", self.output.bright_blue().bold());
     }
@@ -22,10 +26,11 @@ impl TerminalLogger {
     }
     pub fn new(s: &str) -> TerminalLogger {
         TerminalLogger {
-            output: s.to_string(),
+            output: Cow::Borrowed(s),
         }
     }
     pub fn logo(&self) {
         println!("{}", self.output.truecolor(255, 112, 67).bold());
     }
 }
+

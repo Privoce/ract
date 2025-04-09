@@ -11,9 +11,11 @@ use inquire::{Confirm, Select};
 
 use super::check::current_states;
 
+/// ## Create a new project at the current directory
+/// 
 /// Create a new project
 /// This command will create a new project at the specified path
-/// ## Create a new project at the current directory
+/// 
 /// ```shell
 /// ract create
 /// ```

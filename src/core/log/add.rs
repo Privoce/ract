@@ -1,6 +1,10 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display, process::exit};
 
-use super::terminal::TerminalLogger;
+use rust_i18n::t;
+
+use crate::core::{entry::Language, util::ResultErr};
+
+use super::TerminalLogger;
 
 #[derive(Debug, Clone)]
 pub enum AddLogs {
@@ -28,9 +32,38 @@ impl Display for AddLogs {
 }
 
 impl AddLogs {
-    pub fn terminal(&self) -> TerminalLogger {
+    pub fn terminal(&self, lang: &Language) -> TerminalLogger {
         TerminalLogger {
-            output: self.to_string(),
+            output: match self {
+                AddLogs::DownloadFailed(reason) => t!(
+                    "add.download.failed",
+                    locale = lang.as_str(),
+                    reason = reason
+                ),
+                AddLogs::DownloadSuccess(name) => {
+                    t!("add.download.success", locale = lang.as_str(), name = name)
+                }
+                AddLogs::Downloading(name) => {
+                    t!("add.download.waiting", locale = lang.as_str(), name = name)
+                }
+                AddLogs::WriteInTomlFailed(name) => t!(
+                    "add.write_in_toml_fail",
+                    locale = lang.as_str(),
+                    name = name
+                ),
+                AddLogs::Complete(name) => t!("add.complete", locale = lang.as_str(), name = name),
+            },
+        }
+    }
+}
+
+impl Error for AddLogs {}
+
+impl<T> ResultErr for Result<T, AddLogs> {
+    fn export_err(&self, lang: &Language) -> () {
+        if let Err(e) = self {
+            e.terminal(lang).error();
+            exit(1);
         }
     }
 }

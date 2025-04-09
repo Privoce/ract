@@ -26,6 +26,8 @@ pub struct ChainEnvToml {
     pub check: Check,
     /// 依赖包
     pub dependencies: HashMap<String, PathBuf>,
+    /// 语言
+    pub language: Language,
 }
 
 impl ChainEnvToml {
@@ -85,6 +87,15 @@ impl ChainEnvToml {
             !self.is_latest,
             Some((self.version.to_string(), latest_version.to_string())),
         ))
+    }
+
+    pub fn only_parse_lang() -> Result<Language, Error> {
+        let path = Self::path()?;
+        let doc = Self::read(path.as_path()).unwrap();
+        Ok(doc
+            .get("language")
+            .and_then(|v| v.as_str())
+            .map_or(Language::default(), |v| Language::from(v)))
     }
 }
 
@@ -183,6 +194,12 @@ impl TryFrom<PathBuf> for ChainEnvToml {
                 },
             )?;
 
+        // [language] ----------------------------------------------------------------
+        let language = doc.get("language").map_or(Language::default(), |v| {
+            v.as_str()
+                .map_or(Language::default(), |v| Language::from(v))
+        });
+
         Ok(Self {
             path,
             version,
@@ -190,6 +207,7 @@ impl TryFrom<PathBuf> for ChainEnvToml {
             is_latest,
             auto_update,
             check,
+            language,
         })
     }
 }
@@ -211,6 +229,7 @@ impl Default for ChainEnvToml {
             is_latest: true,
             auto_update: true,
             check: Check::default(),
+            language: Language::default(),
         }
     }
 }
@@ -322,6 +341,35 @@ impl TryFrom<&Item> for Check {
             last_time,
             frequency,
         })
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Language {
+    Zh,
+    #[default]
+    En,
+}
+
+impl Language {
+    pub fn from_conf() -> Result<Language, Error> {
+        ChainEnvToml::only_parse_lang()
+    }
+    pub fn as_str(&self) -> &str {
+        match self {
+            Language::Zh => "zh_CN",
+            Language::En => "en_US",
+        }
+    }
+}
+
+impl From<&str> for Language {
+    fn from(value: &str) -> Self {
+        match value {
+            "zh" | "zh_CN" | "zh-CN" => Language::Zh,
+            "en" | "en_US" | "en-US" => Language::En,
+            _ => Language::En,
+        }
     }
 }
 

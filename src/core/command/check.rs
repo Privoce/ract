@@ -5,20 +5,23 @@ use gen_utils::{
     error::Error,
 };
 use inquire::Select;
+use rust_i18n::t;
 use toml_edit::DocumentMut;
 use which::which;
 
 use crate::core::{
-    entry::{ChainEnvToml, Checks, Tools, Underlayer, UnderlayerTools},
+    entry::{ChainEnvToml, Checks, Language, Tools, Underlayer, UnderlayerTools},
    
     log::{CheckLogs, TerminalLogger},
 };
 
 /// Check target toolchain
 pub fn run() -> () {
+    let lang = Language::from_conf();
+
     CheckLogs::Welcome.terminal().rust();
 
-    let check = Select::new("Which you need to check?", Checks::options())
+    let check = Select::new(&t!("check.select_which"), Checks::options())
         .prompt()
         .expect("select check failed");
 

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use super::terminal::TerminalLogger;
 
@@ -26,7 +26,7 @@ impl Display for WasmLogs {
 impl WasmLogs {
     pub fn terminal(&self) -> TerminalLogger {
         TerminalLogger {
-            output: self.to_string(),
+            output: std::borrow::Cow::Owned(self.to_string()),
         }
     }
 }
@@ -37,3 +37,5 @@ const DESC: &str = r#"
 🔸 If the project is in rust workspace, use -p to point target project
 🔸 Or you can run `ract wasm` to build and start
 "#;
+
+impl Error for WasmLogs {}

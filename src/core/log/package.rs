@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{borrow::Cow, error::Error, fmt::Display};
 
 use super::terminal::TerminalLogger;
 
@@ -44,10 +44,12 @@ impl Display for PackageLogs {
 impl PackageLogs {
     pub fn terminal(&self) -> TerminalLogger {
         TerminalLogger {
-            output: self.to_string(),
+            output: Cow::Owned(self.to_string()),
         }
     }
 }
+
+impl Error for PackageLogs {}
 
 const DESC: &str = r#"
 🔸 ract will check `cargo-packager` is installed or not

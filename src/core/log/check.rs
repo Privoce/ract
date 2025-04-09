@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use super::terminal::TerminalLogger;
 
@@ -33,7 +33,9 @@ impl Display for CheckLogs {
 impl CheckLogs {
     pub fn terminal(&self) -> TerminalLogger {
         TerminalLogger {
-            output: self.to_string(),
+            output: std::borrow::Cow::Owned(self.to_string()),
         }
     }
 }
+
+impl Error for CheckLogs {}

@@ -5,6 +5,9 @@ use std::path::Path;
 use std::{env::current_exe, path::PathBuf};
 use toml_edit::DocumentMut;
 
+use super::entry::Language;
+use super::log::Logs;
+
 pub fn exe_path() -> Result<PathBuf, Error> {
     let mut path = current_exe().map_err(|e| Error::from(e.to_string()))?;
     path.pop();
@@ -63,4 +66,8 @@ where
     }
 
     handle(path, 0).unwrap_or(false)
+}
+
+pub trait ResultErr {
+    fn export_err(&self, lang: &Language) -> ();
 }

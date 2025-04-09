@@ -42,7 +42,7 @@
 //! GenUI-Compiler :: [2024-06-28T19:09:24Z] :: INFO >>> File "E:\\Rust\\try\\makepad\\Gen-UI\\examples\\gen_makepad_simple\\ui\\views\\root.gen" compiled successfully.
 //! ```
 
-use std::{fmt::Display, path::PathBuf};
+use std::{error::Error, fmt::Display, path::PathBuf};
 
 use crate::core::{constant::LOGO, log::level::LevelColord};
 use colored::Colorize;
@@ -153,10 +153,12 @@ impl Display for CompilerLogs {
 impl CompilerLogs {
     pub fn terminal(&self) -> TerminalLogger {
         TerminalLogger {
-            output: self.to_string(),
+            output: std::borrow::Cow::Owned(self.to_string()),
         }
     }
     pub fn compiler(&self) -> CompilerLogger {
         self.into()
     }
 }
+
+impl Error for CompilerLogs {}
