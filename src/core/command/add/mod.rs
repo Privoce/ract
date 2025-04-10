@@ -1,4 +1,4 @@
-use std::{env::current_dir, path::PathBuf, process::exit};
+use std::{env::current_dir, path::PathBuf};
 
 use gen_utils::{
     common::{fs, git_download_plugin_from_github, ToToml},
@@ -12,20 +12,24 @@ use crate::core::{
 
 pub fn run(name: &str) {
     let lang = Language::from_conf();
-    match download_and_update(name) {
+    match download_and_update(name, &lang) {
         Ok(_) => {
-            AddLogs::Complete(name.to_string()).terminal(&lang).success();
+            AddLogs::Complete(name.to_string())
+                .terminal(&lang)
+                .success();
         }
         Err(e) => {
-            AddLogs::DownloadFailed(e.to_string()).terminal(&lang).error();
+            AddLogs::DownloadFailed(e.to_string())
+                .terminal(&lang)
+                .error();
         }
     }
 }
 
-fn download_and_update(name: &str) -> Result<(), Error> {
-    let _ = download_plugins_from_github(name)?;
+fn download_and_update(name: &str, lang: &Language) -> Result<(), Error> {
+    let _ = download_plugins_from_github(name, lang)?;
     AddLogs::DownloadSuccess(name.to_string())
-        .terminal()
+        .terminal(lang)
         .success();
     // write use in gen_ui.toml
     return update_plugin_in_toml(name);
@@ -64,7 +68,7 @@ pub fn update_plugin_in_toml(plugin: &str) -> Result<(), Error> {
 /// - repo: https://github.com/Privoce/genui_plugins
 /// - dir: tokens
 /// - branch: main
-pub fn download_plugins_from_github(plugin: &str) -> Result<(), Error> {
+pub fn download_plugins_from_github(plugin: &str, lang: &Language) -> Result<(), Error> {
     let path = current_dir().unwrap();
     let ract_toml: RactToml = (&RactToml::read(path.as_path().join(".ract"))?).try_into()?;
 
@@ -78,7 +82,9 @@ pub fn download_plugins_from_github(plugin: &str) -> Result<(), Error> {
                 let download_path = source_path.join(".plugins");
                 fs::exists_or_create_dir(download_path.as_path())?;
                 // 从github仓库中下载指定的包，例如: ract add gen_makepad_http
-                AddLogs::Downloading(plugin.to_string()).terminal().info();
+                AddLogs::Downloading(plugin.to_string())
+                    .terminal(lang)
+                    .info();
 
                 return git_download_plugin_from_github(
                     plugin,

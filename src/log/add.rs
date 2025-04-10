@@ -1,8 +1,8 @@
-use std::{error::Error, fmt::Display, process::exit};
+use std::{error::Error, fmt::Display};
 
 use rust_i18n::t;
 
-use crate::core::{entry::Language};
+use crate::entry::Language;
 
 use super::{LogExt, TerminalLogger};
 

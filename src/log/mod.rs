@@ -10,6 +10,7 @@ mod package;
 mod run;
 mod terminal;
 mod wasm;
+mod error;
 
 use std::borrow::Cow;
 
