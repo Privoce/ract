@@ -10,7 +10,7 @@ mod package;
 mod run;
 mod terminal;
 mod wasm;
-mod error;
+pub mod error;
 
 use std::borrow::Cow;
 
@@ -27,6 +27,7 @@ pub use run::{ProjectLogs, RunLogs, StudioLogs};
 use rust_i18n::t;
 pub use terminal::TerminalLogger;
 pub use wasm::WasmLogs;
+
 
 use super::entry::Language;
 

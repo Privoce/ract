@@ -18,7 +18,7 @@ use gen_utils::{
 use sha2::{Digest, Sha256};
 use toml_edit::{value, DocumentMut, Item, Table};
 
-use crate::core::log::compiler::CompilerLogs;
+use crate::log::compiler::CompilerLogs;
 
 /// ## Gen compile cache
 /// use msgpack to serialize and deserialize

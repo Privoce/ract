@@ -2,7 +2,7 @@ use gen_utils::error::Error;
 use inquire::{Confirm, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
-use crate::core::log::TerminalLogger;
+use crate::log::TerminalLogger;
 
 use super::ProjectInfo;
 

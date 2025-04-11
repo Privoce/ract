@@ -44,7 +44,7 @@
 
 use std::{error::Error, fmt::Display, path::PathBuf};
 
-use crate::{common::constant::LOGO, log::level::LevelColord};
+use crate::{common::LOGO, log::level::LevelColord};
 use colored::Colorize;
 use env_logger::{Builder, WriteStyle};
 use gen_utils::common::time::local_time_default;

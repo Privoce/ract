@@ -14,7 +14,7 @@ use gen_utils::{
 use toml_edit::value;
 use walkdir::WalkDir;
 
-use crate::core::{
+use crate::{
     entry::{GenUIConf, Member},
     log::compiler::{CompilerLogger, CompilerLogs},
 };
@@ -222,7 +222,7 @@ impl CompilerImpl for Compiler {
         }
         // [init logger] -------------------------------------------------------------------------------------------------
         let log_level = self.conf.compiler.log_level;
-        let _ = crate::core::log::compiler::init(log_level);
+        let _ = crate::log::compiler::init(log_level);
         // [clear cache] -------------------------------------------------------------------------------------------------
         let _ = self.cache.clear(self.source.from_path().as_path());
         // [delete compiled project] -------------------------------------------------------------------------------------

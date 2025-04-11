@@ -5,11 +5,13 @@ use gen_utils::{
     error::Error,
 };
 
-use crate::core::{
-    constant::{COMPONENT_MOD_GEN, EASY_GEN, GENUI_README, HELLO_GEN, HOME_GEN, ROOT_GEN, VIEW_MOD_GEN},
+use crate::{
+    common::{
+        create_workspace, COMPONENT_MOD_GEN, EASY_GEN, GENUI_README, HELLO_GEN, HOME_GEN, ROOT_GEN,
+        VIEW_MOD_GEN,
+    },
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
-    util::create_workspace,
 };
 
 pub fn create<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<PathBuf, Error>

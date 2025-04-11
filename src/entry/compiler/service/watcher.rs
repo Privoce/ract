@@ -12,7 +12,7 @@
 
 use std::path::Path;
 
-use crate::core::entry::compiler::excludes::Excludes;
+use crate::entry::compiler::excludes::Excludes;
 #[cfg(target_os = "macos")]
 use gen_utils::common::fs::FileState;
 use gen_utils::error::Error;
@@ -34,7 +34,7 @@ where
 
     use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
-    use crate::core::log::compiler::{CompilerLogger, CompilerLogs};
+    use crate::log::compiler::{CompilerLogger, CompilerLogs};
 
     let (tx, rx) = channel();
     // [config for watcher] --------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ where
 
     use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
-    use crate::core::{
+    use crate::{
         entry::compiler::service::FileEventTracker,
         log::compiler::{CompilerLogger, CompilerLogs},
     };

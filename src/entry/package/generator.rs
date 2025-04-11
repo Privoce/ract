@@ -6,7 +6,7 @@ use gen_utils::{
 };
 use toml_edit::DocumentMut;
 
-use crate::core::log::TerminalLogger;
+use crate::log::TerminalLogger;
 
 use super::{MacOsConfig, PackageConf};
 

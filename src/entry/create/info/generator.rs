@@ -2,8 +2,8 @@ pub mod gen_ui;
 pub mod makepad;
 
 use super::ProjectInfoType;
-use crate::core::{
-    constant::DEFAULT_GITIGNORE,
+use crate::{
+    common::DEFAULT_GITIGNORE,
     entry::{FrameworkType, RactToml},
     log::CreateLogs,
 };

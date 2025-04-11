@@ -3,7 +3,7 @@ use std::fmt::Display;
 use gen_utils::{err_from_to, error::Error};
 use toml_edit::{value, Item, Table};
 
-use crate::core::{
+use crate::{
     entry::{compiler::excludes::Excludes, Underlayer},
     log::LogLevel,
 };

@@ -14,7 +14,7 @@ use makepad_gen_plugin::compiler::{
     CONF_FORMAT_SUGGESTION as MAKEPAD_CONF_FORMAT_SUGGESTION,
 };
 use toml_edit::{DocumentMut, Formatted, InlineTable, Item, Value};
-use crate::core::entry::ChainEnvToml;
+use crate::entry::ChainEnvToml;
 use super::GenUIConf;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]

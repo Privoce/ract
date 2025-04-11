@@ -9,7 +9,7 @@ use gen_utils::{
 use inquire::{Confirm, Select, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
-use crate::core::entry::{FrameworkType, Underlayer};
+use crate::entry::{FrameworkType, Underlayer};
 
 /// # Project Info for GenUI project
 /// use in ui project.Cargo.toml

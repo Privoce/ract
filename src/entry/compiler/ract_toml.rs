@@ -11,7 +11,7 @@ use gen_utils::{
 };
 use toml_edit::{value, Array, DocumentMut, Formatted, InlineTable, Value};
 
-use crate::core::entry::{FrameworkType, ProjectInfo, Resource};
+use crate::entry::{FrameworkType, ProjectInfo, Resource};
 
 /// # RactToml
 /// each project has a .ract file to point the project kind and help ract to compile the project
@@ -306,7 +306,7 @@ impl TryFrom<&Value> for Member {
 mod test_ract {
     use toml_edit::DocumentMut;
 
-    use crate::core::entry::RactToml;
+    use crate::entry::RactToml;
 
     #[test]
     fn makepad() {

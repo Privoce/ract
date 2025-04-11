@@ -12,7 +12,7 @@ use gen_utils::{
 };
 use toml_edit::{value, Array, DocumentMut, Table};
 
-use crate::core::{entry::FrameworkType, log::LogLevel, util::is_workspace};
+use crate::{entry::FrameworkType, log::LogLevel, common::is_workspace};
 
 use super::{
     AppCategory, Binary, DebianConfig, DmgConfig, FileAssociation, MacOsConfig, NsisConfig,

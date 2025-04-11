@@ -2,7 +2,7 @@ use std::{fmt::Display, path::{Path, PathBuf}, str::FromStr};
 
 use gen_utils::{common::fs, error::Error};
 
-use crate::core::util::exe_path;
+use crate::common::exe_path;
 
 use super::ChainEnvToml;
 

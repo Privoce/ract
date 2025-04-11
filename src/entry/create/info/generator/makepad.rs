@@ -8,11 +8,10 @@ use gen_utils::{
     error::Error,
 };
 
-use crate::core::{
-    constant::{MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
+use crate::{
+    common::{self, MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
     log::{CreateLogs, TerminalLogger},
-    util,
 };
 
 pub fn create_workspace<P>(
@@ -34,7 +33,7 @@ where
     // [workspace Cargo.toml] ------------------------------------------------------
     let cargo_toml = info.workspace_members_toml().to_string();
     // [create a new wrokspace] ----------------------------------------------------
-    let _ = util::create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
+    let _ = common::create_workspace(path.as_path(), &cargo_toml, ract_toml)?;
     // [create real projects] ------------------------------------------------------
     for member in info.members.iter() {
         let _ = create_project(path.as_path(), &member);

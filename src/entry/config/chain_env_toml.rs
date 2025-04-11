@@ -7,7 +7,7 @@ use gen_utils::{
 };
 use toml_edit::{value, DocumentMut, Formatted, InlineTable, Item, Table, Value};
 
-use crate::core::{log::TerminalLogger, util::exe_path};
+use crate::{log::TerminalLogger, common::exe_path};
 
 use super::env::Env;
 

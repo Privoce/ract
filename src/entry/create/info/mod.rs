@@ -10,7 +10,7 @@ pub use project::ProjectInfo;
 use std::path::Path;
 pub use workspace::WorkspaceInfo;
 
-use crate::core::entry::{FrameworkType, Member};
+use crate::entry::{FrameworkType, Member};
 
 #[derive(Debug, Clone)]
 pub enum ProjectInfoType {
