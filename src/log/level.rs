@@ -3,6 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use colored::{ColoredString, Colorize};
 use gen_utils::error::{ConvertError, Error};
 use log::{Level, LevelFilter};
+use ratatui::style::Color;
 use toml_edit::{Formatted, Value};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -14,6 +15,29 @@ pub enum LogLevel {
     Warn,
     Trace,
     Off,
+}
+
+impl LogLevel {
+    pub fn color(&self) -> Color {
+        match self {
+            LogLevel::Info => Color::Blue,
+            LogLevel::Debug => Color::Cyan,
+            LogLevel::Error => Color::Red,
+            LogLevel::Warn => Color::Yellow,
+            LogLevel::Trace => Color::White,
+            LogLevel::Off => Color::White,
+        }
+    }
+    pub fn fmt_level(&self) -> &str {
+        match self {
+            LogLevel::Info => "INFO",
+            LogLevel::Debug => "DEBUG",
+            LogLevel::Error => "ERROR",
+            LogLevel::Warn => "WARN",
+            LogLevel::Trace => "TRACE",
+            LogLevel::Off => "OFF",
+        }
+    }
 }
 
 impl FromStr for LogLevel {

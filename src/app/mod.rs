@@ -1,3 +1,5 @@
+mod dashboard;
+
 use crate::{
     cli::{command::init::InitCmd, command::Commands, Cli},
     common::Result,
@@ -12,6 +14,8 @@ use ratatui::{
 };
 use std::time::Duration;
 
+pub use dashboard::Dashboard;
+
 pub fn run() -> Result<()> {
     // [do init before cli and app run] -----------------------------------------------------------------
     let (mut terminal, lang) = before()?;
@@ -21,6 +25,10 @@ pub fn run() -> Result<()> {
         // init::run();
         let init_cmd = InitCmd::new(lang);
         init_cmd.run(&mut terminal)?;
+
+        // let mut dashboard = dashboard::Dashboard::new(lang);
+        // dashboard.run(&mut terminal)?;
+
         ratatui::restore();
     } else {
         // match cmd {
@@ -72,7 +80,7 @@ pub fn before() -> Result<(DefaultTerminal, Language)> {
 
 pub fn after() {}
 
-pub trait AppTemplate {
+pub trait AppComponent {
     // fn before(&self) -> Result<()>{
 
     // }
