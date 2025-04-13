@@ -28,7 +28,6 @@ pub fn run() -> Result<()> {
 
         // let mut dashboard = dashboard::Dashboard::new(lang);
         // dashboard.run(&mut terminal)?;
-
         ratatui::restore();
     } else {
         // match cmd {
@@ -88,4 +87,9 @@ pub trait AppComponent {
     fn run(self, terminal: &mut DefaultTerminal) -> Result<()>;
     fn handle_events(&mut self) -> Result<()>;
     fn quit(&mut self) -> ();
+}
+
+
+pub trait Component {
+    fn new(lang: Language) -> Self;
 }

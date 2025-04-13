@@ -6,14 +6,14 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Text},
     widgets::{Block, BorderType, Gauge, List, ListItem, Paragraph, Widget},
-    DefaultTerminal,
+    DefaultTerminal, Frame,
 };
 
 use crate::{
     app::{AppComponent, Dashboard},
     cli::command,
     entry::Language,
-    log::LogItem,
+    log::{InitLogs, LogItem, LogType},
 };
 
 pub struct InitCmd {
@@ -38,7 +38,8 @@ impl AppComponent for InitCmd {
     }
     fn run(mut self, terminal: &mut DefaultTerminal) -> crate::common::Result<()> {
         while !self.state.is_quit() {
-            terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
+            // terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
+            terminal.draw(|frame| self.render_frame(frame))?;
             self.handle_events()?;
             // self.update(terminal.size()?.width);
         }
@@ -64,11 +65,16 @@ impl AppComponent for InitCmd {
 
         if do_next {
             // handle service
-            if let InitState::Start = self.state {
-                self.logs.push(LogItem::info("Initializing..."));
-                self.state = InitState::Run;
-            } else if let InitState::Run = self.state {
-                self.logs.push(LogItem::info("Running..."));
+            match self.state {
+                InitState::Start => {
+                    self.logs.push(LogItem::info(InitLogs::Init.to_string()));
+                    self.state.next();
+                }
+                InitState::Run(run_state) => match run_state {
+                    RunState::CreateEnvFile => {}
+                    RunState::CreateChain => {}
+                },
+                InitState::Quit => {}
             }
         }
 
@@ -80,32 +86,24 @@ impl AppComponent for InitCmd {
     }
 }
 
-impl Widget for &mut InitCmd {
-    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
+impl InitCmd {
+    // 渲染整个界面
+    fn render_frame(&mut self, frame: &mut Frame) {
+        let area = frame.area();
         let layout =
             Layout::vertical([Constraint::Max(20), Constraint::Max(20)]).vertical_margin(1);
         let [msg_area, dashboard_area] = layout.areas(area);
-        // self.render_gauge(msg_area, buf);
-        self.render_msg(msg_area, buf);
-        self.render_dashboard(dashboard_area, buf);
+        // [dashboard] -------------------------------------------------------------------------------------------
+        let mut dashboard = Dashboard::new(self.lang.clone());
+        dashboard.ty = LogType::Init;
+        // [render app] ------------------------------------------------------------------------------------------
+        frame.render_widget(self.render_msg(), msg_area);
+        dashboard.render(frame, dashboard_area, |frame, area| {
+            self.render_dashboard(&dashboard, frame, area)
+        });
     }
-}
 
-impl InitCmd {
-    fn update(&mut self, width: u16) {
-        if !self.state.is_start() {
-            return;
-        }
-
-        self.progress += 1.0;
-        if self.progress >= 100.0 {
-            self.state.quit();
-        }
-    }
-    fn render_msg(&mut self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
+    fn render_msg(&self) -> List {
         // Text::raw("Initializing...").render(area, buf);
         let items: Vec<ListItem> = self
             .logs
@@ -113,13 +111,15 @@ impl InitCmd {
             .map(|log| ListItem::new(log.fmt_line()))
             .collect();
 
-        List::new(items)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .render(area, buf);
+        List::new(items).highlight_style(Style::default().add_modifier(Modifier::BOLD))
     }
-    fn render_dashboard(&self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        let dashboard = Dashboard::new(self.lang.clone());
-        dashboard.render(area, buf);
+
+    fn render_dashboard(
+        &self,
+        dashboard: &Dashboard,
+        frame: &mut Frame,
+        area: ratatui::prelude::Rect,
+    ) {
     }
 
     fn render_gauge(&self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
@@ -134,7 +134,7 @@ impl InitCmd {
 pub enum InitState {
     #[default]
     Start,
-    Run,
+    Run(RunState),
     Quit,
 }
 
@@ -148,4 +148,27 @@ impl InitState {
     pub fn is_start(&self) -> bool {
         matches!(self, InitState::Start)
     }
+    pub fn next(&mut self) {
+        match self {
+            InitState::Start => {
+                *self = InitState::Run(RunState::default());
+            }
+            InitState::Run(run_state) => match run_state {
+                RunState::CreateEnvFile => {
+                    *self = InitState::Run(RunState::CreateChain);
+                }
+                RunState::CreateChain => {
+                    *self = InitState::Quit;
+                }
+            },
+            InitState::Quit => {}
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum RunState {
+    #[default]
+    CreateEnvFile,
+    CreateChain,
 }

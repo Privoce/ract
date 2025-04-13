@@ -12,7 +12,7 @@ mod run;
 mod terminal;
 mod wasm;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 pub use add::AddLogs;
 pub use check::CheckLogs;
@@ -73,11 +73,11 @@ impl LogItem {
         self.datetime.format(" [%Y-%m-%d %H:%M:%S] ").to_string()
     }
 
-    pub fn info(msg: &str) -> Self {
+    pub fn info(msg: String) -> Self {
         Self {
             level: LogLevel::Info,
             ty: Default::default(),
-            msg: msg.to_string(),
+            msg,
             datetime: Local::now(),
         }
     }
@@ -90,4 +90,21 @@ pub enum LogType {
     Create,
     #[default]
     Unknown,
+}
+
+impl LogType {
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, LogType::Unknown)
+    }
+}
+
+impl Display for LogType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            LogType::Init => "INIT",
+            LogType::Check => "CHECK",
+            LogType::Create => "CREATE",
+            LogType::Unknown => "UNKNOWN",
+        })
+    }
 }

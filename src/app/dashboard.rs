@@ -3,13 +3,14 @@ use std::time::Duration;
 use gen_utils::common::Os;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Alignment, Constraint, Layout},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::Color,
-    widgets::{block::Position, Block, BorderType, Borders, Gauge, Padding, Widget},
-    DefaultTerminal,
+    text::{Line, Span},
+    widgets::{block::Position, Block, BorderType, Borders, Gauge, Padding, Paragraph, Widget},
+    DefaultTerminal, Frame,
 };
 
-use crate::entry::Language;
+use crate::{entry::Language, log::LogType};
 
 use super::AppComponent;
 
@@ -17,88 +18,70 @@ pub struct Dashboard {
     pub os: Os,
     pub title: String,
     pub lang: Language,
-    state: State,
-}
-
-impl AppComponent for Dashboard {
-    fn new(lang: crate::entry::Language) -> Self {
-        Self {
-            os: Os::current(),
-            title: "Ract Dashboard".to_string(),
-            state: Default::default(),
-            lang,
-        }
-    }
-
-    fn run(mut self, terminal: &mut ratatui::DefaultTerminal) -> crate::common::Result<()> {
-        while !self.state.is_quit() {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
-            self.handle_events()?;
-            // self.update(terminal.size()?.width);
-        }
-
-        Ok(())
-    }
-
-    fn handle_events(&mut self) -> crate::common::Result<()> {
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') => self.quit(),
-                        _ => {}
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn quit(&mut self) -> () {
-        self.state.quit();
-    }
-}
-
-impl Widget for &Dashboard {
-    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        let layout = Layout::vertical([Constraint::Percentage(100)]);
-        let [main_area] = layout.areas(area);
-        self.render_container(main_area, buf);   
-    }
+    pub ty: LogType,
 }
 
 impl Dashboard {
-    pub fn render_container(&self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        Block::default()
-        .title(self.title.to_string())
-        .title_alignment(Alignment::Left)
-        .title_style(Color::Rgb(255, 112, 67))
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .padding(Padding::new(2,2,2,2))
-        .render(area, buf);
+    pub fn new(lang: crate::entry::Language) -> Self {
+        Self {
+            os: Os::current(),
+            title: "Ract Dashboard".to_string(),
+            lang,
+            ty: LogType::Unknown,
+        }
     }
-}
+    pub fn render<F>(&self, frame: &mut Frame, area: Rect, render_main: F) -> ()
+    where F: FnOnce(&mut Frame, Rect){
+        // [container] -----------------------------------------------------------
+        let container_area = self.render_container(frame, area);
+        // [inner layout for left and right] -------------------------------------
+        let [left, right] = Self::inner_layout().areas(container_area);
+        // - [left info] ---------------------------------------------------------
+        self.render_info(frame, left);
+        // - [right main] --------------------------------------------------------
+        render_main(frame, right);
+        //
+    }
 
-#[derive(Default, Clone, Copy, Debug)]
-enum State {
-    #[default]
-    Start,
-    Quit,
-}
+    pub fn render_container(&self, frame: &mut Frame, area: Rect) -> Rect {
+        let container = Block::default()
+            .title(self.title.to_string())
+            .title_alignment(Alignment::Left)
+            .title_style(Color::Rgb(255, 112, 67))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .padding(Padding::new(2, 2, 1, 1));
+        let innser_area = container.inner(area);
+        frame.render_widget(container, area);
+        innser_area
+    }
+    pub fn inner_layout() -> Layout {
+        Layout::horizontal([Constraint::Fill(1), Constraint::Fill(3)])
+    }
+    pub fn render_info(&self, frame: &mut Frame, area: Rect) -> () {
+        let mut lines = vec![
+            Line::from_iter([
+                "Os: ".into(),
+                Span::styled(self.os.to_string(), Color::Rgb(255, 112, 67)),
+            ]),
+            Line::from_iter([
+                "Version: ".into(),
+                Span::styled("0.2.0", Color::Rgb(255, 112, 67)),
+            ]),
+            Line::from_iter([
+                "Language: ".into(),
+                Span::styled(self.lang.as_str(), Color::Rgb(255, 112, 67)),
+            ]),
+        ];
 
-impl State {
-    pub fn quit(&mut self) {
-        *self = State::Quit;
+        if !self.ty.is_unknown() {
+            lines.push(Line::from_iter([
+                "Type: ".into(),
+                Span::styled(self.ty.to_string(), Color::Rgb(255, 112, 67)),
+            ]));
+        }
+
+        frame.render_widget(Paragraph::new(lines), area);
     }
-    pub fn is_quit(&self) -> bool {
-        matches!(self, State::Quit)
-    }
-    pub fn is_start(&self) -> bool {
-        matches!(self, State::Start)
-    }
+    
 }
