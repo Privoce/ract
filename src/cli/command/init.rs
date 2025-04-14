@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Constraint, Layout},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Text},
     widgets::{Block, BorderType, Gauge, List, ListItem, Paragraph, Widget},
@@ -10,7 +10,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{AppComponent, Dashboard},
+    app::{AppComponent, Dashboard, TimelineItem, TimelineState},
     cli::command,
     entry::Language,
     log::{InitLogs, LogItem, LogType},
@@ -39,7 +39,7 @@ impl AppComponent for InitCmd {
     fn run(mut self, terminal: &mut DefaultTerminal) -> crate::common::Result<()> {
         while !self.state.is_quit() {
             // terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
-            terminal.draw(|frame| self.render_frame(frame))?;
+            terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
             // self.update(terminal.size()?.width);
         }
@@ -87,47 +87,132 @@ impl AppComponent for InitCmd {
 }
 
 impl InitCmd {
-    // 渲染整个界面
-    fn render_frame(&mut self, frame: &mut Frame) {
+    /// ## Render the init command
+    fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let layout =
-            Layout::vertical([Constraint::Max(20), Constraint::Max(20)]).vertical_margin(1);
-        let [msg_area, dashboard_area] = layout.areas(area);
+        let msg = self.render_msg();
+
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
+        
         // [render app] ------------------------------------------------------------------------------------------
-        frame.render_widget(self.render_msg(), msg_area);
+
+        // dashboard.render(frame, dashboard_area, |frame, area| {
+        //     self.render_dashboard(&dashboard, frame, area)
+        // });
+
+        let mut node1 = TimelineItem::new("Test1", self.lang)
+            .description("Test1 description")
+            .render();
+
+       
+        // let (header_left, header_right) = node1.header;
+
+        let mut node2 = TimelineItem::new("Test2", self.lang).render();
+
+        // node1.render(area1, frame);
+        // node2.render(area2, frame);
+
+        let container_height = node1.height + node2.height + 1 + 2;
+
+        let layout = Layout::vertical([
+            Constraint::Length(msg.height() as u16),
+            Constraint::Length(container_height),
+        ])
+        .spacing(1)
+        .vertical_margin(1);
+        let [msg_area, dashboard_area] = layout.areas(area);
+        
+        
+
+        // [render components] -------------------------------------------------------
+        frame.render_widget(msg, msg_area);
+        // dashboard.render_container(frame, dashboard_area);
+        // frame.render_widget(dasah, area);
         dashboard.render(frame, dashboard_area, |frame, area| {
-            self.render_dashboard(&dashboard, frame, area)
+            let [node1_area, node2_area] = Layout::vertical([
+                Constraint::Length(node1.height),
+                Constraint::Length(node2.height),
+            ])
+            .spacing(1)
+            .areas(area);
+        let node1_container = Block::new();
+        // let node1_inner_area = node1_container.inner(node1_area);
+            let [header_area, main_area, footer_area] = node1.layout.areas(node1_area);
+            let [header_left_area, header_right_area] = Layout::horizontal([
+                Constraint::Length(node1.header.0.width() as u16),
+                Constraint::Length(node1.header.1.width() as u16),
+            ])
+            .spacing(1)
+            .areas(header_area);
+           
+
+            let header = Block::new();
+            // frame.render_widget(node1_container, node1_area);
+            frame.render_widget(header, header_area);
+            frame.render_widget(node1.header.0, header_left_area);
+            frame.render_widget(node1.header.1, header_right_area);
+            // frame.render_widget(node1.main.unwrap(), main_area);
+            // frame.render_widget(node1.footer.0, footer_area);
+
         });
+       
     }
 
-    fn render_msg(&self) -> List {
-        // Text::raw("Initializing...").render(area, buf);
-        let items: Vec<ListItem> = self
-            .logs
-            .iter()
-            .map(|log| ListItem::new(log.fmt_line()))
-            .collect();
-
-        List::new(items).highlight_style(Style::default().add_modifier(Modifier::BOLD))
+    fn render_msg(&self) -> Text {
+        let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
+        Text::from_iter(items)
     }
 
-    fn render_dashboard(
-        &self,
-        dashboard: &Dashboard,
-        frame: &mut Frame,
-        area: ratatui::prelude::Rect,
-    ) {
+    fn draw_components(&self) {
+        let mut node1 = TimelineItem::new("Test1", self.lang);
+        node1.description.replace("Test1 description".to_string());
+        node1.render();
+        let mut node2 = TimelineItem::new("Test2", self.lang);
+        node2.render();
     }
 
-    fn render_gauge(&self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        Gauge::default()
-            .gauge_style(Color::Blue)
-            .ratio(self.progress / 100.0)
-            .render(area, buf);
-    }
+    // fn render_dashboard(
+    //     &self,
+    //     dashboard: &Dashboard,
+    //     frame: &mut Frame,
+    //     area: ratatui::prelude::Rect,
+    // ) {
+    //     // let [area1, area2] =
+    //     //     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
+    //     //         .spacing(1)
+    //     //         .areas(area);
+
+    //     let mut node1 = TimelineItem::new("Test1", self.lang);
+    //     node1.description.replace("Test1 description".to_string());
+    //     node1.render();
+
+    //     let header = Block::new();
+    //     let (header_left, header_right) = node1.header;
+    //     let [header_left_area, header_right_area] = Layout::horizontal([
+    //         Constraint::Length(header_left.width() as u16),
+    //         Constraint::Length(header_right.width() as u16),
+    //     ])
+    //     .spacing(1)
+    //     .areas(header_area);
+
+    //     let [header_area, main_area, footer_area] = node1.layout.areas()
+
+    //     let mut node2 = TimelineItem::new("Test2", self.lang);
+    //     node2.render();
+
+    //     // node1.render(area1, frame);
+    //     // node2.render(area2, frame);
+
+    //     Layout::vertical([
+    //         Constraint::Length(node1.height),
+    //         Constraint::Length(node2.height),
+    //     ]);
+
+    //     let container_height = node1.height + node2.height;
+
+    // }
 }
 
 #[derive(Default, Clone, Copy, Debug)]

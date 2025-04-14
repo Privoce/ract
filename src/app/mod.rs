@@ -1,4 +1,5 @@
 mod dashboard;
+mod timeline;
 
 use crate::{
     cli::{command::init::InitCmd, command::Commands, Cli},
@@ -15,6 +16,7 @@ use ratatui::{
 use std::time::Duration;
 
 pub use dashboard::Dashboard;
+pub use timeline::*;
 
 pub fn run() -> Result<()> {
     // [do init before cli and app run] -----------------------------------------------------------------
