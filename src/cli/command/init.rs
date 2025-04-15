@@ -3,9 +3,7 @@ use std::time::Duration;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
     text::{Line, Text},
-    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
 
@@ -13,41 +11,80 @@ use crate::{
     app::{AppComponent, Dashboard, Timeline, TimelineState},
     cli::command,
     entry::Language,
-    log::{InitLogs, LogItem, LogType},
+    log::{InitLogs, LogExt, LogItem, LogType},
+    service,
 };
 
 pub struct InitCmd {
     state: InitState,
     lang: Language,
-    progress: f64,
     logs: Vec<LogItem>,
+    cost: Cost,
 }
-
-// pub fn run(lang: &Language) -> crate::common::Result<()>{
-
-// }
 
 impl AppComponent for InitCmd {
     fn new(lang: Language) -> Self {
         Self {
             state: Default::default(),
             lang,
-            progress: 0.0,
             logs: vec![],
+            cost: Cost::default(),
         }
     }
+
     fn run(mut self, terminal: &mut DefaultTerminal) -> crate::common::Result<()> {
         while !self.state.is_quit() {
-            // terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
-            // self.update(terminal.size()?.width);
         }
-
         Ok(())
     }
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
+        // handle service
+        match &mut self.state {
+            InitState::Start => {
+                self.logs
+                    .push(LogItem::info(InitLogs::Init.t(&self.lang).to_string()));
+                self.cost.chain_state = TimelineState::Running;
+                self.state.next();
+            }
+            InitState::Run(run_state) => match run_state {
+                RunState::CreateEnvFile(progress) => {
+                    if *progress == 0 {
+                        // 计算花费时间
+                        let start = std::time::Instant::now();
+                        let res = service::init::create_env_file();
+                        let duration = start.elapsed();
+                        self.cost.env = duration;
+                        match res {
+                            Ok(_) => {
+                                *progress += 100;
+                                self.cost.env_state = TimelineState::Success;
+                                self.logs.push(LogItem::success(
+                                    InitLogs::EnvSuccess.t(&self.lang).to_string(),
+                                ));
+                            }
+                            Err(e) => {
+                                *progress = 96;
+                                self.cost.env_state = TimelineState::Failed;
+                                self.logs.push(LogItem::error(
+                                    InitLogs::EnvFailed(e.to_string()).t(&self.lang).to_string(),
+                                ));
+                            }
+                        }
+                    }
+
+                    if self.cost.chain_state.is_success() {
+                        self.cost.chain_state = TimelineState::Running;
+                        self.state.next();
+                    }
+                }
+                RunState::CreateChain(progress) => {}
+            },
+            InitState::Quit => {}
+        }
+
         let mut do_next = false;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
@@ -63,20 +100,7 @@ impl AppComponent for InitCmd {
             }
         }
 
-        if do_next {
-            // handle service
-            match self.state {
-                InitState::Start => {
-                    self.logs.push(LogItem::info(InitLogs::Init.to_string()));
-                    self.state.next();
-                }
-                InitState::Run(run_state) => match run_state {
-                    RunState::CreateEnvFile => {}
-                    RunState::CreateChain => {}
-                },
-                InitState::Quit => {}
-            }
-        }
+        if do_next {}
 
         Ok(())
     }
@@ -91,30 +115,20 @@ impl InitCmd {
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         let msg = self.render_msg();
-
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
-
         // [render app] ------------------------------------------------------------------------------------------
+        let node1 = Timeline::new(InitLogs::Env.t(&self.lang).to_string(), self.lang)
+            .progress(self.env_progress())
+            .cost(self.cost.env)
+            .description(InitLogs::EnvDesc.t(&self.lang).to_string())
+            .draw();
 
-        // dashboard.render(frame, dashboard_area, |frame, area| {
-        //     self.render_dashboard(&dashboard, frame, area)
-        // });
-
-        let mut node1 = Timeline::new("Test1", self.lang)
-            .description("Test1 description")
-            .render();
-
-        // let (header_left, header_right) = node1.header;
-
-        let mut node2 = Timeline::new("Test2", self.lang).render();
-
-        // node1.render(area1, frame);
-        // node2.render(area2, frame);
-
+        let node2 = Timeline::new(InitLogs::Chain.t(&self.lang).to_string(), self.lang)
+            .progress(self.chain_progress())
+            .draw();
         let container_height = node1.height + node2.height + 1 + 2;
-
         let layout = Layout::vertical([
             Constraint::Length(msg.height() as u16),
             Constraint::Length(container_height),
@@ -122,11 +136,8 @@ impl InitCmd {
         .spacing(1)
         .vertical_margin(1);
         let [msg_area, dashboard_area] = layout.areas(area);
-
         // [render components] -------------------------------------------------------
         frame.render_widget(msg, msg_area);
-        // dashboard.render_container(frame, dashboard_area);
-        // frame.render_widget(dasah, area);
         dashboard.render(frame, dashboard_area, |frame, area| {
             let [node1_area, node2_area] = Layout::vertical([
                 Constraint::Length(node1.height),
@@ -135,23 +146,8 @@ impl InitCmd {
             .spacing(1)
             .areas(area);
 
-            let header = Block::new();
-            let footer = Block::new().borders(Borders::BOTTOM);
-            // let node1_inner_area = node1_container.inner(node1_area);
-            let [header_area, main_area, footer_area] = node1.layout.areas(node1_area);
-            let [header_left_area, header_right_area] =
-                node1.header.layout.areas(header.inner(header_area));
-            let [footer_left_area, footer_right_area] =
-                node1.footer.layout.areas(footer.inner(footer_area));
-
-            // frame.render_widget(node1_container, node1_area);
-            frame.render_widget(header, header_area);
-            frame.render_widget(node1.header.state, header_left_area);
-            frame.render_widget(node1.header.name, header_right_area);
-            frame.render_widget(node1.main.unwrap().description, main_area);
-            frame.render_widget(footer, footer_area);
-            frame.render_widget(node1.footer.progress, footer_left_area);
-            frame.render_widget(node1.footer.cost, footer_right_area);
+            node1.render(node1_area, frame);
+            node2.render(node2_area, frame);
         });
     }
 
@@ -159,55 +155,26 @@ impl InitCmd {
         let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
         Text::from_iter(items)
     }
-
-    fn draw_components(&self) {
-        let mut node1 = Timeline::new("Test1", self.lang);
-        node1.description.replace("Test1 description".to_string());
-        node1.render();
-        let mut node2 = Timeline::new("Test2", self.lang);
-        node2.render();
+    fn env_progress(&self) -> u16 {
+        if let InitState::Run(run_state) = self.state {
+            match run_state {
+                RunState::CreateEnvFile(progress) => progress,
+                RunState::CreateChain(_) => 100,
+            }
+        } else {
+            0
+        }
     }
-
-    // fn render_dashboard(
-    //     &self,
-    //     dashboard: &Dashboard,
-    //     frame: &mut Frame,
-    //     area: ratatui::prelude::Rect,
-    // ) {
-    //     // let [area1, area2] =
-    //     //     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-    //     //         .spacing(1)
-    //     //         .areas(area);
-
-    //     let mut node1 = Timeline::new("Test1", self.lang);
-    //     node1.description.replace("Test1 description".to_string());
-    //     node1.render();
-
-    //     let header = Block::new();
-    //     let (header_left, header_right) = node1.header;
-    //     let [header_left_area, header_right_area] = Layout::horizontal([
-    //         Constraint::Length(header_left.width() as u16),
-    //         Constraint::Length(header_right.width() as u16),
-    //     ])
-    //     .spacing(1)
-    //     .areas(header_area);
-
-    //     let [header_area, main_area, footer_area] = node1.layout.areas()
-
-    //     let mut node2 = Timeline::new("Test2", self.lang);
-    //     node2.render();
-
-    //     // node1.render(area1, frame);
-    //     // node2.render(area2, frame);
-
-    //     Layout::vertical([
-    //         Constraint::Length(node1.height),
-    //         Constraint::Length(node2.height),
-    //     ]);
-
-    //     let container_height = node1.height + node2.height;
-
-    // }
+    fn chain_progress(&self) -> u16 {
+        if let InitState::Run(run_state) = self.state {
+            match run_state {
+                RunState::CreateEnvFile(_) => 0,
+                RunState::CreateChain(progress) => progress,
+            }
+        } else {
+            0
+        }
+    }
 }
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -234,10 +201,10 @@ impl InitState {
                 *self = InitState::Run(RunState::default());
             }
             InitState::Run(run_state) => match run_state {
-                RunState::CreateEnvFile => {
-                    *self = InitState::Run(RunState::CreateChain);
+                RunState::CreateEnvFile(_) => {
+                    *self = InitState::Run(RunState::CreateChain(0));
                 }
-                RunState::CreateChain => {
+                RunState::CreateChain(_) => {
                     *self = InitState::Quit;
                 }
             },
@@ -246,9 +213,35 @@ impl InitState {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub enum RunState {
-    #[default]
-    CreateEnvFile,
-    CreateChain,
+    CreateEnvFile(u16),
+    CreateChain(u16),
+}
+
+impl Default for RunState {
+    fn default() -> Self {
+        Self::CreateEnvFile(0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Cost {
+    pub env: Duration,
+    pub env_state: TimelineState,
+    pub chain: Duration,
+    pub chain_state: TimelineState,
+}
+
+#[cfg(test)]
+mod te {
+    use crate::service;
+
+    #[test]
+    fn t() {
+        let start = std::time::Instant::now();
+        let res = service::init::create_env_file();
+        let duration = start.elapsed();
+        dbg!(duration);
+    }
 }

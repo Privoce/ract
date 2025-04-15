@@ -1,3 +1,5 @@
+use gen_utils::error::Error;
+
 use crate::{entry::{ChainEnvToml, Env}, log::{InitLogs, TerminalLogger}};
 
 use super::update::check_auto_update;
@@ -19,15 +21,16 @@ pub fn run() {
     InitLogs::Init.terminal().info();
     create_env_file();
     create_chain();
-    InitLogs::Confirm.terminal().success();
+    InitLogs::Complete.terminal().success();
 }
 
-fn create_env_file() {
-    Env::default().write().expect("write env.toml failed");
-    InitLogs::Env.terminal().success();
+pub fn create_env_file() -> Result<(), Error>{
+    Env::default().write()
+    // .expect("write env.toml failed");
+    // InitLogs::Env.terminal().success();
 }
 
-fn create_chain() {
+pub fn create_chain() {
     ChainEnvToml::default()
         .write()
         .expect("write env.toml failed");

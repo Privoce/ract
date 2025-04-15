@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use ratatui::{
-    layout::{Constraint, Flex, Layout},
+    layout::{Constraint, Flex, Layout, Rect},
     style::{Color, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, Gauge},
+    widgets::{Block, Borders, Gauge},
+    Frame,
 };
 
 use crate::entry::Language;
@@ -12,7 +15,7 @@ pub struct Timeline<'a> {
     pub name: String,
     pub description: Option<String>,
     /// time taken for the process
-    pub cost: String,
+    pub cost: Duration,
     pub state: TimelineState,
     pub progress: u16,
     pub lang: Language,
@@ -24,26 +27,26 @@ pub struct Timeline<'a> {
 }
 
 impl<'a> Timeline<'a> {
-    pub fn new(name: &str, lang: Language) -> Self {
+    pub fn new(name: String, lang: Language) -> Self {
         Self {
-            name: name.to_string(),
+            name,
             lang,
             ..Default::default()
         }
     }
 
-    pub fn name(mut self, name: &str) -> Self {
-        self.name = name.to_string();
+    pub fn name(mut self, name: String) -> Self {
+        self.name = name;
         self
     }
 
-    pub fn description(mut self, description: &str) -> Self {
-        self.description.replace(description.to_string());
+    pub fn description(mut self, description: String) -> Self {
+        self.description.replace(description);
         self
     }
 
-    pub fn cost(mut self, cost: &str) -> Self {
-        self.cost = cost.to_string();
+    pub fn cost(mut self, cost: Duration) -> Self {
+        self.cost = cost;
         self
     }
 
@@ -90,7 +93,7 @@ impl<'a> Timeline<'a> {
     /// │ └────────────────────────────────────────┘           │
     /// └──────────────────────────────────────────────────────┘
     /// ```                               
-    pub fn render(mut self) -> Self {
+    pub fn draw(mut self) -> Self {
         // [handle state] ----------------------------------------------------------------------------------------------
         let (icon, color) = match self.state {
             TimelineState::UnStart => ("🟠", Color::Rgb(255, 112, 67)),
@@ -126,19 +129,48 @@ impl<'a> Timeline<'a> {
             Layout::vertical([Constraint::Length(1), Constraint::Length(2)]).spacing(1)
         };
         // [footer] ----------------------------------------------------------------------------------------------
+        let fmt_cost = if self.progress < 100 {
+            format!("⌛️ {:?}", &self.cost)
+        } else {
+            format!("🎉 {:?}", &self.cost)
+        };
+
         self.footer = self
             .footer
             .progress(
                 Gauge::default()
-                    .label("")
+                    .label(format!("{}%", self.progress))
                     .percent(self.progress)
                     .gauge_style(Color::Rgb(255, 112, 67))
                     .block(Block::new().bg(Color::Rgb(255, 160, 140))),
             )
-            .cost(Text::styled(format!("🎉 {}", &self.cost), Color::Gray))
+            .cost(Text::styled(fmt_cost, Color::Gray))
             .draw();
 
         self
+    }
+    pub fn render(self, area: Rect, frame: &mut Frame) {
+        let header = Block::new();
+        let footer = Block::new().borders(Borders::BOTTOM);
+
+        let [header_area, footer_area] = if let Some(main) = self.main {
+            let [header_area, main_area, footer_area] = self.layout.areas(area);
+            frame.render_widget(main.description, main_area);
+            [header_area, footer_area]
+        } else {
+            self.layout.areas(area)
+        };
+
+        let [header_left_area, header_right_area] =
+            self.header.layout.areas(header.inner(header_area));
+        let [footer_left_area, footer_right_area] =
+            self.footer.layout.areas(footer.inner(footer_area));
+        frame.render_widget(header, header_area);
+        frame.render_widget(self.header.state, header_left_area);
+        frame.render_widget(self.header.name, header_right_area);
+        frame.render_widget(footer, footer_area);
+        frame.render_widget(self.footer.progress, footer_left_area);
+        frame.render_widget(self.footer.cost, footer_right_area);
     }
 }
 
@@ -149,6 +181,12 @@ pub enum TimelineState {
     Running,
     Success,
     Failed,
+}
+
+impl TimelineState {
+    pub fn is_success(&self) -> bool {
+        matches!(self, TimelineState::Success)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -221,7 +259,7 @@ impl<'f> TimelineFooter<'f> {
     }
     pub fn draw(mut self) -> Self {
         self.layout = Layout::horizontal([
-            Constraint::Percentage(76),
+            Constraint::Percentage(70),
             Constraint::Length(self.cost.width() as u16),
         ])
         .spacing(4)
@@ -230,16 +268,4 @@ impl<'f> TimelineFooter<'f> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::Timeline;
 
-    #[test]
-    fn timeline() {
-        let node = Timeline::new("Test", crate::entry::Language::En)
-            .description("Test description")
-            .render();
-
-        dbg!(node);
-    }
-}

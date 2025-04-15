@@ -36,9 +36,8 @@ pub use wasm::WasmLogs;
 use super::entry::Language;
 
 pub trait LogExt {
-    /// ## Convert the log to a terminal logger
-    /// TerminalLogger is a logger that can be used to log to the terminal and link with i18n
-    fn terminal(&self, lang: &Language) -> TerminalLogger;
+    // use i18n to translate the log message
+    fn t(&self, lang: &Language) -> Cow<str>;
 }
 
 #[derive(Debug)]
@@ -48,6 +47,7 @@ pub struct LogItem {
     msg: String,
     /// The datetime of the log （use `chrono` crate）
     datetime: DateTime<Local>,
+    is_success: bool
 }
 
 impl LogItem {
@@ -60,7 +60,7 @@ impl LogItem {
             Span::styled(self.fmt_timestamp(), Style::default().fg(Color::White)).into(),
             Span::styled(
                 format!("[{}]", self.level.fmt_level()),
-                Style::default().fg(self.level.color()),
+                Style::default().fg(self.level_color()),
             )
             .into(),
             Span::styled(" >>> ", Style::default().fg(Color::White)).into(),
@@ -68,7 +68,13 @@ impl LogItem {
         ]
         .into()
     }
-
+    fn level_color(&self) -> Color {
+        if self.is_success {
+            Color::Green
+        }else{
+            self.level.color()
+        }
+    }
     pub fn fmt_timestamp(&self) -> String {
         self.datetime.format(" [%Y-%m-%d %H:%M:%S] ").to_string()
     }
@@ -79,6 +85,25 @@ impl LogItem {
             ty: Default::default(),
             msg,
             datetime: Local::now(),
+            is_success: false
+        }
+    }
+    pub fn success(msg: String) -> Self {
+        Self {
+            level: LogLevel::Info,
+            ty: Default::default(),
+            msg,
+            datetime: Local::now(),
+            is_success: true
+        }
+    }
+    pub fn error(msg: String) -> Self {
+        Self {
+            level: LogLevel::Error,
+            ty: Default::default(),
+            msg,
+            datetime: Local::now(),
+            is_success: false
         }
     }
 }

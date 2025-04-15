@@ -34,27 +34,25 @@ impl Display for AddLogs {
 impl Error for AddLogs {}
 
 impl LogExt for AddLogs {
-    fn terminal(&self, lang: &Language) -> TerminalLogger {
-        TerminalLogger {
-            output: match self {
-                AddLogs::DownloadFailed(reason) => t!(
-                    "add.download.failed",
-                    locale = lang.as_str(),
-                    reason = reason
-                ),
-                AddLogs::DownloadSuccess(name) => {
-                    t!("add.download.success", locale = lang.as_str(), name = name)
-                }
-                AddLogs::Downloading(name) => {
-                    t!("add.download.waiting", locale = lang.as_str(), name = name)
-                }
-                AddLogs::WriteInTomlFailed(name) => t!(
-                    "add.write_in_toml_fail",
-                    locale = lang.as_str(),
-                    name = name
-                ),
-                AddLogs::Complete(name) => t!("add.complete", locale = lang.as_str(), name = name),
-            },
+    fn t(&self, lang: &Language) -> std::borrow::Cow<str> {
+        match self {
+            AddLogs::DownloadFailed(reason) => t!(
+                "add.download.failed",
+                locale = lang.as_str(),
+                reason = reason
+            ),
+            AddLogs::DownloadSuccess(name) => {
+                t!("add.download.success", locale = lang.as_str(), name = name)
+            }
+            AddLogs::Downloading(name) => {
+                t!("add.download.waiting", locale = lang.as_str(), name = name)
+            }
+            AddLogs::WriteInTomlFailed(name) => t!(
+                "add.write_in_toml_fail",
+                locale = lang.as_str(),
+                name = name
+            ),
+            AddLogs::Complete(name) => t!("add.complete", locale = lang.as_str(), name = name),
         }
     }
 }
