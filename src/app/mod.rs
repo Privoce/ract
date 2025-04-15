@@ -1,4 +1,6 @@
+#[allow(unused)]
 mod dashboard;
+#[allow(unused)]
 mod timeline;
 
 use crate::{

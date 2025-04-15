@@ -5,12 +5,12 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Text},
-    widgets::{Block, BorderType, Gauge, List, ListItem, Paragraph, Widget},
+    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
 
 use crate::{
-    app::{AppComponent, Dashboard, TimelineItem, TimelineState},
+    app::{AppComponent, Dashboard, Timeline, TimelineState},
     cli::command,
     entry::Language,
     log::{InitLogs, LogItem, LogType},
@@ -95,21 +95,20 @@ impl InitCmd {
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
-        
+
         // [render app] ------------------------------------------------------------------------------------------
 
         // dashboard.render(frame, dashboard_area, |frame, area| {
         //     self.render_dashboard(&dashboard, frame, area)
         // });
 
-        let mut node1 = TimelineItem::new("Test1", self.lang)
+        let mut node1 = Timeline::new("Test1", self.lang)
             .description("Test1 description")
             .render();
 
-       
         // let (header_left, header_right) = node1.header;
 
-        let mut node2 = TimelineItem::new("Test2", self.lang).render();
+        let mut node2 = Timeline::new("Test2", self.lang).render();
 
         // node1.render(area1, frame);
         // node2.render(area2, frame);
@@ -123,8 +122,6 @@ impl InitCmd {
         .spacing(1)
         .vertical_margin(1);
         let [msg_area, dashboard_area] = layout.areas(area);
-        
-        
 
         // [render components] -------------------------------------------------------
         frame.render_widget(msg, msg_area);
@@ -137,27 +134,25 @@ impl InitCmd {
             ])
             .spacing(1)
             .areas(area);
-        let node1_container = Block::new();
-        // let node1_inner_area = node1_container.inner(node1_area);
-            let [header_area, main_area, footer_area] = node1.layout.areas(node1_area);
-            let [header_left_area, header_right_area] = Layout::horizontal([
-                Constraint::Length(node1.header.0.width() as u16),
-                Constraint::Length(node1.header.1.width() as u16),
-            ])
-            .spacing(1)
-            .areas(header_area);
-           
 
             let header = Block::new();
+            let footer = Block::new().borders(Borders::BOTTOM);
+            // let node1_inner_area = node1_container.inner(node1_area);
+            let [header_area, main_area, footer_area] = node1.layout.areas(node1_area);
+            let [header_left_area, header_right_area] =
+                node1.header.layout.areas(header.inner(header_area));
+            let [footer_left_area, footer_right_area] =
+                node1.footer.layout.areas(footer.inner(footer_area));
+
             // frame.render_widget(node1_container, node1_area);
             frame.render_widget(header, header_area);
-            frame.render_widget(node1.header.0, header_left_area);
-            frame.render_widget(node1.header.1, header_right_area);
-            // frame.render_widget(node1.main.unwrap(), main_area);
-            // frame.render_widget(node1.footer.0, footer_area);
-
+            frame.render_widget(node1.header.state, header_left_area);
+            frame.render_widget(node1.header.name, header_right_area);
+            frame.render_widget(node1.main.unwrap().description, main_area);
+            frame.render_widget(footer, footer_area);
+            frame.render_widget(node1.footer.progress, footer_left_area);
+            frame.render_widget(node1.footer.cost, footer_right_area);
         });
-       
     }
 
     fn render_msg(&self) -> Text {
@@ -166,10 +161,10 @@ impl InitCmd {
     }
 
     fn draw_components(&self) {
-        let mut node1 = TimelineItem::new("Test1", self.lang);
+        let mut node1 = Timeline::new("Test1", self.lang);
         node1.description.replace("Test1 description".to_string());
         node1.render();
-        let mut node2 = TimelineItem::new("Test2", self.lang);
+        let mut node2 = Timeline::new("Test2", self.lang);
         node2.render();
     }
 
@@ -184,7 +179,7 @@ impl InitCmd {
     //     //         .spacing(1)
     //     //         .areas(area);
 
-    //     let mut node1 = TimelineItem::new("Test1", self.lang);
+    //     let mut node1 = Timeline::new("Test1", self.lang);
     //     node1.description.replace("Test1 description".to_string());
     //     node1.render();
 
@@ -199,7 +194,7 @@ impl InitCmd {
 
     //     let [header_area, main_area, footer_area] = node1.layout.areas()
 
-    //     let mut node2 = TimelineItem::new("Test2", self.lang);
+    //     let mut node2 = Timeline::new("Test2", self.lang);
     //     node2.render();
 
     //     // node1.render(area1, frame);

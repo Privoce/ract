@@ -1,15 +1,14 @@
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::{Constraint, Flex, Layout},
     style::{Color, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Padding},
-    Frame,
+    widgets::{Block, Gauge},
 };
 
 use crate::entry::Language;
 
 #[derive(Debug, Default)]
-pub struct TimelineItem<'a> {
+pub struct Timeline<'a> {
     pub name: String,
     pub description: Option<String>,
     /// time taken for the process
@@ -18,30 +17,21 @@ pub struct TimelineItem<'a> {
     pub progress: u16,
     pub lang: Language,
     pub layout: Layout,
-    pub header: (Text<'a>, Text<'a>),
-    pub main: Option<Text<'a>>,
-    pub footer: (Gauge<'a>, Text<'a>),
+    pub header: TimelineHeader<'a>,
+    pub main: Option<TimelineMain<'a>>,
+    pub footer: TimelineFooter<'a>,
     pub height: u16,
 }
 
-impl<'a> TimelineItem<'a> {
+impl<'a> Timeline<'a> {
     pub fn new(name: &str, lang: Language) -> Self {
         Self {
             name: name.to_string(),
-            description: None,
-            cost: String::new(),
-            state: TimelineState::default(),
-            progress: 0,
             lang,
-            height: 0,
-            layout: Layout::default(),
-            header: (Text::default(), Text::default()),
-            main: None,
-            footer: (Default::default(), Text::default()),
+            ..Default::default()
         }
     }
 
-    
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_string();
         self
@@ -91,13 +81,9 @@ impl<'a> TimelineItem<'a> {
 
     /// ```txt                                
     /// ┌──────────────────────────────────────────────────────┐
-    /// │                                                      │
     /// │ state icon      name                                 │
-    /// │                                                      │
     /// ┼──────────────────────────────────────────────────────┤
-    /// │                                                      │
     /// │ description                                          │
-    /// │                                                      │
     /// ┼──────────────────────────────────────────────────────┤
     /// │ ┌────────────────────────────────────────┐           │
     /// │ │                                        │ cost time │
@@ -105,8 +91,7 @@ impl<'a> TimelineItem<'a> {
     /// └──────────────────────────────────────────────────────┘
     /// ```                               
     pub fn render(mut self) -> Self {
-        // let header_component = Block::new().padding(Padding::new(0, 0, 0, 1));
-        // let header_inner_area = header_component.inner(areas[0]);
+        // [handle state] ----------------------------------------------------------------------------------------------
         let (icon, color) = match self.state {
             TimelineState::UnStart => ("🟠", Color::Rgb(255, 112, 67)),
             TimelineState::Running => ("🚀", Color::Rgb(0, 255, 0)),
@@ -114,17 +99,22 @@ impl<'a> TimelineItem<'a> {
             TimelineState::Failed => ("🔴", Color::Rgb(255, 0, 0)),
         };
 
-        self.header = (
-            Text::styled(icon, color),
-            Text::styled(self.name.to_string(), Color::Rgb(255, 112, 67)).bold(),
-        );
-        // let [state_icon_area, name_area] = Self::header_layout().areas();
+        // [header] ----------------------------------------------------------------------------------------------
+        self.header = self
+            .header
+            .state(Text::styled(icon, color))
+            .name(Text::styled(self.name.to_string(), Color::Rgb(255, 112, 67)).bold())
+            .draw();
 
-        self.layout = if let Some(description) = &self.description {
+        // [main] ----------------------------------------------------------------------------------------------
+        self.layout = if let Some(description) = self.description.clone() {
             let description = Text::from(Line::from(Span::styled(description, Color::White)));
             let desc_height = description.height();
+
+            self.main
+                .replace(TimelineMain::new().description(description).draw());
             // 2 for footer, 1 for header, 2 for spacing
-            self.height = desc_height as u16 + 2 + 1 + 2;
+            self.height = desc_height as u16 + 1 + 1 + 2 + 3;
             Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(desc_height as u16),
@@ -135,52 +125,20 @@ impl<'a> TimelineItem<'a> {
             self.height = 1 + 2 + 1;
             Layout::vertical([Constraint::Length(1), Constraint::Length(2)]).spacing(1)
         };
-
-        self.footer = (
-            Gauge::default()
-                .label("")
-                .percent(self.progress)
-                .gauge_style(Color::Rgb(255, 112, 67))
-                .block(Block::new().bg(Color::Rgb(255, 160, 140))),
-            Text::styled(format!("🎉 {}", &self.cost), Color::Gray),
-        );
+        // [footer] ----------------------------------------------------------------------------------------------
+        self.footer = self
+            .footer
+            .progress(
+                Gauge::default()
+                    .label("")
+                    .percent(self.progress)
+                    .gauge_style(Color::Rgb(255, 112, 67))
+                    .block(Block::new().bg(Color::Rgb(255, 160, 140))),
+            )
+            .cost(Text::styled(format!("🎉 {}", &self.cost), Color::Gray))
+            .draw();
 
         self
-        // let len = self.area_len();
-        // let areas: Vec<Rect> = Self::layout(len).split(area).to_vec();
-        // let header_component = Block::new().padding(Padding::new(0, 0, 0, 1));
-        // let header_inner_area = header_component.inner(areas[0]);
-        // frame.render_widget(header_component, areas[0]);
-
-        // let [state_icon_area, name_area] = Self::header_layout().areas(header_inner_area);
-
-        // let name_wrapper = Block::default().padding(Padding::left(2));
-
-        // let [name_inner_area] =
-        //     Layout::horizontal([Constraint::Percentage(100)]).areas(name_wrapper.inner(name_area));
-        // frame.render_widget(name, name_inner_area);
-        // frame.render_widget(state_icon, state_icon_area);
-        // frame.render_widget(name_wrapper, name_area);
-
-        // if let Some(description) = &self.description {
-        //     let main_component = Block::new();
-
-        //     frame.render_widget(main_component, areas[1]);
-        //     let [description_area] =
-        //         Layout::horizontal([Constraint::Percentage(100)]).areas(areas[1]);
-        //     let description = Line::from(Span::styled(description, Color::White));
-        //     frame.render_widget(description, description_area);
-        // }
-
-        // let footer_wrapper = Block::new().borders(Borders::BOTTOM);
-        // let footer_area = if len == 2 { areas[1] } else { areas[2] };
-        // let footer_inner_area = footer_wrapper.inner(footer_area);
-        // frame.render_widget(footer_wrapper, footer_area);
-
-        // let [progress_area, cost_area] =
-        //     Self::progress_layout(cost.width()).areas(footer_inner_area);
-        // frame.render_widget(progress, progress_area);
-        // frame.render_widget(cost, cost_area);
     }
 }
 
@@ -191,4 +149,97 @@ pub enum TimelineState {
     Running,
     Success,
     Failed,
+}
+
+#[derive(Debug, Default)]
+pub struct TimelineHeader<'h> {
+    pub state: Text<'h>,
+    pub name: Text<'h>,
+    pub layout: Layout,
+}
+
+impl<'h> TimelineHeader<'h> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn state(mut self, state: Text<'h>) -> Self {
+        self.state = state;
+        self
+    }
+    pub fn name(mut self, name: Text<'h>) -> Self {
+        self.name = name;
+        self
+    }
+    pub fn draw(mut self) -> Self {
+        self.layout = Layout::horizontal([
+            Constraint::Length(self.state.width() as u16),
+            Constraint::Length(self.name.width() as u16),
+        ])
+        .spacing(1);
+        self
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TimelineMain<'m> {
+    pub description: Text<'m>,
+    pub layout: Layout,
+}
+
+impl<'m> TimelineMain<'m> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn description(mut self, description: Text<'m>) -> Self {
+        self.description = description;
+        self
+    }
+    pub fn draw(mut self) -> Self {
+        self.layout = Layout::vertical([Constraint::Length(self.description.height() as u16)]);
+        self
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TimelineFooter<'f> {
+    pub progress: Gauge<'f>,
+    pub cost: Text<'f>,
+    pub layout: Layout,
+}
+
+impl<'f> TimelineFooter<'f> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn progress(mut self, progress: Gauge<'f>) -> Self {
+        self.progress = progress;
+        self
+    }
+    pub fn cost(mut self, cost: Text<'f>) -> Self {
+        self.cost = cost;
+        self
+    }
+    pub fn draw(mut self) -> Self {
+        self.layout = Layout::horizontal([
+            Constraint::Percentage(76),
+            Constraint::Length(self.cost.width() as u16),
+        ])
+        .spacing(4)
+        .flex(Flex::SpaceBetween);
+        self
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Timeline;
+
+    #[test]
+    fn timeline() {
+        let node = Timeline::new("Test", crate::entry::Language::En)
+            .description("Test description")
+            .render();
+
+        dbg!(node);
+    }
 }

@@ -37,14 +37,15 @@ impl Dashboard {
         let info_width = info.width();
         let [left, right] =
             Layout::horizontal([Constraint::Length(info_width as u16), Constraint::Fill(3)])
+                .spacing(4)
                 .areas(container_area);
-        
+
         // - [right main] --------------------------------------------------------
         render_main(frame, right);
 
         frame.render_widget(info, left);
     }
-   
+
     pub fn render_container(&self, frame: &mut Frame, area: Rect) -> Rect {
         let container = Block::default()
             .title(self.title.to_string())
