@@ -13,7 +13,7 @@ impl<'a> TerminalLogger<'a> {
     fn unified_log(&self, level: ColoredString) -> () {
         println!(
             "{}{} >>> {}",
-            Self::PREFIX.on_truecolor(255, 112, 67).bold(),
+            Self::PREFIX.truecolor(255, 112, 67).bold(),
             level,
             self.output
         )

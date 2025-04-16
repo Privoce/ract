@@ -1,4 +1,9 @@
 _version = 1
 
+# [check] -------------------------------------------------------------
 [check]
-select_which = "Which you need to check?"
+complete = "🎉 Check complete!"
+
+[check.select]
+which = "Which option do you want to check?"
+failed = "❌ Invalid option, please reselect!"

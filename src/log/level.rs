@@ -28,6 +28,16 @@ impl LogLevel {
             LogLevel::Off => Color::White,
         }
     }
+    pub fn colorize(&self) -> ColoredString {
+        match self {
+            LogLevel::Info => "INFO".blue(),
+            LogLevel::Debug => "DEBUG".cyan(),
+            LogLevel::Error => "ERROR".red(),
+            LogLevel::Warn => "WARN".yellow(),
+            LogLevel::Trace => "TRACE".white(),
+            LogLevel::Off => "OFF".white(),
+        }
+    }
     pub fn fmt_level(&self) -> &str {
         match self {
             LogLevel::Info => "INFO",

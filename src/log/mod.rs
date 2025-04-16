@@ -17,6 +17,7 @@ use std::{borrow::Cow, fmt::Display};
 pub use add::AddLogs;
 pub use check::CheckLogs;
 use chrono::{DateTime, Local};
+use colored::Colorize;
 use compiler::CompilerLogs;
 pub use config::ConfigLogs;
 pub use create::CreateLogs;
@@ -47,12 +48,18 @@ pub struct LogItem {
     msg: String,
     /// The datetime of the log （use `chrono` crate）
     datetime: DateTime<Local>,
-    is_success: bool
+    is_success: bool,
 }
 
 impl LogItem {
-    pub fn log(&self) -> (){
-        println!("Ract{}[{}] >>> {}", self.fmt_timestamp(), self.level.fmt_level(), self.msg);
+    pub fn log(&self) -> () {
+        println!(
+            "{}{}[{}] >>> {}",
+            "Ract".truecolor(255, 112, 67).bold(),
+            self.fmt_timestamp(),
+            self.level.colorize(),
+            self.msg
+        );
     }
     /// ## fmt as ratatui text line for colorful display
     /// display as:
@@ -74,7 +81,7 @@ impl LogItem {
     fn level_color(&self) -> Color {
         if self.is_success {
             Color::Green
-        }else{
+        } else {
             self.level.color()
         }
     }
@@ -88,7 +95,7 @@ impl LogItem {
             ty: Default::default(),
             msg,
             datetime: Local::now(),
-            is_success: false
+            is_success: false,
         }
     }
     pub fn success(msg: String) -> Self {
@@ -97,7 +104,7 @@ impl LogItem {
             ty: Default::default(),
             msg,
             datetime: Local::now(),
-            is_success: true
+            is_success: true,
         }
     }
     pub fn error(msg: String) -> Self {
@@ -106,7 +113,7 @@ impl LogItem {
             ty: Default::default(),
             msg,
             datetime: Local::now(),
-            is_success: false
+            is_success: false,
         }
     }
 }

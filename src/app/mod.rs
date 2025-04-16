@@ -58,7 +58,10 @@ pub fn run() -> Result<()> {
     } else {
         match cmd {
             Commands::Check => {
-                service::check::run();
+                let cmd: CheckCmd = CheckCmd::before(&lang)?.into();
+                let mut terminal = ratatui::init();
+                cmd.run(&mut terminal)?;
+                destroy(&mut terminal)?;
             }
             _ => {}
         }

@@ -9,13 +9,16 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     app::AppComponent,
+    common::Result,
     entry::{Checks, Language},
-    log::{CheckLogs, LogExt}, service,
+    log::{error::Error, CheckLogs, LogExt},
+    service,
 };
 
 pub struct CheckCmd {
     state: CheckState,
     lang: Language,
+    option: Checks,
 }
 
 impl AppComponent for CheckCmd {
@@ -23,6 +26,7 @@ impl AppComponent for CheckCmd {
         Self {
             state: Default::default(),
             lang,
+            option: Checks::default(),
         }
     }
 
@@ -58,30 +62,30 @@ impl AppComponent for CheckCmd {
 }
 
 impl CheckCmd {
+    pub fn option(&mut self, option: Checks) -> &mut Self {
+        self.option = option;
+        self
+    }
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
     }
-    fn before(&self) {
-        let check = Select::new(
-            &CheckLogs::Select.t(&self.lang).to_string(),
-            Checks::options(),
-        )
-        .prompt()
-        .expect("select check failed");
+    pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
+        Select::new(&CheckLogs::Select.t(lang).to_string(), Checks::options())
+            .prompt()
+            .map_or_else(
+                |_| Err(Error::Other(CheckLogs::SelectFailed.t(lang).to_string())),
+                |check| Ok((Checks::from_str(check).unwrap(), lang)),
+            )
+    }
+}
 
-        
-        match Checks::from_str(check).unwrap() {
-            Checks::Basic => {
-                service::check::check_basic();
-            }
-            Checks::Underlayer => {
-                service::check::check_underlayer();
-            }
-            Checks::All => {
-                service::check::check_basic();
-                service::check::check_underlayer();
-            }
-        };
+impl From<(Checks, &Language)> for CheckCmd {
+    fn from(value: (Checks, &Language)) -> Self {
+        Self {
+            state: Default::default(),
+            lang: value.1.clone(),
+            option: value.0,
+        }
     }
 }
 
@@ -100,5 +104,16 @@ impl CheckState {
     }
     pub fn quit(&mut self) {
         *self = CheckState::Quit;
+    }
+}
+
+#[cfg(test)]
+mod t{
+    use crate::{entry::Language, log::{CheckLogs, LogExt}};
+
+    #[test]
+    fn a(){
+        let lang = Language::Zh;
+       dbg!(CheckLogs::Select.t(&lang).to_string());
     }
 }
