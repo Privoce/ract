@@ -7,7 +7,7 @@ use gen_utils::{
 };
 use toml_edit::{value, DocumentMut, Formatted, InlineTable, Item, Table, Value};
 
-use crate::{log::TerminalLogger, common::exe_path};
+use crate::{common::exe_path, log::TerminalLogger};
 
 use super::env::Env;
 
@@ -91,11 +91,15 @@ impl ChainEnvToml {
 
     pub fn only_parse_lang() -> Result<Language, Error> {
         let path = Self::path()?;
-        let doc = Self::read(path.as_path()).unwrap();
-        Ok(doc
-            .get("language")
-            .and_then(|v| v.as_str())
-            .map_or(Language::default(), |v| Language::from(v)))
+        Self::read(path.as_path()).map_or_else(
+            |_| Ok(Language::default()),
+            |doc| {
+                Ok(doc
+                    .get("language")
+                    .and_then(|v| v.as_str())
+                    .map_or(Language::default(), |v| Language::from(v)))
+            },
+        )
     }
 }
 

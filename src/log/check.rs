@@ -1,14 +1,15 @@
 use std::{error::Error, fmt::Display};
-
-use super::terminal::TerminalLogger;
+use rust_i18n::t;
+use super::{terminal::TerminalLogger, LogExt};
 
 #[derive(Debug, Clone)]
 pub enum CheckLogs {
+    Select,
     Welcome,
     Rustc,
     Cargo,
     Git,
-    Confirm,
+    Complete,
     DependenceNotFound(String),
     DependenceReady(String),
 }
@@ -16,8 +17,9 @@ pub enum CheckLogs {
 impl Display for CheckLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            CheckLogs::Select => f.write_str("🔍 Which Option do you want to check?"),
             CheckLogs::Welcome => f.write_str("🥳 Welcome to use ract checker!"),
-            CheckLogs::Confirm => f.write_str("🎉 Check finish!"),
+            CheckLogs::Complete => f.write_str("🎉 Check finish!"),
             CheckLogs::Rustc => f.write_str("✅ rustc is ready!"),
             CheckLogs::Cargo => f.write_str("✅ cargo is ready!"),
             CheckLogs::Git => f.write_str("✅ git is ready!"),
@@ -39,3 +41,19 @@ impl CheckLogs {
 }
 
 impl Error for CheckLogs {}
+
+impl LogExt for CheckLogs {
+    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+        let lang = lang.as_str();
+        match self{
+            CheckLogs::Select => t!("check.select", locale = lang),
+            CheckLogs::Welcome => todo!(),
+            CheckLogs::Rustc => todo!(),
+            CheckLogs::Cargo => todo!(),
+            CheckLogs::Git => todo!(),
+            CheckLogs::Complete => t!("check.complete", locale = lang),
+            CheckLogs::DependenceNotFound(_) => todo!(),
+            CheckLogs::DependenceReady(_) => todo!(),
+        }
+    }
+}

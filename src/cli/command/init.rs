@@ -2,14 +2,13 @@ use std::time::Duration;
 
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Layout},
     text::{Line, Text},
     DefaultTerminal, Frame,
 };
 
 use crate::{
     app::{AppComponent, Dashboard, Timeline, TimelineState},
-    cli::command,
     entry::Language,
     log::{InitLogs, LogExt, LogItem, LogType},
     service,
@@ -42,65 +41,57 @@ impl AppComponent for InitCmd {
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
         // handle service
-        match &mut self.state {
+        match self.state {
             InitState::Start => {
                 self.logs
                     .push(LogItem::info(InitLogs::Init.t(&self.lang).to_string()));
-                self.cost.chain_state = TimelineState::Running;
+                self.cost.env_state = TimelineState::Running;
                 self.state.next();
             }
             InitState::Run(run_state) => match run_state {
-                RunState::CreateEnvFile(progress) => {
-                    if *progress == 0 {
-                        // 计算花费时间
-                        let start = std::time::Instant::now();
-                        let res = service::init::create_env_file();
-                        let duration = start.elapsed();
-                        self.cost.env = duration;
-                        match res {
-                            Ok(_) => {
-                                *progress += 100;
-                                self.cost.env_state = TimelineState::Success;
-                                self.logs.push(LogItem::success(
-                                    InitLogs::EnvSuccess.t(&self.lang).to_string(),
-                                ));
-                            }
-                            Err(e) => {
-                                *progress = 96;
-                                self.cost.env_state = TimelineState::Failed;
-                                self.logs.push(LogItem::error(
-                                    InitLogs::EnvFailed(e.to_string()).t(&self.lang).to_string(),
-                                ));
-                            }
-                        }
-                    }
+                RunState::CreateEnvFile => {
+                    self.handle_running(
+                        || service::init::create_env_file(),
+                        |cost| (&mut cost.env_progress, &mut cost.env),
+                        |cost| (&mut cost.env_state, InitLogs::EnvSuccess),
+                        |cost, e| (&mut cost.env_state, InitLogs::EnvFailed(e)),
+                    );
 
-                    if self.cost.chain_state.is_success() {
+                    if self.cost.env_state.is_success() {
                         self.cost.chain_state = TimelineState::Running;
                         self.state.next();
                     }
                 }
-                RunState::CreateChain(progress) => {}
+                RunState::CreateChain => {
+                    self.handle_running(
+                        || service::init::create_chain(),
+                        |cost| (&mut cost.chain_progress, &mut cost.chain),
+                        |cost| (&mut cost.chain_state, InitLogs::ChainSuccess),
+                        |cost, e| (&mut cost.chain_state, InitLogs::ChainFailed(e)),
+                    );
+                    if self.cost.chain_state.is_success() {
+                        self.logs
+                            .push(LogItem::info(InitLogs::Complete.t(&self.lang).to_string()));
+                        self.state.next();
+                    }
+                }
             },
+            InitState::Pause => {}
             InitState::Quit => {}
         }
 
-        let mut do_next = false;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') => self.quit(),
-                        event::KeyCode::Enter => {
-                            do_next = true;
+                        event::KeyCode::Esc | event::KeyCode::Char('q') | event::KeyCode::Enter => {
+                            self.quit()
                         }
                         _ => {}
                     }
                 }
             }
         }
-
-        if do_next {}
 
         Ok(())
     }
@@ -123,10 +114,13 @@ impl InitCmd {
             .progress(self.env_progress())
             .cost(self.cost.env)
             .description(InitLogs::EnvDesc.t(&self.lang).to_string())
+            .state(self.cost.env_state)
             .draw();
 
         let node2 = Timeline::new(InitLogs::Chain.t(&self.lang).to_string(), self.lang)
             .progress(self.chain_progress())
+            .cost(self.cost.chain)
+            .state(self.cost.chain_state)
             .draw();
         let container_height = node1.height + node2.height + 1 + 2;
         let layout = Layout::vertical([
@@ -150,30 +144,53 @@ impl InitCmd {
             node2.render(node2_area, frame);
         });
     }
+    fn handle_running<S, C, Success, Failed>(
+        &mut self,
+        service: S,
+        cost: C,
+        success: Success,
+        failed: Failed,
+    ) where
+        C: FnOnce(&mut Cost) -> (&mut u16, &mut Duration),
+        S: FnOnce() -> Result<(), gen_utils::error::Error>,
+
+        Success: FnOnce(&mut Cost) -> (&mut TimelineState, InitLogs),
+        Failed: FnOnce(&mut Cost, String) -> (&mut TimelineState, InitLogs),
+    {
+        let (progress, cost) = cost(&mut self.cost);
+        if *progress == 0 {
+            let start = std::time::Instant::now();
+            let res = service();
+            let duration = start.elapsed();
+            *cost = duration;
+            match res {
+                Ok(_) => {
+                    *progress += 100;
+                    let (state, log) = success(&mut self.cost);
+                    *state = TimelineState::Success;
+                    self.logs
+                        .push(LogItem::success(log.t(&self.lang).to_string()));
+                }
+                Err(e) => {
+                    *progress = 96;
+                    let (state, log) = failed(&mut self.cost, e.to_string());
+                    *state = TimelineState::Failed;
+                    self.logs
+                        .push(LogItem::error(log.t(&self.lang).to_string()));
+                }
+            }
+        }
+    }
 
     fn render_msg(&self) -> Text {
         let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
         Text::from_iter(items)
     }
     fn env_progress(&self) -> u16 {
-        if let InitState::Run(run_state) = self.state {
-            match run_state {
-                RunState::CreateEnvFile(progress) => progress,
-                RunState::CreateChain(_) => 100,
-            }
-        } else {
-            0
-        }
+        self.cost.env_progress
     }
     fn chain_progress(&self) -> u16 {
-        if let InitState::Run(run_state) = self.state {
-            match run_state {
-                RunState::CreateEnvFile(_) => 0,
-                RunState::CreateChain(progress) => progress,
-            }
-        } else {
-            0
-        }
+        self.cost.chain_progress
     }
 }
 
@@ -182,6 +199,7 @@ pub enum InitState {
     #[default]
     Start,
     Run(RunState),
+    Pause,
     Quit,
 }
 
@@ -192,22 +210,20 @@ impl InitState {
     pub fn is_quit(&self) -> bool {
         matches!(self, InitState::Quit)
     }
-    pub fn is_start(&self) -> bool {
-        matches!(self, InitState::Start)
-    }
     pub fn next(&mut self) {
         match self {
             InitState::Start => {
                 *self = InitState::Run(RunState::default());
             }
             InitState::Run(run_state) => match run_state {
-                RunState::CreateEnvFile(_) => {
-                    *self = InitState::Run(RunState::CreateChain(0));
+                RunState::CreateEnvFile => {
+                    *self = InitState::Run(RunState::CreateChain);
                 }
-                RunState::CreateChain(_) => {
-                    *self = InitState::Quit;
-                }
+                RunState::CreateChain => *self = InitState::Pause,
             },
+            InitState::Pause => {
+                *self = InitState::Quit;
+            }
             InitState::Quit => {}
         }
     }
@@ -215,13 +231,13 @@ impl InitState {
 
 #[derive(Clone, Copy, Debug)]
 pub enum RunState {
-    CreateEnvFile(u16),
-    CreateChain(u16),
+    CreateEnvFile,
+    CreateChain,
 }
 
 impl Default for RunState {
     fn default() -> Self {
-        Self::CreateEnvFile(0)
+        Self::CreateEnvFile
     }
 }
 
@@ -229,19 +245,8 @@ impl Default for RunState {
 pub struct Cost {
     pub env: Duration,
     pub env_state: TimelineState,
+    pub env_progress: u16,
     pub chain: Duration,
     pub chain_state: TimelineState,
-}
-
-#[cfg(test)]
-mod te {
-    use crate::service;
-
-    #[test]
-    fn t() {
-        let start = std::time::Instant::now();
-        let res = service::init::create_env_file();
-        let duration = start.elapsed();
-        dbg!(duration);
-    }
+    pub chain_progress: u16,
 }

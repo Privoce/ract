@@ -4,13 +4,27 @@ mod dashboard;
 mod timeline;
 
 use crate::{
-    cli::{command::init::InitCmd, command::Commands, Cli},
+    cli::{
+        command::{check::CheckCmd, init::InitCmd, Commands},
+        Cli,
+    },
     common::Result,
     entry::Language,
+    service,
 };
 use clap::Parser;
+
+// use crossterm::{
+//     event::DisableMouseCapture,
+//     execute,
+//     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+// };
 use ratatui::{
-    crossterm::event::{self, Event, KeyCode},
+    crossterm::{
+        event::{self, DisableMouseCapture, Event, KeyCode},
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    },
     prelude::CrosstermBackend,
     widgets::{Paragraph, Widget},
     DefaultTerminal, Frame, Terminal,
@@ -21,19 +35,33 @@ pub use dashboard::Dashboard;
 pub use timeline::*;
 
 pub fn run() -> Result<()> {
+    fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {
+        ratatui::restore();
+        disable_raw_mode()?;
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        terminal.show_cursor()?;
+        Ok(())
+    }
+
     // [do init before cli and app run] -----------------------------------------------------------------
-    let (mut terminal, lang) = before()?;
+    let lang = Language::from_conf();
     // [match cli command] ------------------------------------------------------------------------------
     let cmd = Cli::parse().commands;
     if let Commands::Init = cmd {
-        // init::run();
-        let init_cmd = InitCmd::new(lang);
-        init_cmd.run(&mut terminal)?;
-
-        // let mut dashboard = dashboard::Dashboard::new(lang);
-        // dashboard.run(&mut terminal)?;
-        ratatui::restore();
+        let mut terminal = ratatui::init();
+        InitCmd::new(lang).run(&mut terminal)?;
+        destroy(&mut terminal)?;
     } else {
+        match cmd {
+            Commands::Check => {
+                service::check::run();
+            }
+            _ => {}
+        }
         // match cmd {
         //     Commands::Create(create_args) => create_args.run(),
         //     Commands::Check => check::run(),
@@ -49,13 +77,6 @@ pub fn run() -> Result<()> {
         //     Commands::Uninstall => uninstall::run(),
         // }
     }
-
-    // loop {
-    //     tm.draw(draw_app)?;
-    //     if should_quit()? {
-    //         break;
-    //     }
-    // }
 
     Ok(())
 }
@@ -92,7 +113,6 @@ pub trait AppComponent {
     fn handle_events(&mut self) -> Result<()>;
     fn quit(&mut self) -> ();
 }
-
 
 pub trait Component {
     fn new(lang: Language) -> Self;

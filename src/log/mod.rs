@@ -51,6 +51,9 @@ pub struct LogItem {
 }
 
 impl LogItem {
+    pub fn log(&self) -> (){
+        println!("Ract{}[{}] >>> {}", self.fmt_timestamp(), self.level.fmt_level(), self.msg);
+    }
     /// ## fmt as ratatui text line for colorful display
     /// display as:
     /// Ract [${fmt_date_time}]: [${level}] >>> ${msg}
