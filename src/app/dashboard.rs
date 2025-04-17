@@ -25,6 +25,19 @@ impl Dashboard {
             ty: LogType::Unknown,
         }
     }
+    pub fn height(&self, from: u16, offset: u16) -> u16 {
+        let info_height = if self.ty.is_unknown() { 5 } else { 7 };
+
+        let mut content_height = if from < info_height {
+            info_height
+        } else {
+            from
+        };
+        content_height += 2; // padding
+        content_height += 2; // border
+        content_height += offset; // offset
+        content_height
+    }
     pub fn render<F>(&self, frame: &mut Frame, area: Rect, render_main: F) -> ()
     where
         F: FnOnce(&mut Frame, Rect),
@@ -47,6 +60,7 @@ impl Dashboard {
     }
 
     pub fn render_container(&self, frame: &mut Frame, area: Rect) -> Rect {
+        let [area] = Layout::horizontal([Constraint::Max(90)]).areas(area);
         let container = Block::default()
             .title(self.title.to_string())
             .title_alignment(Alignment::Left)

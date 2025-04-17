@@ -65,7 +65,7 @@ impl LogItem {
     /// display as:
     /// Ract [${fmt_date_time}]: [${level}] >>> ${msg}
     pub fn fmt_line(&self) -> Line {
-        vec![
+        Line::from(vec![
             Span::styled("Ract", Style::default().bold().fg(Color::Rgb(255, 112, 67))).into(),
             Span::styled(self.fmt_timestamp(), Style::default().fg(Color::White)).into(),
             Span::styled(
@@ -75,8 +75,7 @@ impl LogItem {
             .into(),
             Span::styled(" >>> ", Style::default().fg(Color::White)).into(),
             Span::styled(self.msg.clone(), Style::default().fg(Color::White)).into(),
-        ]
-        .into()
+        ])
     }
     fn level_color(&self) -> Color {
         if self.is_success {

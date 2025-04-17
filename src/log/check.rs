@@ -1,4 +1,5 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, path::PathBuf};
+use gen_utils::common::fs;
 use rust_i18n::t;
 use super::{terminal::TerminalLogger, LogExt};
 
@@ -6,6 +7,11 @@ use super::{terminal::TerminalLogger, LogExt};
 pub enum CheckLogs {
     Select,
     SelectFailed,
+    Found{
+        name: String,
+        path: Option<PathBuf>,
+    },
+    NotFound(String),
     Welcome,
     Rustc,
     Cargo,
@@ -18,6 +24,10 @@ pub enum CheckLogs {
 impl Display for CheckLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            CheckLogs::Found{
+                name, path
+            } => f.write_fmt(format_args!("✅ {} is ready!", name)),
+            CheckLogs::NotFound(name) => f.write_fmt(format_args!("❗️ {} is not found", name)),
             CheckLogs::Select => f.write_str("🔍 Which Option do you want to check?"),
             CheckLogs::SelectFailed => f.write_str("❗️ Select failed!"),
             CheckLogs::Welcome => f.write_str("🥳 Welcome to use ract checker!"),
@@ -50,6 +60,8 @@ impl LogExt for CheckLogs {
         match self{
             CheckLogs::Select => t!("check.select.which", locale = lang),
             CheckLogs::SelectFailed => t!("check.select.failed", locale = lang),
+            CheckLogs::Found { name, .. } => t!("check.found.success", locale = lang, name = name),
+            CheckLogs::NotFound(name) => t!("check.found.failed", locale = lang, name = name),
             CheckLogs::Welcome => todo!(),
             CheckLogs::Rustc => todo!(),
             CheckLogs::Cargo => todo!(),

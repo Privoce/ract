@@ -1,3 +1,5 @@
+mod item;
+pub use item::*;
 use std::{path::PathBuf, process::exit, str::FromStr};
 
 use gen_utils::{
@@ -39,62 +41,50 @@ pub fn run() -> () {
     LogItem::success(CheckLogs::Complete.t(&lang).to_string()).log();
 }
 
-pub fn check_basic() -> () {
-    let handle = |check: Result<(), Error>| {
-        check
-            .map_err(|e| {
-                TerminalLogger::new(e.to_string().as_str()).error();
-                exit(2);
-            })
-            .unwrap();
-    };
-    // [rustc] ----------------------------------------------------------------------------------------------
-    handle(check_rustc());
-    // [cargo] ----------------------------------------------------------------------------------------------
-    handle(check_cargo());
-    // [git] ------------------------------------------------------------------------------------------------
-    handle(check_git());
+/// ## Check basic toolchain
+/// 1. rustc
+/// 2. cargo
+/// 3. git
+pub fn check_basic() -> Vec<CheckItem> {
+    vec![check_rustc(), check_cargo(), check_git()]
 }
 
 pub fn current_states() -> Result<Tools, Error> {
     // [basic] ----------------------------------------------------------------------------------------------
-    let rustc = basic_check("rustc").is_ok();
-    let cargo = basic_check("cargo").is_ok();
-    let git = basic_check("git").is_ok();
+    // let rustc = basic_check("rustc").is_ok();
+    // let cargo = basic_check("cargo").is_ok();
+    // let git = basic_check("git").is_ok();
     // [underlayer] -----------------------------------------------------------------------------------------
     let (makepad, gen_ui) = check_makepad()?;
     let makepad = makepad.is_some();
     let gen_ui = gen_ui.is_some();
 
+    // Ok(Tools {
+    //     basic: (rustc, cargo, git).into(),
+    //     underlayer: UnderlayerTools::Makepad((makepad, gen_ui).into()),
+    // })
     Ok(Tools {
-        basic: (rustc, cargo, git).into(),
+        basic: Default::default(),
         underlayer: UnderlayerTools::Makepad((makepad, gen_ui).into()),
     })
 }
 
-fn check_rustc() -> Result<(), Error> {
-    basic_check("rustc").and_then(|_| {
-        CheckLogs::Rustc.terminal().success();
-        Ok(())
-    })
+fn check_rustc() -> CheckItem {
+    basic_check("rustc".to_string())
 }
 
-fn check_cargo() -> Result<(), Error> {
-    basic_check("cargo").and_then(|_| {
-        CheckLogs::Cargo.terminal().success();
-        Ok(())
-    })
+fn check_cargo() -> CheckItem {
+    basic_check("cargo".to_string())
 }
 
-fn check_git() -> Result<(), Error> {
-    basic_check("git").and_then(|_| {
-        CheckLogs::Git.terminal().success();
-        Ok(())
-    })
+fn check_git() -> CheckItem {
+    basic_check("git".to_string())
 }
 
-fn basic_check(name: &str) -> Result<(), Error> {
-    which(name).map_or_else(|e| Err(e.to_string().into()), |_| Ok(()))
+fn basic_check(name: String) -> CheckItem {
+    let mut item: CheckItem = which(&name).into();
+    item.name = name;
+    item
 }
 
 pub fn check_underlayer() -> () {
