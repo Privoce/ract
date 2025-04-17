@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use gen_utils::common::Os;
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
@@ -14,6 +16,7 @@ pub struct Dashboard {
     pub title: String,
     pub lang: Language,
     pub ty: LogType,
+    pub cost: Option<Duration>,
 }
 
 impl Dashboard {
@@ -23,11 +26,14 @@ impl Dashboard {
             title: "Ract Dashboard".to_string(),
             lang,
             ty: LogType::Unknown,
+            cost: None,
         }
     }
     pub fn height(&self, from: u16, offset: u16) -> u16 {
-        let info_height = if self.ty.is_unknown() { 5 } else { 7 };
-
+        let mut info_height = if self.ty.is_unknown() { 5 } else { 7 };
+        if self.cost.is_some() {
+            info_height += 2;
+        }
         let mut content_height = if from < info_height {
             info_height
         } else {
@@ -95,6 +101,14 @@ impl Dashboard {
             lines.push(Line::from_iter([
                 "Type: ".into(),
                 Span::styled(self.ty.to_string(), Color::Rgb(255, 112, 67)).bold(),
+            ]));
+        }
+
+        if let Some(cost) = self.cost {
+            lines.push("".into());
+            lines.push(Line::from_iter([
+                "Total: ".into(),
+                Span::styled(format!("{:?}", cost), Color::Rgb(255, 112, 67)).bold(),
             ]));
         }
 

@@ -8,14 +8,14 @@ use ratatui::{
 };
 
 use crate::{
-    app::{AppComponent, Dashboard, Timeline, TimelineState},
+    app::{AppComponent, ComponentState, Dashboard, State, Timeline, TimelineState},
     entry::Language,
     log::{InitLogs, LogExt, LogItem, LogType},
     service,
 };
 
 pub struct InitCmd {
-    state: InitState,
+    state: ComponentState<InitState>,
     lang: Language,
     logs: Vec<LogItem>,
     cost: Cost,
@@ -42,14 +42,14 @@ impl AppComponent for InitCmd {
     fn handle_events(&mut self) -> crate::common::Result<()> {
         // handle service
         match self.state {
-            InitState::Start => {
+            ComponentState::Start => {
                 self.logs
                     .push(LogItem::info(InitLogs::Init.t(&self.lang).to_string()));
                 self.cost.env_state = TimelineState::Running;
                 self.state.next();
             }
-            InitState::Run(run_state) => match run_state {
-                RunState::CreateEnvFile => {
+            ComponentState::Run(r) => match r {
+                InitState::CreateEnvFile => {
                     self.handle_running(
                         || service::init::create_env_file(),
                         |cost| (&mut cost.env_progress, &mut cost.env),
@@ -62,7 +62,7 @@ impl AppComponent for InitCmd {
                         self.state.next();
                     }
                 }
-                RunState::CreateChain => {
+                InitState::CreateChain => {
                     self.handle_running(
                         || service::init::create_chain(),
                         |cost| (&mut cost.chain_progress, &mut cost.chain),
@@ -76,8 +76,8 @@ impl AppComponent for InitCmd {
                     }
                 }
             },
-            InitState::Pause => {}
-            InitState::Quit => {}
+            ComponentState::Pause => {}
+            ComponentState::Quit => {}
         }
 
         if event::poll(Duration::from_millis(100))? {
@@ -95,13 +95,6 @@ impl AppComponent for InitCmd {
 
         Ok(())
     }
-
-    fn quit(&mut self) -> () {
-        self.state.quit();
-    }
-}
-
-impl InitCmd {
     /// ## Render the init command
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
@@ -109,6 +102,7 @@ impl InitCmd {
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
+        dashboard.cost.replace(self.cost.env + self.cost.chain);
         // [render app] ------------------------------------------------------------------------------------------
         let node1 = Timeline::new(InitLogs::Env.t(&self.lang).to_string(), self.lang)
             .progress(self.env_progress())
@@ -122,10 +116,10 @@ impl InitCmd {
             .cost(self.cost.chain)
             .state(self.cost.chain_state)
             .draw();
-        let container_height = node1.height + node2.height + 1 + 2;
+        let container_height = node1.height + node2.height;
         let layout = Layout::vertical([
             Constraint::Length(msg.height() as u16),
-            Constraint::Length(container_height),
+            Constraint::Length(dashboard.height(container_height, 0)),
         ])
         .spacing(1)
         .vertical_margin(1);
@@ -144,6 +138,12 @@ impl InitCmd {
             node2.render(node2_area, frame);
         });
     }
+    fn quit(&mut self) -> () {
+        self.state.quit();
+    }
+}
+
+impl InitCmd {
     fn handle_running<S, C, Success, Failed>(
         &mut self,
         service: S,
@@ -194,50 +194,29 @@ impl InitCmd {
     }
 }
 
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum InitState {
     #[default]
-    Start,
-    Run(RunState),
-    Pause,
-    Quit,
-}
-
-impl InitState {
-    pub fn quit(&mut self) {
-        *self = InitState::Quit;
-    }
-    pub fn is_quit(&self) -> bool {
-        matches!(self, InitState::Quit)
-    }
-    pub fn next(&mut self) {
-        match self {
-            InitState::Start => {
-                *self = InitState::Run(RunState::default());
-            }
-            InitState::Run(run_state) => match run_state {
-                RunState::CreateEnvFile => {
-                    *self = InitState::Run(RunState::CreateChain);
-                }
-                RunState::CreateChain => *self = InitState::Pause,
-            },
-            InitState::Pause => {
-                *self = InitState::Quit;
-            }
-            InitState::Quit => {}
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum RunState {
     CreateEnvFile,
     CreateChain,
 }
 
-impl Default for RunState {
-    fn default() -> Self {
-        Self::CreateEnvFile
+impl State for InitState {
+    fn next(&mut self) -> () {
+        match self {
+            InitState::CreateEnvFile => {
+                *self = InitState::CreateChain;
+            }
+            InitState::CreateChain => {}
+        }
+    }
+
+    fn is_run_end(&self) -> bool {
+        matches!(self, InitState::CreateChain)
+    }
+
+    fn to_run_end(&mut self) -> () {
+        *self = InitState::CreateChain;
     }
 }
 

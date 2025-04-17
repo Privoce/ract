@@ -3,6 +3,8 @@ mod dashboard;
 #[allow(unused)]
 mod timeline;
 
+mod state;
+pub use state::*;
 use crate::{
     cli::{
         command::{check::CheckCmd, init::InitCmd, Commands},
@@ -108,13 +110,12 @@ pub fn before() -> Result<(DefaultTerminal, Language)> {
 pub fn after() {}
 
 pub trait AppComponent {
-    // fn before(&self) -> Result<()>{
-
-    // }
     fn new(lang: Language) -> Self;
     fn run(self, terminal: &mut DefaultTerminal) -> Result<()>;
     fn handle_events(&mut self) -> Result<()>;
+    fn render(&mut self, frame: &mut Frame);
     fn quit(&mut self) -> ();
+    
 }
 
 pub trait Component {

@@ -9,7 +9,7 @@ use ratatui::{
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    app::{AppComponent, Dashboard},
+    app::{AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language},
     log::{error::Error, CheckLogs, LogExt, LogItem, LogType},
@@ -20,11 +20,12 @@ use crate::{
 };
 
 pub struct CheckCmd {
-    state: CheckState,
+    state: ComponentState<CheckState>,
     lang: Language,
     option: Checks,
     logs: Vec<LogItem>,
     items: Vec<CheckItem>,
+    cost: Option<Duration>,
 }
 
 impl AppComponent for CheckCmd {
@@ -35,6 +36,7 @@ impl AppComponent for CheckCmd {
             option: Checks::default(),
             logs: vec![],
             items: vec![],
+            cost: None,
         }
     }
 
@@ -48,15 +50,24 @@ impl AppComponent for CheckCmd {
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
         match self.state {
-            CheckState::Start => {
-                self.state = CheckState::Run;
+            ComponentState::Start => {
+                self.state.next();
             }
-            CheckState::Run => {
-                self.handle_running();
-                self.state = CheckState::Pause;
-            }
-            CheckState::Pause => {}
-            CheckState::Quit => {}
+            ComponentState::Run(r) => match r {
+                CheckState::Basic => match self.option {
+                    Checks::Basic | Checks::All => {
+                        self.handle_running();
+                        self.state = ComponentState::Pause;
+                    }
+                    Checks::Underlayer => {
+                        // todo
+                        self.state.next();
+                    }
+                },
+                CheckState::Underlayer => todo!(),
+            },
+            ComponentState::Pause => {}
+            ComponentState::Quit => {}
         }
 
         if event::poll(Duration::from_millis(100))? {
@@ -73,18 +84,12 @@ impl AppComponent for CheckCmd {
         }
         Ok(())
     }
-
-    fn quit(&mut self) -> () {
-        self.state.quit();
-    }
-}
-
-impl CheckCmd {
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         // [dashboard] ----------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
+        dashboard.cost = self.cost;
         // [render items] ----------------------------------------------------------------------------------------------
         let (items, list_height): (Vec<ListItem>, u16) =
             self.items
@@ -112,6 +117,13 @@ impl CheckCmd {
             frame.render_widget(list, area);
         });
     }
+    fn quit(&mut self) -> () {
+        self.state.quit();
+    }
+}
+
+impl CheckCmd {
+    
     fn render_msg(&self) -> Text {
         let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
         Text::from_iter(items)
@@ -127,7 +139,9 @@ impl CheckCmd {
     fn handle_running(&mut self) {
         match self.option {
             Checks::Basic => {
+                let start = std::time::Instant::now();
                 let checks = check_basic();
+                self.cost.replace(start.elapsed());
                 self.logs.extend(
                     checks
                         .iter()
@@ -139,6 +153,8 @@ impl CheckCmd {
             Checks::Underlayer => todo!(),
             Checks::All => todo!(),
         }
+        self.logs
+            .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
     }
 }
 
@@ -150,6 +166,7 @@ impl From<(Checks, &Language)> for CheckCmd {
             option: value.0,
             logs: vec![],
             items: vec![],
+            cost: None,
         }
     }
 }
@@ -157,47 +174,25 @@ impl From<(Checks, &Language)> for CheckCmd {
 #[derive(Default, Clone, Copy, Debug)]
 enum CheckState {
     #[default]
-    Start,
-    Run,
-    Pause,
-    Quit,
+    Basic,
+    Underlayer,
 }
 
-impl CheckState {
-    pub fn is_quit(&self) -> bool {
-        matches!(self, CheckState::Quit)
+impl State for CheckState {
+    fn next(&mut self) -> () {
+        match self {
+            CheckState::Basic => {
+                *self = CheckState::Underlayer;
+            }
+            CheckState::Underlayer => {}
+        }
     }
-    pub fn quit(&mut self) {
-        *self = CheckState::Quit;
+
+    fn is_run_end(&self) -> bool {
+        matches!(self, CheckState::Underlayer)
     }
-    pub fn is_start(&self) -> bool {
-        matches!(self, CheckState::Start)
-    }
-}
 
-#[cfg(test)]
-mod syud {
-    use ratatui::widgets::ListItem;
-
-    use crate::service::check::CheckItem;
-
-    #[test]
-    fn height() {
-        let (items, list_height): (Vec<ListItem>, u16) =
-            vec![
-                CheckItem::default(),
-                CheckItem::default(),
-                CheckItem::default(),
-            ]
-                .iter()
-                .fold((vec![], 0), |(mut items, mut height), item| {
-                    let item: ListItem = item.into();
-                    height += item.height() as u16;
-                    items.push(item);
-
-                    (items, height)
-                });
-
-        dbg!(list_height);
+    fn to_run_end(&mut self) -> () {
+        *self = CheckState::Underlayer;
     }
 }
