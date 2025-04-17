@@ -3,15 +3,15 @@ use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
     text::{Line, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Widget, Wrap},
-    DefaultTerminal, Frame,
+    widgets::{List, ListItem},
+    Frame,
 };
 use std::{str::FromStr, time::Duration};
 
 use crate::{
     app::{AppComponent, ComponentState, Dashboard, State},
     common::Result,
-    entry::{Checks, Language},
+    entry::{Checks, Language, Underlayer},
     log::{error::Error, CheckLogs, LogExt, LogItem, LogType},
     service::{
         self,
@@ -53,19 +53,7 @@ impl AppComponent for CheckCmd {
             ComponentState::Start => {
                 self.state.next();
             }
-            ComponentState::Run(r) => match r {
-                CheckState::Basic => match self.option {
-                    Checks::Basic | Checks::All => {
-                        self.handle_running();
-                        self.state = ComponentState::Pause;
-                    }
-                    Checks::Underlayer => {
-                        // todo
-                        self.state.next();
-                    }
-                },
-                CheckState::Underlayer => todo!(),
-            },
+            ComponentState::Run(r) => self.handle_running(r),
             ComponentState::Pause => {}
             ComponentState::Quit => {}
         }
@@ -123,25 +111,92 @@ impl AppComponent for CheckCmd {
 }
 
 impl CheckCmd {
-    
     fn render_msg(&self) -> Text {
         let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
         Text::from_iter(items)
     }
     pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
+        fn select_underlyer(lang: &Language) -> Result<Underlayer> {
+            Select::new(
+                "Which underlayer tool chain you want to check?",
+                Underlayer::options(),
+            )
+            .with_help_message("current support: Makepad")
+            .prompt()
+            .map_or_else(
+                |_| Err(Error::Other(CheckLogs::SelectFailed.t(lang).to_string())),
+                |s| Ok(Underlayer::from_str(s).unwrap()),
+            )
+        }
+
         Select::new(&CheckLogs::Select.t(lang).to_string(), Checks::options())
             .prompt()
             .map_or_else(
                 |_| Err(Error::Other(CheckLogs::SelectFailed.t(lang).to_string())),
-                |check| Ok((Checks::from_str(check).unwrap(), lang)),
+                |check| {
+                    let check = Checks::from_str(check).unwrap();
+                    match check {
+                        Checks::Basic => Ok((check, lang)),
+                        Checks::Underlayer(_) => {
+                            Ok((Checks::Underlayer(select_underlyer(lang)?), lang))
+                        }
+                        Checks::All(_) => Ok((Checks::All(select_underlyer(lang)?), lang)),
+                    }
+                },
             )
     }
-    fn handle_running(&mut self) {
-        match self.option {
-            Checks::Basic => {
-                let start = std::time::Instant::now();
-                let checks = check_basic();
-                self.cost.replace(start.elapsed());
+    fn handle_running(&mut self, state: CheckState) {
+        match state {
+            CheckState::Basic => match self.option {
+                Checks::Basic => {
+                    self.handle_basic();
+                    self.logs
+                        .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
+                    self.state = ComponentState::Pause;
+                }
+                Checks::All(_) => {
+                    self.handle_basic();
+                    self.state.next();
+                }
+                Checks::Underlayer(_) => {
+                    self.state.next();
+                }
+            },
+            CheckState::Underlayer => {
+                match self.option {
+                    Checks::Underlayer(u) => {
+                        self.handle_underlayer(u);
+                    }
+                    Checks::All(u) => {
+                        self.handle_underlayer(u);
+                    }
+                    Checks::Basic => {}
+                }
+                self.state.next();
+                self.logs
+                    .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
+            }
+        }
+    }
+    fn handle_basic(&mut self) {
+        let start = std::time::Instant::now();
+        let checks = check_basic();
+        self.cost.replace(start.elapsed());
+        self.logs.extend(
+            checks
+                .iter()
+                .map(|item| (item, &self.lang).into())
+                .collect::<Vec<LogItem>>(),
+        );
+        self.items.extend(checks);
+    }
+    fn handle_underlayer(&mut self, underlayer: Underlayer) {
+        let start = std::time::Instant::now();
+        let res = service::check::check_underlayer(underlayer);
+        match res {
+            Ok(checks) => {
+                self.cost
+                    .replace(self.cost.unwrap_or_default() + start.elapsed());
                 self.logs.extend(
                     checks
                         .iter()
@@ -150,11 +205,10 @@ impl CheckCmd {
                 );
                 self.items.extend(checks);
             }
-            Checks::Underlayer => todo!(),
-            Checks::All => todo!(),
+            Err(e) => {
+                self.logs.push(LogItem::error(e.to_string()));
+            }
         }
-        self.logs
-            .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
     }
 }
 

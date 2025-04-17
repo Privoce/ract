@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use gen_utils::common::fs;
 use ratatui::{
@@ -80,5 +80,20 @@ impl From<Result<PathBuf, which::Error>> for CheckItem {
             }
         }
         item
+    }
+}
+
+impl CheckItem {
+    pub fn success<P>(name: String, path: Option<P>) -> Self
+    where
+        P: AsRef<Path>,
+    {
+        Self::new(name, path.map(|p| p.as_ref().to_path_buf()), true)
+    }
+    pub fn error(name: String) -> Self {
+        Self::new(name, None, false)
+    }
+    pub fn new(name: String, path: Option<PathBuf>, state: bool) -> Self {
+        Self { name, path, state }
     }
 }

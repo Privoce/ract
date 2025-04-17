@@ -66,7 +66,7 @@ impl Dashboard {
     }
 
     pub fn render_container(&self, frame: &mut Frame, area: Rect) -> Rect {
-        let [area] = Layout::horizontal([Constraint::Max(90)]).areas(area);
+        let [area] = Layout::horizontal([Constraint::Min(60)]).areas(area);
         let container = Block::default()
             .title(self.title.to_string())
             .title_alignment(Alignment::Left)

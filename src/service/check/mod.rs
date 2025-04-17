@@ -1,6 +1,10 @@
 mod item;
 pub use item::*;
-use std::{path::PathBuf, process::exit, str::FromStr};
+use std::{
+    path::{Path, PathBuf},
+    process::exit,
+    str::FromStr,
+};
 
 use gen_utils::{
     common::{fs, RustDependence},
@@ -28,12 +32,12 @@ pub fn run() -> () {
         Checks::Basic => {
             check_basic();
         }
-        Checks::Underlayer => {
-            check_underlayer();
+        Checks::Underlayer(_) => {
+            // check_underlayer();
         }
-        Checks::All => {
+        Checks::All(_) => {
             check_basic();
-            check_underlayer();
+            // check_underlayer();
         }
     };
 
@@ -55,9 +59,7 @@ pub fn current_states() -> Result<Tools, Error> {
     // let cargo = basic_check("cargo").is_ok();
     // let git = basic_check("git").is_ok();
     // [underlayer] -----------------------------------------------------------------------------------------
-    let (makepad, gen_ui) = check_makepad()?;
-    let makepad = makepad.is_some();
-    let gen_ui = gen_ui.is_some();
+    let ((makepad, _), (gen_ui, _)) = makepad_exist()?;
 
     // Ok(Tools {
     //     basic: (rustc, cargo, git).into(),
@@ -87,76 +89,57 @@ fn basic_check(name: String) -> CheckItem {
     item
 }
 
-pub fn check_underlayer() -> () {
-    let underlayer = Select::new(
-        "Which underlayer tool chain you want to check?",
-        Underlayer::options(),
-    )
-    .with_help_message("current support: Makepad")
-    .prompt()
-    .expect("select underlayer failed");
-
-    match Underlayer::from_str(underlayer).unwrap() {
-        Underlayer::Makepad => match check_makepad() {
-            Ok((makepad, gen_ui)) => {
-                if let Some(makepad) = makepad {
-                    CheckLogs::DependenceReady(makepad).terminal().success();
-                } else {
-                    CheckLogs::DependenceNotFound("makepad-widgets".to_string())
-                        .terminal()
-                        .warning();
-                }
-                if let Some(gen_ui) = gen_ui {
-                    CheckLogs::DependenceReady(gen_ui).terminal().success();
-                } else {
-                    CheckLogs::DependenceNotFound("gen_components".to_string())
-                        .terminal()
-                        .warning();
-                }
-            }
-            Err(e) => {
-                TerminalLogger::new(e.to_string().as_str()).error();
-                exit(2);
-            }
-        },
+pub fn check_underlayer(underlayer: Underlayer) -> Result<Vec<CheckItem>, Error> {
+    match underlayer {
+        Underlayer::Makepad => check_makepad(),
     }
 }
 
-pub fn check_makepad() -> Result<(Option<String>, Option<String>), Error> {
-    let dep_exist = |pre: &str, dep: Option<&str>| -> Option<String> {
-        dep.map_or_else(
-            || None,
-            |dep| {
-                return if dep.is_empty() {
-                    None
-                } else {
-                    // check dep path is exist
-                    let dep_path = PathBuf::from_str(dep).unwrap();
+pub fn check_makepad() -> Result<Vec<CheckItem>, Error> {
+    let ((makepad_exist, makepad_widgets_path), (gen_components_exist, gen_components_path)) =
+        makepad_exist()?;
 
-                    let dep = format!("{} = \"{}\"", pre, dep);
-                    RustDependence::from_str(&dep).map_or_else(
-                        |_| None,
-                        |_| fs::exists_dir(dep_path.as_path()).then_some(dep),
-                    )
-                };
-            },
-        )
-    };
+    Ok(vec![
+        CheckItem::new(
+            "makepad_widgets".to_string(),
+            makepad_widgets_path,
+            makepad_exist,
+        ),
+        CheckItem::new(
+            "gen_components".to_string(),
+            gen_components_path,
+            gen_components_exist,
+        ),
+    ])
+}
 
-    // get makepad widget path from chain/env.toml
-    // let chain_env_path = real_chain_env_path()?;
-    let chain_env_path = ChainEnvToml::path()?;
-    fs::read(chain_env_path.as_path()).map_or_else(
-        |e| Err(e.to_string().into()),
-        |content| {
-            let toml_content = content.parse::<DocumentMut>().expect("parse toml failed");
-            let makepad_dep = toml_content["dependencies"]["makepad-widgets"].as_str();
-            let gen_ui_components_dep = toml_content["dependencies"]["gen_components"].as_str();
+fn makepad_exist() -> Result<((bool, Option<PathBuf>), (bool, Option<PathBuf>)), Error> {
+    let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+    let makepad_widgets_path = chain_env_toml.makepad_widgets_path();
+    let gen_components_path = chain_env_toml.gen_components_path();
 
-            Ok((
-                dep_exist("makepad-widgets", makepad_dep),
-                dep_exist("gen_components", gen_ui_components_dep),
-            ))
-        },
-    )
+    Ok((
+        (
+            is_empty_dir(makepad_widgets_path)?,
+            makepad_widgets_path.cloned(),
+        ),
+        (
+            is_empty_dir(gen_components_path)?,
+            gen_components_path.cloned(),
+        ),
+    ))
+}
+
+fn is_empty_dir<P>(path: Option<P>) -> Result<bool, Error>
+where
+    P: AsRef<Path>,
+{
+    if let Some(path) = path {
+        if fs::exists_dir(path.as_ref()) {
+            let mut entries = std::fs::read_dir(path).map_err(|e| Error::from(e.to_string()))?;
+            return Ok(entries.next().is_none());
+        }
+    }
+
+    Ok(false)
 }
