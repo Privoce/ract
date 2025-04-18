@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Release V0.2.0
+
+### General
+
+- Update UI (ratatui)
+
+### Fixes
+
+- fix makepad_widgts, gen_components check
+
 ## Release V0.1.8
 
 ### General

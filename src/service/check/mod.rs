@@ -89,6 +89,8 @@ fn basic_check(name: String) -> CheckItem {
     item
 }
 
+/// ## Check underlayer toolchain
+/// 1. makepad (current support)
 pub fn check_underlayer(underlayer: Underlayer) -> Result<Vec<CheckItem>, Error> {
     match underlayer {
         Underlayer::Makepad => check_makepad(),

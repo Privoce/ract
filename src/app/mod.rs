@@ -2,7 +2,6 @@
 mod dashboard;
 #[allow(unused)]
 mod timeline;
-
 mod state;
 pub use state::*;
 use crate::{
@@ -65,6 +64,11 @@ pub fn run() -> Result<()> {
                 cmd.run(&mut terminal)?;
                 destroy(&mut terminal)?;
             }
+            Commands::Config => {
+
+            }
+            Commands::Uninstall => service::uninstall::run(),
+            // Commands::Studio => {service::run::makepad::run();},
             _ => {}
         }
         // match cmd {

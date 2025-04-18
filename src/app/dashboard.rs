@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use gen_utils::common::Os;
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Stylize},
+    layout::{Alignment, Constraint, Flex, Layout, Rect},
+    style::{Color, Modifier, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Padding, Paragraph},
     Frame,
@@ -39,8 +39,8 @@ impl Dashboard {
         } else {
             from
         };
-        content_height += 2; // padding
-        content_height += 2; // border
+        // footer height: 2, padding: 1, border: 2, spacing: 1
+        content_height += 6;
         content_height += offset; // offset
         content_height
     }
@@ -49,23 +49,31 @@ impl Dashboard {
         F: FnOnce(&mut Frame, Rect),
     {
         // [container] -----------------------------------------------------------
-        let container_area = self.render_container(frame, area);
+        let container_area = self.draw_container(frame, area);
+        // [main layout and footer] -----------------------------------------------
+        let [main, footer] =
+            Layout::vertical([Constraint::Length(area.height - 2), Constraint::Length(2)])
+                .spacing(1)
+                .areas(container_area);
+        let link = self.draw_link();
         // [inner layout for left and right] -------------------------------------
         // - [left info] ---------------------------------------------------------
-        let info = self.render_info();
+        let info = self.draw_info();
         let info_width = info.width();
-        let [left, right] =
-            Layout::horizontal([Constraint::Length(info_width as u16), Constraint::Fill(3)])
-                .spacing(4)
-                .areas(container_area);
+        let [left, right] = Layout::horizontal([
+            Constraint::Percentage(60),
+            Constraint::Length(info_width as u16),
+        ])
+        .flex(Flex::SpaceBetween)
+        .areas(main);
 
         // - [right main] --------------------------------------------------------
-        render_main(frame, right);
-
-        frame.render_widget(info, left);
+        render_main(frame, left);
+        frame.render_widget(link, footer);
+        frame.render_widget(info, right);
     }
 
-    pub fn render_container(&self, frame: &mut Frame, area: Rect) -> Rect {
+    pub fn draw_container(&self, frame: &mut Frame, area: Rect) -> Rect {
         let [area] = Layout::horizontal([Constraint::Min(60)]).areas(area);
         let container = Block::default()
             .title(self.title.to_string())
@@ -73,12 +81,12 @@ impl Dashboard {
             .title_style(Color::Rgb(255, 112, 67))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .padding(Padding::new(1, 1, 1, 1));
+            .padding(Padding::new(2, 2, 1, 0));
         let innser_area = container.inner(area);
         frame.render_widget(container, area);
         innser_area
     }
-    pub fn render_info(&self) -> Text {
+    pub fn draw_info(&self) -> Text {
         let mut lines = vec![
             Line::from_iter([
                 "Os: ".into(),
@@ -96,14 +104,6 @@ impl Dashboard {
             ]),
         ];
 
-        if !self.ty.is_unknown() {
-            lines.push("".into());
-            lines.push(Line::from_iter([
-                "Type: ".into(),
-                Span::styled(self.ty.to_string(), Color::Rgb(255, 112, 67)).bold(),
-            ]));
-        }
-
         if let Some(cost) = self.cost {
             lines.push("".into());
             lines.push(Line::from_iter([
@@ -113,5 +113,24 @@ impl Dashboard {
         }
 
         Text::from_iter(lines)
+    }
+    pub fn draw_link(&self) -> Text {
+        Text::from_iter(vec![
+            Line::from_iter(vec![
+                Span::from("Github: "),
+                Span::styled("https://github.com/Privoce/GenUI", Color::Rgb(255, 112, 67))
+                    .bold()
+                    .add_modifier(Modifier::UNDERLINED),
+            ]),
+            Line::from_iter(vec![
+                Span::from("Doc: "),
+                Span::styled(
+                    "https://privoce.github.io/GenUI.github.io/tools/ract/introduction",
+                    Color::Rgb(255, 112, 67),
+                )
+                .bold()
+                .add_modifier(Modifier::UNDERLINED),
+            ]),
+        ])
     }
 }
