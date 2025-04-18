@@ -12,7 +12,7 @@ use crate::{
     app::{AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{error::Error, CheckLogs, LogExt, LogItem, LogType},
+    log::{error::Error, CheckLogs, Log, LogExt, LogItem, LogType},
     service::{
         self,
         check::{check_basic, CheckItem},
@@ -23,7 +23,7 @@ pub struct CheckCmd {
     state: ComponentState<CheckState>,
     lang: Language,
     option: Checks,
-    logs: Vec<LogItem>,
+    log: Log,
     items: Vec<CheckItem>,
     cost: Option<Duration>,
 }
@@ -34,16 +34,23 @@ impl AppComponent for CheckCmd {
             state: Default::default(),
             lang,
             option: Checks::default(),
-            logs: vec![],
+            log: Log::new(),
             items: vec![],
             cost: None,
         }
     }
 
-    fn run(mut self, terminal: &mut ratatui::DefaultTerminal) -> crate::common::Result<()> {
+    fn run(
+        mut self,
+        terminal: &mut ratatui::DefaultTerminal,
+        quit: bool,
+    ) -> crate::common::Result<()> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
+            if quit && self.state.is_pause() {
+                self.quit();
+            }
         }
         Ok(())
     }
@@ -101,9 +108,9 @@ impl AppComponent for CheckCmd {
         .areas(area);
         // [render components] ----------------------------------------------------------------------------------------------
         frame.render_widget(msg, msg_area);
-        dashboard.render(frame, dashboard_area, |frame, area| {
-            frame.render_widget(list, area);
-        });
+        // dashboard.render(frame, dashboard_area, |frame, area| {
+        //     frame.render_widget(list, area);
+        // });
     }
     fn quit(&mut self) -> () {
         self.state.quit();
@@ -112,8 +119,7 @@ impl AppComponent for CheckCmd {
 
 impl CheckCmd {
     fn render_msg(&self) -> Text {
-        let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
-        Text::from_iter(items)
+        self.log.get_text()
     }
     pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
         fn select_underlyer(lang: &Language) -> Result<Underlayer> {
@@ -124,7 +130,12 @@ impl CheckCmd {
             .with_help_message("current support: Makepad")
             .prompt()
             .map_or_else(
-                |_| Err(Error::Other(CheckLogs::SelectFailed.t(lang).to_string())),
+                |_| {
+                    Err(Error::Other {
+                        ty: Some("select".to_string()),
+                        msg: CheckLogs::SelectFailed.t(lang).to_string(),
+                    })
+                },
                 |s| Ok(Underlayer::from_str(s).unwrap()),
             )
         }
@@ -132,7 +143,12 @@ impl CheckCmd {
         Select::new(&CheckLogs::Select.t(lang).to_string(), Checks::options())
             .prompt()
             .map_or_else(
-                |_| Err(Error::Other(CheckLogs::SelectFailed.t(lang).to_string())),
+                |_| {
+                    Err(Error::Other {
+                        ty: Some("select".to_string()),
+                        msg: CheckLogs::SelectFailed.t(lang).to_string(),
+                    })
+                },
                 |check| {
                     let check = Checks::from_str(check).unwrap();
                     match check {
@@ -150,7 +166,7 @@ impl CheckCmd {
             CheckState::Basic => match self.option {
                 Checks::Basic => {
                     self.handle_basic();
-                    self.logs
+                    self.log
                         .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
                     self.state = ComponentState::Pause;
                 }
@@ -173,7 +189,7 @@ impl CheckCmd {
                     Checks::Basic => {}
                 }
                 self.state.next();
-                self.logs
+                self.log
                     .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
             }
         }
@@ -182,7 +198,7 @@ impl CheckCmd {
         let start = std::time::Instant::now();
         let checks = check_basic();
         self.cost.replace(start.elapsed());
-        self.logs.extend(
+        self.log.extend(
             checks
                 .iter()
                 .map(|item| (item, &self.lang).into())
@@ -197,7 +213,7 @@ impl CheckCmd {
             Ok(checks) => {
                 self.cost
                     .replace(self.cost.unwrap_or_default() + start.elapsed());
-                self.logs.extend(
+                self.log.extend(
                     checks
                         .iter()
                         .map(|item| (item, &self.lang).into())
@@ -206,7 +222,7 @@ impl CheckCmd {
                 self.items.extend(checks);
             }
             Err(e) => {
-                self.logs.push(LogItem::error(e.to_string()));
+                self.log.push(LogItem::error(e.to_string()));
             }
         }
     }
@@ -218,7 +234,7 @@ impl From<(Checks, &Language)> for CheckCmd {
             state: Default::default(),
             lang: value.1.clone(),
             option: value.0,
-            logs: vec![],
+            log: Log::default(),
             items: vec![],
             cost: None,
         }

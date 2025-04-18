@@ -4,20 +4,21 @@ use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
     text::{Line, Text},
+    widgets::{Block, Borders, Paragraph, Wrap},
     DefaultTerminal, Frame,
 };
 
 use crate::{
     app::{AppComponent, ComponentState, Dashboard, State, Timeline, TimelineState},
     entry::Language,
-    log::{InitLogs, LogExt, LogItem, LogType},
+    log::{InitLogs, Log, LogExt, LogItem, LogType},
     service,
 };
 
 pub struct InitCmd {
     state: ComponentState<InitState>,
     lang: Language,
-    logs: Vec<LogItem>,
+    log: Log,
     cost: Cost,
 }
 
@@ -26,15 +27,18 @@ impl AppComponent for InitCmd {
         Self {
             state: Default::default(),
             lang,
-            logs: vec![],
+            log: Log::default(),
             cost: Cost::default(),
         }
     }
 
-    fn run(mut self, terminal: &mut DefaultTerminal) -> crate::common::Result<()> {
+    fn run(mut self, terminal: &mut DefaultTerminal, quit: bool) -> crate::common::Result<()> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
+            if quit && self.state.is_pause() {
+                self.quit();
+            }
         }
         Ok(())
     }
@@ -43,7 +47,7 @@ impl AppComponent for InitCmd {
         // handle service
         match self.state {
             ComponentState::Start => {
-                self.logs
+                self.log
                     .push(LogItem::info(InitLogs::Init.t(&self.lang).to_string()));
                 self.cost.env_state = TimelineState::Running;
                 self.state.next();
@@ -70,7 +74,7 @@ impl AppComponent for InitCmd {
                         |cost, e| (&mut cost.chain_state, InitLogs::ChainFailed(e)),
                     );
                     if self.cost.chain_state.is_success() {
-                        self.logs
+                        self.log
                             .push(LogItem::info(InitLogs::Complete.t(&self.lang).to_string()));
                         self.state.next();
                     }
@@ -80,7 +84,7 @@ impl AppComponent for InitCmd {
             ComponentState::Quit => {}
         }
 
-        if event::poll(Duration::from_millis(100))? {
+        if event::poll(Duration::from_millis(500))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
@@ -98,7 +102,10 @@ impl AppComponent for InitCmd {
     /// ## Render the init command
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let msg = self.render_msg();
+        let msg = Paragraph::new(self.draw_msg())
+            .scroll((0, 0))
+            .wrap(Wrap { trim: true })
+            .block(Block::new().borders(Borders::TOP));
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Init;
@@ -117,26 +124,24 @@ impl AppComponent for InitCmd {
             .state(self.cost.chain_state)
             .draw();
         let container_height = node1.height + node2.height;
-        let layout = Layout::vertical([
-            Constraint::Length(msg.height() as u16),
-            Constraint::Length(dashboard.height(container_height, 0)),
-        ])
-        .spacing(1)
-        .vertical_margin(1);
-        let [msg_area, dashboard_area] = layout.areas(area);
-        // [render components] -------------------------------------------------------
-        frame.render_widget(msg, msg_area);
-        dashboard.render(frame, dashboard_area, |frame, area| {
-            let [node1_area, node2_area] = Layout::vertical([
-                Constraint::Length(node1.height),
-                Constraint::Length(node2.height),
-            ])
-            .spacing(1)
-            .areas(area);
-
-            node1.render(node1_area, frame);
-            node2.render(node2_area, frame);
-        });
+        // [render components] ------------------------------------------------------------------------------------
+        dashboard.render(
+            frame,
+            area,
+            container_height,
+            8,
+            |frame, [main_area, msg_area]| {
+                let [node1_area, node2_area] = Layout::vertical([
+                    Constraint::Length(node1.height),
+                    Constraint::Length(node2.height),
+                ])
+                .spacing(1)
+                .areas(main_area);
+                node1.render(node1_area, frame);
+                node2.render(node2_area, frame);
+                frame.render_widget(msg, msg_area);
+            },
+        );
     }
     fn quit(&mut self) -> () {
         self.state.quit();
@@ -168,23 +173,20 @@ impl InitCmd {
                     *progress += 100;
                     let (state, log) = success(&mut self.cost);
                     *state = TimelineState::Success;
-                    self.logs
+                    self.log
                         .push(LogItem::success(log.t(&self.lang).to_string()));
                 }
                 Err(e) => {
                     *progress = 96;
                     let (state, log) = failed(&mut self.cost, e.to_string());
                     *state = TimelineState::Failed;
-                    self.logs
-                        .push(LogItem::error(log.t(&self.lang).to_string()));
+                    self.log.push(LogItem::error(log.t(&self.lang).to_string()));
                 }
             }
         }
     }
-
-    fn render_msg(&self) -> Text {
-        let items: Vec<Line> = self.logs.iter().map(|log| log.fmt_line()).collect();
-        Text::from_iter(items)
+    fn draw_msg(&self) -> Text {
+        self.log.get_text()
     }
     fn env_progress(&self) -> u16 {
         self.cost.env_progress

@@ -1,12 +1,15 @@
 #[allow(unused)]
 mod dashboard;
+mod state;
 #[allow(unused)]
 mod timeline;
-mod state;
-pub use state::*;
+mod select;
+#[allow(unused)]
+mod unicode;
+
 use crate::{
     cli::{
-        command::{check::CheckCmd, init::InitCmd, Commands},
+        command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, Commands},
         Cli,
     },
     common::Result,
@@ -14,6 +17,7 @@ use crate::{
     service,
 };
 use clap::Parser;
+pub use state::*;
 
 // use crossterm::{
 //     event::DisableMouseCapture,
@@ -34,38 +38,22 @@ use std::time::Duration;
 
 pub use dashboard::Dashboard;
 pub use timeline::*;
+use select::*;
 
-pub fn run() -> Result<()> {
-    fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {
-        ratatui::restore();
-        disable_raw_mode()?;
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )?;
-        terminal.show_cursor()?;
-        Ok(())
-    }
-
-    // [do init before cli and app run] -----------------------------------------------------------------
-    let lang = Language::from_conf();
+pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
     let cmd = Cli::parse().commands;
     if let Commands::Init = cmd {
-        let mut terminal = ratatui::init();
-        InitCmd::new(lang).run(&mut terminal)?;
-        destroy(&mut terminal)?;
+        let mut cmd = InitCmd::new(lang);
+        cmd.run(terminal, false)?;
     } else {
         match cmd {
             Commands::Check => {
                 let cmd: CheckCmd = CheckCmd::before(&lang)?.into();
-                let mut terminal = ratatui::init();
-                cmd.run(&mut terminal)?;
-                destroy(&mut terminal)?;
+                cmd.run(terminal, false)?;
             }
             Commands::Config => {
-
+                ConfigCmd::new(lang).run(terminal, false)?;
             }
             Commands::Uninstall => service::uninstall::run(),
             // Commands::Studio => {service::run::makepad::run();},
@@ -90,38 +78,10 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-// fn draw_app(frame: &mut Frame) {
-//     let greeting = Paragraph::new("Hello World! (press 'q' to quit)");
-//     frame.render_widget(greeting, frame.area());
-// }
-
-// fn should_quit() -> Result<bool, Box<dyn std::error::Error>> {
-//     if event::poll(Duration::from_millis(250))? {
-//         if let Event::Key(key) = event::read()? {
-//             return Ok(KeyCode::Char('q') == key.code);
-//         }
-//     }
-//     Ok(false)
-// }
-
-/// ## Do before app run
-/// 1. i18n
-/// 2. ui init
-pub fn before() -> Result<(DefaultTerminal, Language)> {
-    Ok((ratatui::init(), Language::from_conf()))
-}
-
-pub fn after() {}
-
 pub trait AppComponent {
     fn new(lang: Language) -> Self;
-    fn run(self, terminal: &mut DefaultTerminal) -> Result<()>;
+    fn run(self, terminal: &mut DefaultTerminal, quit: bool) -> Result<()>;
     fn handle_events(&mut self) -> Result<()>;
     fn render(&mut self, frame: &mut Frame);
     fn quit(&mut self) -> ();
-    
-}
-
-pub trait Component {
-    fn new(lang: Language) -> Self;
 }

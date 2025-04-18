@@ -5,11 +5,15 @@ use ratatui::{
     layout::{Alignment, Constraint, Flex, Layout, Rect},
     style::{Color, Modifier, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, Padding, Paragraph},
+    widgets::{Block, BorderType, Borders, Padding, Paragraph, Widget},
     Frame,
 };
 
-use crate::{entry::Language, log::LogType};
+use super::unicode::{CIRCLE_DOT, CIRCLE_FILLED};
+use crate::{
+    entry::Language,
+    log::{Common, LogExt, LogType},
+};
 
 pub struct Dashboard {
     pub os: Os,
@@ -39,80 +43,142 @@ impl Dashboard {
         } else {
             from
         };
-        // footer height: 2, padding: 1, border: 2, spacing: 1
-        content_height += 6;
+        // footer height: 2, padding: 0, border: 2, spacing: 4
+        content_height += 8;
         content_height += offset; // offset
         content_height
     }
-    pub fn render<F>(&self, frame: &mut Frame, area: Rect, render_main: F) -> ()
+    pub fn render<R>(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        main_height: u16,
+        msg_height: u16,
+        render_all: R,
+    ) -> ()
     where
-        F: FnOnce(&mut Frame, Rect),
+        R: FnOnce(&mut Frame, [Rect; 2]),
     {
         // [container] -----------------------------------------------------------
         let container_area = self.draw_container(frame, area);
-        // [main layout and footer] -----------------------------------------------
-        let [main, footer] =
-            Layout::vertical([Constraint::Length(area.height - 2), Constraint::Length(2)])
-                .spacing(1)
-                .areas(container_area);
+        // [link] -----------------------------------------------------------------
         let link = self.draw_link();
-        // [inner layout for left and right] -------------------------------------
-        // - [left info] ---------------------------------------------------------
-        let info = self.draw_info();
-        let info_width = info.width();
-        let [left, right] = Layout::horizontal([
-            Constraint::Percentage(60),
-            Constraint::Length(info_width as u16),
+        // [main layout and footer] -----------------------------------------------
+        let [main_area, footer_area] = Layout::vertical([
+            Constraint::Length(8 + main_height + msg_height),
+            Constraint::Length(2),
         ])
         .flex(Flex::SpaceBetween)
-        .areas(main);
-
-        // - [right main] --------------------------------------------------------
-        render_main(frame, left);
-        frame.render_widget(link, footer);
-        frame.render_widget(info, right);
+        .areas(container_area);
+        let [header_area, info_area, main_area, msg_area] = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Length(3),
+            Constraint::Length(main_height),
+            Constraint::Length(msg_height),
+        ])
+        .spacing(1)
+        .areas(main_area);
+        // [render] ---------------------------------------------------------------
+        self.render_header(header_area, frame);
+        self.render_info(info_area, frame);
+        frame.render_widget(link, footer_area);
+        render_all(frame, [main_area, msg_area]);
     }
 
     pub fn draw_container(&self, frame: &mut Frame, area: Rect) -> Rect {
         let [area] = Layout::horizontal([Constraint::Min(60)]).areas(area);
         let container = Block::default()
-            .title(self.title.to_string())
-            .title_alignment(Alignment::Left)
-            .title_style(Color::Rgb(255, 112, 67))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .padding(Padding::new(2, 2, 1, 0));
+            .padding(Padding::new(2, 2, 0, 0));
         let innser_area = container.inner(area);
         frame.render_widget(container, area);
         innser_area
     }
-    pub fn draw_info(&self) -> Text {
-        let mut lines = vec![
-            Line::from_iter([
-                "Os: ".into(),
-                Span::styled(self.os.to_string(), Color::Rgb(255, 112, 67)).bold(),
-            ]),
-            "".into(),
-            Line::from_iter([
-                "Version: ".into(),
-                Span::styled("0.2.0", Color::Rgb(255, 112, 67)).bold(),
-            ]),
-            "".into(),
-            Line::from_iter([
-                "Language: ".into(),
-                Span::styled(self.lang.as_str(), Color::Rgb(255, 112, 67)).bold(),
-            ]),
-        ];
+    pub fn render_header(&self, area: Rect, frame: &mut Frame) -> () {
+        let header_wrapper = Block::new().borders(Borders::BOTTOM);
 
-        if let Some(cost) = self.cost {
-            lines.push("".into());
-            lines.push(Line::from_iter([
-                "Total: ".into(),
-                Span::styled(format!("{:?}", cost), Color::Rgb(255, 112, 67)).bold(),
-            ]));
-        }
+        let left = Text::from(Line::from(
+            Span::styled("Ract Dashboard", Color::Rgb(255, 112, 67)).bold(),
+        ));
 
-        Text::from_iter(lines)
+        let right = Text::from(Line::from_iter(vec![
+            Span::styled(CIRCLE_FILLED, Color::Green),
+            Span::styled(format!(" {}", self.ty.to_string()), Color::White),
+        ]));
+
+        let [left_area, right_area] = Layout::horizontal([
+            Constraint::Length(left.width() as u16),
+            Constraint::Length(right.width() as u16),
+        ])
+        .flex(Flex::SpaceBetween)
+        .areas(header_wrapper.inner(area));
+        frame.render_widget(header_wrapper, area);
+        frame.render_widget(left, left_area);
+        frame.render_widget(right, right_area);
+    }
+    pub fn render_info(&self, area: Rect, frame: &mut Frame) -> () {
+        // [left] ------------------------------------------------------------------------------
+        let left = Block::new();
+
+        let left_left = Text::from(vec![
+            Line::from(Common::Os.t(&self.lang)),
+            Line::from(""),
+            Line::from(Common::Version.t(&self.lang)),
+        ]);
+
+        let left_right = Text::from(vec![
+            Line::from(Span::styled(self.os.to_string(), Color::Rgb(255, 112, 67)).bold()),
+            Line::from(""),
+            Line::from(Span::styled("0.2.0", Color::Rgb(255, 112, 67))),
+        ]);
+        // [right] -----------------------------------------------------------------------------
+        let right = Block::new();
+
+        let right_left = Text::from(vec![
+            Line::from(Common::Language.t(&self.lang)),
+            Line::from(""),
+            Line::from(Common::Total.t(&self.lang)),
+        ]);
+
+        let right_right = Text::from(vec![
+            Line::from(Span::styled(self.lang.as_str(), Color::Rgb(255, 112, 67)).bold()),
+            Line::from(""),
+            Line::from(Span::styled(
+                self.cost
+                    .map(|cost| format!("{:?}", cost))
+                    .unwrap_or_else(|| "0".to_string()),
+                Color::Rgb(255, 112, 67),
+            )),
+        ]);
+
+        // [layout] -----------------------------------------------------------------------------
+        let [left_area, right_area] =
+            Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)])
+                .spacing(4)
+                .areas(area);
+
+        let [left_left_area, left_right_area] = Layout::horizontal([
+            Constraint::Length(left_left.width() as u16),
+            Constraint::Length(left_right.width() as u16),
+        ])
+        .flex(Flex::SpaceBetween)
+        .areas(left.inner(left_area));
+
+        let [right_left_area, right_right_area] = Layout::horizontal([
+            Constraint::Length(right_left.width() as u16),
+            Constraint::Length(right_right.width() as u16),
+        ])
+        .flex(Flex::SpaceBetween)
+        .areas(right.inner(right_area));
+
+        // [render] -----------------------------------------------------------------------------
+        frame.render_widget(left, left_area);
+        frame.render_widget(left_left, left_left_area);
+        frame.render_widget(left_right, left_right_area);
+        frame.render_widget(right, right_area);
+        frame.render_widget(right_left, right_left_area);
+        frame.render_widget(right_right, right_right_area);
     }
     pub fn draw_link(&self) -> Text {
         Text::from_iter(vec![

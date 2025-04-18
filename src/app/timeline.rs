@@ -130,7 +130,7 @@ impl<'a> Timeline<'a> {
         };
         // [footer] ----------------------------------------------------------------------------------------------
         let fmt_cost = if self.progress < 100 {
-            format!("⌛️ {:?}", &self.cost)
+            format!("⏱ {:?}", &self.cost)
         } else {
             format!("🎉 {:?}", &self.cost)
         };

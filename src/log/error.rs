@@ -4,7 +4,10 @@ use std::fmt::{Debug, Display};
 pub enum Error {
     Toml(TomlError),
     AppIO(std::io::Error),
-    Other(String),
+    Other{
+        ty: Option<String>,
+        msg: String,
+    },
 }
 
 impl std::error::Error for Error {}
@@ -14,7 +17,13 @@ impl Display for Error {
         match self {
             Error::Toml(e) => e.fmt(f),
             Error::AppIO(e) => write!(f, "IO error: {}", e),
-            Error::Other(e) => write!(f, "Error: {}", e),
+            Error::Other { ty, msg } => {
+                if let Some(ty) = ty {
+                    write!(f, "{}: {}", ty, msg)
+                } else {
+                    write!(f, "{}", msg)
+                }
+            },
         }
     }
 }

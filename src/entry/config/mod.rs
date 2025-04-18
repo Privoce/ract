@@ -7,7 +7,9 @@ pub use chain_env_toml::*;
 use std::str::FromStr;
 use gen_utils::error::Error;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Configs {
+    #[default]
     Env,
     /// config .env file for chain/env.toml
     ChainEnvToml,
