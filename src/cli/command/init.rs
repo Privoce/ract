@@ -186,7 +186,7 @@ impl InitCmd {
         }
     }
     fn draw_msg(&self) -> Text {
-        self.log.get_text()
+        self.log.draw_text()
     }
     fn env_progress(&self) -> u16 {
         self.cost.env_progress

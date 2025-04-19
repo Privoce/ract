@@ -164,7 +164,7 @@ impl Log {
     pub fn iter(&self) -> impl Iterator<Item = &LogItem> {
         self.items.iter()
     }
-    pub fn get_text(&self) -> Text {
+    pub fn draw_text(&self) -> Text {
         if let Some(text) = self.cache.borrow().as_ref() {
             return text.clone();
         }
@@ -183,7 +183,8 @@ pub enum Common{
     Os,
     Version,
     Language,
-    Total
+    Total,
+    Doc
 }
 
 impl LogExt for Common {
@@ -194,6 +195,7 @@ impl LogExt for Common {
             Common::Version => t!("common.version", locale = lang),
             Common::Language => t!("common.language", locale = lang),
             Common::Total => t!("common.total", locale = lang),
+            Common::Doc => t!("common.doc", locale = lang),
         }
     }
 }

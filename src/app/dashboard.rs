@@ -33,21 +33,6 @@ impl Dashboard {
             cost: None,
         }
     }
-    pub fn height(&self, from: u16, offset: u16) -> u16 {
-        let mut info_height = if self.ty.is_unknown() { 5 } else { 7 };
-        if self.cost.is_some() {
-            info_height += 2;
-        }
-        let mut content_height = if from < info_height {
-            info_height
-        } else {
-            from
-        };
-        // footer height: 2, padding: 0, border: 2, spacing: 4
-        content_height += 8;
-        content_height += offset; // offset
-        content_height
-    }
     pub fn render<R>(
         &self,
         frame: &mut Frame,
@@ -130,7 +115,7 @@ impl Dashboard {
         let left_right = Text::from(vec![
             Line::from(Span::styled(self.os.to_string(), Color::Rgb(255, 112, 67)).bold()),
             Line::from(""),
-            Line::from(Span::styled("0.2.0", Color::Rgb(255, 112, 67))),
+            Line::from(Span::styled("0.2.0", Color::Rgb(255, 112, 67)).bold()),
         ]);
         // [right] -----------------------------------------------------------------------------
         let right = Block::new();
@@ -144,12 +129,15 @@ impl Dashboard {
         let right_right = Text::from(vec![
             Line::from(Span::styled(self.lang.as_str(), Color::Rgb(255, 112, 67)).bold()),
             Line::from(""),
-            Line::from(Span::styled(
-                self.cost
-                    .map(|cost| format!("{:?}", cost))
-                    .unwrap_or_else(|| "0".to_string()),
-                Color::Rgb(255, 112, 67),
-            )),
+            Line::from(
+                Span::styled(
+                    self.cost
+                        .map(|cost| format!("{:?}", cost))
+                        .unwrap_or_else(|| "0".to_string()),
+                    Color::Rgb(255, 112, 67),
+                )
+                .bold(),
+            ),
         ]);
 
         // [layout] -----------------------------------------------------------------------------

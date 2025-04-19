@@ -41,32 +41,6 @@ impl From<(&CheckItem, &Language)> for LogItem {
     }
 }
 
-impl<'a> From<&CheckItem> for ListItem<'a> {
-    fn from(value: &CheckItem) -> Self {
-        let (state, color) = if value.state {
-            ("🟢 ", Color::Green)
-        } else {
-            ("🔴 ", Color::Red)
-        };
-
-        let mut lines = vec![Line::from_iter(vec![
-            Span::from(state),
-            Span::styled(value.name.to_string(), color).bold(),
-        ])];
-
-        if let Some(path) = value.path.as_ref() {
-            lines.push(Line::from(vec![Span::styled(
-                fs::path_to_str(path),
-                Style::default().add_modifier(Modifier::UNDERLINED),
-            )]));
-        }
-
-        lines.push(Line::from(""));
-
-        ListItem::new(Text::from(lines))
-    }
-}
-
 impl From<Result<PathBuf, which::Error>> for CheckItem {
     fn from(value: Result<PathBuf, which::Error>) -> Self {
         let mut item = CheckItem::default();
@@ -95,5 +69,30 @@ impl CheckItem {
     }
     pub fn new(name: String, path: Option<PathBuf>, state: bool) -> Self {
         Self { name, path, state }
+    }
+    pub fn draw_list(&self, is_end: bool) -> ListItem {
+        let (state, color) = if self.state {
+            ("🟢 ", Color::Green)
+        } else {
+            ("🔴 ", Color::Red)
+        };
+
+        let mut lines = vec![Line::from_iter(vec![
+            Span::from(state),
+            Span::styled(self.name.to_string(), color).bold(),
+        ])];
+
+        if let Some(path) = self.path.as_ref() {
+            lines.push(Line::from(vec![Span::styled(
+                fs::path_to_str(path),
+                Style::default().add_modifier(Modifier::UNDERLINED),
+            )]));
+        }
+
+        if !is_end {
+            lines.push(Line::from(""));
+        }
+
+        ListItem::new(Text::from(lines))
     }
 }

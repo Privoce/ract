@@ -1,9 +1,8 @@
 use inquire::Select;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Constraint, Layout},
-    text::{Line, Text},
-    widgets::{List, ListItem},
+    text::Text,
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::{str::FromStr, time::Duration};
@@ -81,36 +80,38 @@ impl AppComponent for CheckCmd {
     }
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
+        let msg = Paragraph::new(self.draw_msg())
+            .scroll((0, 0))
+            .wrap(Wrap { trim: true })
+            .block(Block::new().borders(Borders::TOP));
         // [dashboard] ----------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Init;
+        dashboard.ty = LogType::Check;
         dashboard.cost = self.cost;
         // [render items] ----------------------------------------------------------------------------------------------
-        let (items, list_height): (Vec<ListItem>, u16) =
-            self.items
-                .iter()
-                .fold((vec![], 0), |(mut items, mut height), item| {
-                    let item: ListItem = item.into();
-                    height += item.height() as u16;
-                    items.push(item);
+        let len = self.items.len();
+        let (items, list_height): (Vec<ListItem>, u16) = self.items.iter().enumerate().fold(
+            (vec![], 0),
+            |(mut items, mut height), (index, item)| {
+                let item = item.draw_list(len == index + 1);
+                height += item.height() as u16;
+                items.push(item);
 
-                    (items, height)
-                });
-
-        let msg = self.render_msg();
+                (items, height)
+            },
+        );
         let list = List::new(items);
-        let [msg_area, dashboard_area] = Layout::vertical([
-            Constraint::Length(msg.height() as u16),
-            Constraint::Length(dashboard.height(list_height, 0)),
-        ])
-        .spacing(1)
-        .vertical_margin(1)
-        .areas(area);
-        // [render components] ----------------------------------------------------------------------------------------------
-        frame.render_widget(msg, msg_area);
-        // dashboard.render(frame, dashboard_area, |frame, area| {
-        //     frame.render_widget(list, area);
-        // });
+        // [render components] ------------------------------------------------------------------------------------
+        dashboard.render(
+            frame,
+            area,
+            list_height,
+            8,
+            |frame, [main_area, msg_area]| {
+                frame.render_widget(list, main_area);
+                frame.render_widget(msg, msg_area);
+            },
+        );
     }
     fn quit(&mut self) -> () {
         self.state.quit();
@@ -118,8 +119,8 @@ impl AppComponent for CheckCmd {
 }
 
 impl CheckCmd {
-    fn render_msg(&self) -> Text {
-        self.log.get_text()
+    fn draw_msg(&self) -> Text {
+        self.log.draw_text()
     }
     pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
         fn select_underlyer(lang: &Language) -> Result<Underlayer> {
