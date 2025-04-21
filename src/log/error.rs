@@ -8,6 +8,7 @@ pub enum Error {
         ty: Option<String>,
         msg: String,
     },
+    AppExit
 }
 
 impl std::error::Error for Error {}
@@ -24,6 +25,7 @@ impl Display for Error {
                     write!(f, "{}", msg)
                 }
             },
+            Error::AppExit => write!(f, "App exit"),
         }
     }
 }

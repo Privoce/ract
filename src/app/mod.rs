@@ -1,11 +1,11 @@
 #[allow(unused)]
 mod dashboard;
+mod select;
 mod state;
 #[allow(unused)]
 mod timeline;
-mod select;
 #[allow(unused)]
-mod unicode;
+pub mod unicode;
 
 use crate::{
     cli::{
@@ -37,21 +37,20 @@ use ratatui::{
 use std::time::Duration;
 
 pub use dashboard::Dashboard;
-pub use timeline::*;
 pub use select::*;
+pub use timeline::*;
+
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
     let cmd = Cli::parse().commands;
     if let Commands::Init = cmd {
-        let mut cmd = InitCmd::new(lang);
-        cmd.run(terminal, false)?;
+        InitCmd::new(lang).run(terminal, false)?;
     } else {
         match cmd {
             Commands::Check => {
-                // let cmd: CheckCmd = CheckCmd::before(&lang)?.into();
-                // cmd.run(terminal, false)?;
-                CheckCmd::before(&lang, terminal);
+                let cmd: CheckCmd = CheckCmd::before(&lang, terminal)?.into();
+                cmd.run(terminal, false)?;
             }
             Commands::Config => {
                 ConfigCmd::new(lang).run(terminal, false)?;
@@ -80,8 +79,10 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
 }
 
 pub trait AppComponent {
+    type Outupt;
+
     fn new(lang: Language) -> Self;
-    fn run(self, terminal: &mut DefaultTerminal, quit: bool) -> Result<()>;
+    fn run(self, terminal: &mut DefaultTerminal, quit: bool) -> Result<Self::Outupt>;
     fn handle_events(&mut self) -> Result<()>;
     fn render(&mut self, frame: &mut Frame);
     fn quit(&mut self) -> ();

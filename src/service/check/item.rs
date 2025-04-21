@@ -8,6 +8,7 @@ use ratatui::{
 };
 
 use crate::{
+    app::unicode,
     entry::Language,
     log::{CheckLogs, LogExt, LogItem},
 };
@@ -71,15 +72,11 @@ impl CheckItem {
         Self { name, path, state }
     }
     pub fn draw_list(&self, is_end: bool) -> ListItem {
-        let (state, color) = if self.state {
-            ("🟢 ", Color::Green)
-        } else {
-            ("🔴 ", Color::Red)
-        };
+        let color = if self.state { Color::Green } else { Color::Red };
 
         let mut lines = vec![Line::from_iter(vec![
-            Span::from(state),
-            Span::styled(self.name.to_string(), color).bold(),
+            Span::styled(format!("{} ", unicode::CIRCLE_DOT), color),
+            Span::from(self.name.to_string()).bold(),
         ])];
 
         if let Some(path) = self.path.as_ref() {

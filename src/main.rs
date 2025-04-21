@@ -25,12 +25,13 @@ fn main() -> Result<()> {
     let lang = Language::from_conf();
     let mut terminal = ratatui::init();
     // run_cli();
-    if let Err(e) = app::run(lang, &mut terminal) {
+    let res = app::run(lang, &mut terminal);
+    // [destroy terminal] -------------------------------------------------------------------------------
+    destroy(&mut terminal)?;
+    if let Err(e) = res {
         TerminalLogger::new(&e.to_string()).error();
     }
-
-    // [destroy terminal] -------------------------------------------------------------------------------
-    destroy(&mut terminal)
+    Ok(())
 }
 
 fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {

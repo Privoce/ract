@@ -23,6 +23,8 @@ pub struct InitCmd {
 }
 
 impl AppComponent for InitCmd {
+    type Outupt = ();
+
     fn new(lang: Language) -> Self {
         Self {
             state: Default::default(),
@@ -32,7 +34,7 @@ impl AppComponent for InitCmd {
         }
     }
 
-    fn run(mut self, terminal: &mut DefaultTerminal, quit: bool) -> crate::common::Result<()> {
+    fn run(mut self, terminal: &mut DefaultTerminal, quit: bool) -> crate::common::Result<Self::Outupt> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;

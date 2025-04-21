@@ -10,6 +10,8 @@ use ratatui::{
 
 use crate::entry::Language;
 
+use super::unicode;
+
 #[derive(Debug, Default)]
 pub struct Timeline<'a> {
     pub name: String,
@@ -95,17 +97,17 @@ impl<'a> Timeline<'a> {
     /// ```                               
     pub fn draw(mut self) -> Self {
         // [handle state] ----------------------------------------------------------------------------------------------
-        let (icon, color) = match self.state {
-            TimelineState::UnStart => ("🟠", Color::Rgb(255, 112, 67)),
-            TimelineState::Running => ("🚀", Color::Rgb(0, 255, 0)),
-            TimelineState::Success => ("🟢", Color::Rgb(0, 255, 0)),
-            TimelineState::Failed => ("🔴", Color::Rgb(255, 0, 0)),
+        let color = match self.state {
+            TimelineState::UnStart => Color::Rgb(255, 112, 67),
+            TimelineState::Running => Color::Blue,
+            TimelineState::Success => Color::Green,
+            TimelineState::Failed => Color::Red,
         };
 
         // [header] ----------------------------------------------------------------------------------------------
         self.header = self
             .header
-            .state(Text::styled(icon, color))
+            .state(Text::styled(format!("{} ", unicode::CIRCLE_DOT), color))
             .name(Text::styled(self.name.to_string(), Color::Rgb(255, 112, 67)).bold())
             .draw();
 
@@ -267,5 +269,3 @@ impl<'f> TimelineFooter<'f> {
         self
     }
 }
-
-

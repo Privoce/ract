@@ -3,14 +3,16 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::Widget,
     Frame,
 };
 use std::time::Duration;
 
-use crate::{entry::Language, log::{Common, Help, LogExt}};
+use crate::{
+    entry::Language,
+    log::{error::Error, Common, Help, LogExt},
+};
 
-use super::{unicode, AppComponent, BaseRunState, ComponentState};
+use super::{unicode, AppComponent, BaseRunState, ComponentState, State};
 
 /// # Select
 /// single select component for terminal
@@ -27,10 +29,10 @@ pub struct Select<'s> {
     pub selected: usize,
     pub placeholder: Option<Text<'s>>,
     pub title: Text<'s>,
-    pub default: usize,
     pub help_msg: Text<'s>,
     pub select_style: Style,
     pub option_style: Style,
+    #[allow(unused)]
     pub lang: Language,
     pub state: ComponentState<BaseRunState>,
 }
@@ -42,8 +44,10 @@ impl<'s> Default for Select<'s> {
             selected: Default::default(),
             placeholder: Default::default(),
             title: Default::default(),
-            default: Default::default(),
-            help_msg: Text::from("Press ↑/↓ to select, Enter to confirm"),
+            help_msg: Text::from(Line::styled(
+                format!("[ {} ]", Common::Help(Help::Select).t(&Language::En)),
+                Color::Blue,
+            )),
             select_style: Style::default().fg(Color::Rgb(255, 112, 67)),
             option_style: Default::default(),
             lang: Default::default(),
@@ -52,6 +56,7 @@ impl<'s> Default for Select<'s> {
     }
 }
 
+#[allow(unused)]
 impl<'s> Select<'s> {
     pub fn new_with_options(
         title: &'s str,
@@ -69,14 +74,16 @@ impl<'s> Select<'s> {
             Span::from(" "),
             Span::from(title).bold(),
         ]));
-        let help_msg = Text::from(Line::styled(format!("[ {} ]", Common::Help(Help::Select).t(&lang)), Color::Blue));
+        let help_msg = Text::from(Line::styled(
+            format!("[ {} ]", Common::Help(Help::Select).t(&lang)),
+            Color::Blue,
+        ));
         let select_style = Style::default().fg(Color::Rgb(255, 112, 67));
         Self {
             options,
             selected: 0,
             placeholder: None,
             title,
-            default: 0,
             help_msg,
             select_style,
             option_style,
@@ -90,10 +97,6 @@ impl<'s> Select<'s> {
     }
     pub fn selected(mut self, selected: usize) -> Self {
         self.selected = selected;
-        self
-    }
-    pub fn default(mut self, default: usize) -> Self {
-        self.default = default;
         self
     }
     pub fn help_msg(mut self, help_msg: Text<'s>) -> Self {
@@ -149,7 +152,7 @@ impl<'s> Select<'s> {
                 );
                 frame.render_widget(option.style(self.select_style), option_line_area);
             } else {
-                frame.render_widget(option, option_line_area);
+                frame.render_widget(option.style(self.option_style), option_line_area);
             }
         }
         // [help] ----------------------------------------------------------------------
@@ -158,6 +161,8 @@ impl<'s> Select<'s> {
 }
 
 impl<'s> AppComponent for Select<'s> {
+    type Outupt = usize;
+
     fn new(lang: Language) -> Self {
         Self {
             lang,
@@ -169,7 +174,7 @@ impl<'s> AppComponent for Select<'s> {
         mut self,
         terminal: &mut ratatui::DefaultTerminal,
         quit: bool,
-    ) -> crate::common::Result<()> {
+    ) -> crate::common::Result<Self::Outupt> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
@@ -177,7 +182,7 @@ impl<'s> AppComponent for Select<'s> {
                 self.quit();
             }
         }
-        Ok(())
+        Ok(self.selected)
     }
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
@@ -185,22 +190,26 @@ impl<'s> AppComponent for Select<'s> {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q')  => {
-                            self.quit()
+                        event::KeyCode::Esc | event::KeyCode::Char('q') => {
+                            // err
+                            return Err(Error::AppExit);
                         }
                         event::KeyCode::Down => {
                             if self.selected < self.options.len() - 1 {
                                 self.selected += 1;
-                            }else{
+                            } else {
                                 self.selected = 0;
                             }
                         }
                         event::KeyCode::Up => {
                             if self.selected > 0 {
                                 self.selected -= 1;
-                            }else{
+                            } else {
                                 self.selected = self.options.len() - 1;
                             }
+                        }
+                        event::KeyCode::Enter => {
+                            self.quit();
                         }
                         _ => {}
                     }

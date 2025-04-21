@@ -25,6 +25,8 @@ pub struct ConfigCmd {
 }
 
 impl AppComponent for ConfigCmd {
+    type Outupt = ();
+
     fn new(lang: Language) -> Self {
         Self {
             state: Default::default(),
@@ -38,7 +40,7 @@ impl AppComponent for ConfigCmd {
         mut self,
         terminal: &mut ratatui::DefaultTerminal,
         quit: bool,
-    ) -> crate::common::Result<()> {
+    ) -> crate::common::Result<Self::Outupt> {
         if self.state.is_start() {
             // 加载data
             self.data.replace(ConfigData::new(self.lang, terminal)?);
