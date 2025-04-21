@@ -1,4 +1,3 @@
-use inquire::Select;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     style::Color,
@@ -12,7 +11,7 @@ use crate::{
     app::{self, AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{error::Error, CheckLogs, Log, LogExt, LogItem, LogType},
+    log::{CheckLogs, Log, LogExt, LogItem, LogType},
     service::{
         self,
         check::{check_basic, CheckItem},

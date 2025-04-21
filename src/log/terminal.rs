@@ -1,6 +1,7 @@
 use std::{borrow::Cow, process::exit};
 
 use colored::{ColoredString, Colorize};
+use gen_utils::common::time::{local_time, local_time_format};
 
 /// # TerminalLogger
 /// logging messages to the terminal with different colors and styles which can combine i18n with super impl
@@ -9,11 +10,12 @@ pub struct TerminalLogger<'a> {
 }
 
 impl<'a> TerminalLogger<'a> {
-    const PREFIX: &'static str = "Ract :: ";
+    const PREFIX: &'static str = "Ract";
     fn unified_log(&self, level: ColoredString) -> () {
         println!(
-            "{}{} >>> {}",
+            "{} [{}] {} >>> {}",
             Self::PREFIX.truecolor(255, 112, 67).bold(),
+            local_time_format("%Y-%m-%d %H:%M:%S"),
             level,
             self.output
         )
@@ -28,11 +30,11 @@ impl<'a> TerminalLogger<'a> {
     /// ## ERROR
     /// Prints the error message in red and exits the program with a non-zero status code
     pub fn error(&self) {
-        self.unified_log("ERROR".bright_red().bold());
+        self.unified_log("ERROR".red().bold());
         exit(1);
     }
     pub fn warning(&self) {
-        self.unified_log("WARNING".bright_yellow().bold());
+        self.unified_log("WARN".yellow().bold());
     }
     // pub fn rust(&self) {
     //     println!("{}", self.output.on_truecolor(255, 112, 67).white().bold());

@@ -21,7 +21,7 @@ pub const BLOCK_HEAVY: &str = "▓";
 pub const BLOCK_FULL: &str = "█";
 
 // Box Drawing 边框字符
-pub const LINE_H: &str = "─";
+pub const LINE_H: &str = "──";
 pub const LINE_V: &str = "│";
 pub const CORNER_TL: &str = "╭";
 pub const CORNER_TR: &str = "╮";
@@ -40,8 +40,11 @@ pub const ARROW_DOUBLE_RIGHT: &str = "»";
 pub const ARROW_DOUBLE_LEFT: &str = "«";
 pub const ARROW_RIGHT_SHARP: &str = "➤";
 
+
 // 复选框
 pub const CHECKBOX_UNCHECKED: &str = "[ ]";
 pub const CHECKBOX_CHECKED: &str = "[✔]";
 pub const RADIO_OFF: &str = "( )";
 pub const RADIO_ON: &str = "(◉)";
+
+  

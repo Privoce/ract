@@ -12,7 +12,7 @@ use crate::{
     log::{error::Error, Common, Help, LogExt},
 };
 
-use super::{unicode, AppComponent, BaseRunState, ComponentState, State};
+use super::{unicode, AppComponent, BaseRunState, ComponentState};
 
 /// # Select
 /// single select component for terminal

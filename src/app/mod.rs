@@ -6,7 +6,8 @@ mod state;
 mod timeline;
 #[allow(unused)]
 pub mod unicode;
-
+#[allow(unused)]
+mod tab;
 use crate::{
     cli::{
         command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, Commands},
@@ -39,7 +40,7 @@ use std::time::Duration;
 pub use dashboard::Dashboard;
 pub use select::*;
 pub use timeline::*;
-
+pub use tab::*;
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
@@ -53,7 +54,9 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 cmd.run(terminal, false)?;
             }
             Commands::Config => {
-                ConfigCmd::new(lang).run(terminal, false)?;
+                // let cmd: ConfigCmd = ConfigCmd::before(&lang, terminal)?.into();
+                // cmd.run(terminal, false)?;
+                ConfigCmd::new(lang).run(terminal, false)?; 
             }
             Commands::Uninstall => service::uninstall::run(),
             // Commands::Studio => {service::run::makepad::run();},

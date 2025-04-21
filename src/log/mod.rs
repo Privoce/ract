@@ -126,6 +126,7 @@ pub enum LogType {
     Init,
     Check,
     Create,
+    Config,
     #[default]
     Unknown,
 }
@@ -142,6 +143,7 @@ impl Display for LogType {
             LogType::Init => "INIT",
             LogType::Check => "CHECK",
             LogType::Create => "CREATE",
+            LogType::Config => "CONFIG",
             LogType::Unknown => "UNKNOWN",
         })
     }

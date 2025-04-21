@@ -58,6 +58,7 @@ impl From<Result<PathBuf, which::Error>> for CheckItem {
     }
 }
 
+#[allow(unused)]
 impl CheckItem {
     pub fn success<P>(name: String, path: Option<P>) -> Self
     where
