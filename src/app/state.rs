@@ -74,3 +74,24 @@ pub trait State: Default + Clone + Copy {
     fn is_run_end(&self) -> bool;
     fn to_run_end(&mut self) -> ();
 }
+
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum BaseRunState{
+    #[default]
+    Running
+}
+
+impl State for BaseRunState {
+    fn next(&mut self) -> () {
+        ()
+    }
+
+    fn is_run_end(&self) -> bool {
+        true
+    }
+
+    fn to_run_end(&mut self) -> () {
+        ()
+    }
+}

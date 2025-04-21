@@ -38,7 +38,7 @@ use std::time::Duration;
 
 pub use dashboard::Dashboard;
 pub use timeline::*;
-use select::*;
+pub use select::*;
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
@@ -49,8 +49,9 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     } else {
         match cmd {
             Commands::Check => {
-                let cmd: CheckCmd = CheckCmd::before(&lang)?.into();
-                cmd.run(terminal, false)?;
+                // let cmd: CheckCmd = CheckCmd::before(&lang)?.into();
+                // cmd.run(terminal, false)?;
+                CheckCmd::before(&lang, terminal);
             }
             Commands::Config => {
                 ConfigCmd::new(lang).run(terminal, false)?;

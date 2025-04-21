@@ -184,18 +184,33 @@ pub enum Common{
     Version,
     Language,
     Total,
-    Doc
+    Doc,
+    Help(Help)
 }
 
 impl LogExt for Common {
     fn t(&self, lang: &Language) -> Cow<str> {
+        let lang_str = lang.as_str();
+        match self {
+            Common::Os => t!("common.os", locale = lang_str),
+            Common::Version => t!("common.version", locale = lang_str),
+            Common::Language => t!("common.language", locale = lang_str),
+            Common::Total => t!("common.total", locale = lang_str),
+            Common::Doc => t!("common.doc", locale = lang_str),
+            Common::Help(help) => help.t(lang),
+        }
+    }
+}
+
+pub enum Help {
+    Select
+}
+
+impl LogExt for Help {
+    fn t(&self, lang: &Language) -> Cow<str> {
         let lang = lang.as_str();
         match self {
-            Common::Os => t!("common.os", locale = lang),
-            Common::Version => t!("common.version", locale = lang),
-            Common::Language => t!("common.language", locale = lang),
-            Common::Total => t!("common.total", locale = lang),
-            Common::Doc => t!("common.doc", locale = lang),
+            Help::Select => t!("common.help.select", locale = lang),
         }
     }
 }

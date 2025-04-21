@@ -3,7 +3,7 @@ use std::time::Duration;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
-    text::{Line, Text},
+    text::Text,
     widgets::{Block, Borders, Paragraph, Wrap},
     DefaultTerminal, Frame,
 };

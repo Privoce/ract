@@ -1,6 +1,7 @@
 use inquire::Select;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
+    style::Color,
     text::Text,
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
@@ -8,7 +9,7 @@ use ratatui::{
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    app::{AppComponent, ComponentState, Dashboard, State},
+    app::{self, AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
     log::{error::Error, CheckLogs, Log, LogExt, LogItem, LogType},
@@ -122,45 +123,55 @@ impl CheckCmd {
     fn draw_msg(&self) -> Text {
         self.log.draw_text()
     }
-    pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
-        fn select_underlyer(lang: &Language) -> Result<Underlayer> {
-            Select::new(
-                "Which underlayer tool chain you want to check?",
-                Underlayer::options(),
-            )
-            .with_help_message("current support: Makepad")
-            .prompt()
-            .map_or_else(
-                |_| {
-                    Err(Error::Other {
-                        ty: Some("select".to_string()),
-                        msg: CheckLogs::SelectFailed.t(lang).to_string(),
-                    })
-                },
-                |s| Ok(Underlayer::from_str(s).unwrap()),
-            )
-        }
+    // pub fn before(lang: &Language) -> Result<(Checks, &Language)> {
+    //     fn select_underlyer(lang: &Language) -> Result<Underlayer> {
+    //         Select::new(
+    //             "Which underlayer tool chain you want to check?",
+    //             Underlayer::options(),
+    //         )
+    //         .with_help_message("current support: Makepad")
+    //         .prompt()
+    //         .map_or_else(
+    //             |_| {
+    //                 Err(Error::Other {
+    //                     ty: Some("select".to_string()),
+    //                     msg: CheckLogs::SelectFailed.t(lang).to_string(),
+    //                 })
+    //             },
+    //             |s| Ok(Underlayer::from_str(s).unwrap()),
+    //         )
+    //     }
 
-        Select::new(&CheckLogs::Select.t(lang).to_string(), Checks::options())
-            .prompt()
-            .map_or_else(
-                |_| {
-                    Err(Error::Other {
-                        ty: Some("select".to_string()),
-                        msg: CheckLogs::SelectFailed.t(lang).to_string(),
-                    })
-                },
-                |check| {
-                    let check = Checks::from_str(check).unwrap();
-                    match check {
-                        Checks::Basic => Ok((check, lang)),
-                        Checks::Underlayer(_) => {
-                            Ok((Checks::Underlayer(select_underlyer(lang)?), lang))
-                        }
-                        Checks::All(_) => Ok((Checks::All(select_underlyer(lang)?), lang)),
-                    }
-                },
-            )
+    //     Select::new(&CheckLogs::Select.t(lang).to_string(), Checks::options())
+    //         .prompt()
+    //         .map_or_else(
+    //             |_| {
+    //                 Err(Error::Other {
+    //                     ty: Some("select".to_string()),
+    //                     msg: CheckLogs::SelectFailed.t(lang).to_string(),
+    //                 })
+    //             },
+    //             |check| {
+    //                 let check = Checks::from_str(check).unwrap();
+    //                 match check {
+    //                     Checks::Basic => Ok((check, lang)),
+    //                     Checks::Underlayer(_) => {
+    //                         Ok((Checks::Underlayer(select_underlyer(lang)?), lang))
+    //                     }
+    //                     Checks::All(_) => Ok((Checks::All(select_underlyer(lang)?), lang)),
+    //                 }
+    //             },
+    //         )
+    // }
+    pub fn before(lang: &Language, terminal: &mut ratatui::DefaultTerminal) {
+        let options = Checks::options();
+        let select = app::Select::new_with_options(
+            &CheckLogs::Select.t(lang).to_string(),
+            *lang,
+            &options,
+            Color::White.into(),
+        )
+        .run(terminal, true);
     }
     fn handle_running(&mut self, state: CheckState) {
         match state {

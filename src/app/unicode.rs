@@ -38,6 +38,7 @@ pub const ARROW_DOWN: &str = "↓";
 pub const ARROW_LOOP: &str = "↻";
 pub const ARROW_DOUBLE_RIGHT: &str = "»";
 pub const ARROW_DOUBLE_LEFT: &str = "«";
+pub const ARROW_RIGHT_SHARP: &str = "➤";
 
 // 复选框
 pub const CHECKBOX_UNCHECKED: &str = "[ ]";
