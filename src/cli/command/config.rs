@@ -28,6 +28,8 @@ pub struct ConfigCmd {
     log: Log,
     data: Option<ConfigData>,
     cost: Option<Duration>,
+    mode: Mode,
+    place: Place,
 }
 
 impl AppComponent for ConfigCmd {
@@ -40,6 +42,8 @@ impl AppComponent for ConfigCmd {
             log: Log::new(),
             data: None,
             cost: None,
+            mode: Mode::default(),
+            place: Place::default(),
         }
     }
 
@@ -83,8 +87,24 @@ impl AppComponent for ConfigCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') | event::KeyCode::Enter => {
-                            self.quit()
+                        event::KeyCode::Esc | event::KeyCode::Char('q') => self.quit(),
+                        event::KeyCode::Up | event::KeyCode::Down => {
+                            match self.place {
+                                Place::Tab => {
+                                    if let Some(data) = self.data.as_mut() {
+                                        data.next();
+                                    }
+                                },
+                                Place::Pane => {},
+                            }
+                        }
+                        event::KeyCode::Left | event::KeyCode::Right => {
+                            self.place.next();
+                        }
+                        event::KeyCode::Char('i') => {
+                            if self.place.is_pane(){
+                                self.mode.next();
+                            }
                         }
                         _ => {}
                     }
@@ -105,10 +125,16 @@ impl AppComponent for ConfigCmd {
         dashboard.ty = LogType::Config;
         dashboard.cost = self.cost.clone();
         // [render components] ------------------------------------------------------------------------------------
+        let selected_index = self
+            .data
+            .as_ref()
+            .map(|data| data.current_index())
+            .unwrap_or(0);
         dashboard.render(frame, area, 12, 8, |frame, [main_area, msg_area]| {
             if let Some(data) = self.data.as_ref() {
                 Tab::new(Configs::options())
                     .direction(Direction::Horizontal)
+                    .selected(selected_index)
                     .selected_style(
                         Style::default()
                             .fg(Color::Rgb(255, 112, 67))
@@ -155,8 +181,6 @@ impl ConfigCmd {
         .run(terminal, true)?;
         Ok((Configs::from_str(options[config]).unwrap(), lang))
     }
-
-    fn handle_running(&mut self, state: ConfigState) {}
 }
 
 impl From<(Configs, &Language)> for ConfigCmd {
@@ -167,6 +191,8 @@ impl From<(Configs, &Language)> for ConfigCmd {
             log: Log::default(),
             data: None,
             cost: None,
+            mode: Mode::default(),
+            place: Place::default(),
         }
     }
 }
@@ -228,5 +254,61 @@ impl ConfigData {
             Configs::Env => 0,
             Configs::ChainEnvToml => 1,
         }
+    }
+    pub fn next(&mut self) -> () {
+        match self.current {
+            Configs::Env => {
+                self.current = Configs::ChainEnvToml;
+            }
+            Configs::ChainEnvToml => {
+                self.current = Configs::Env;
+            }
+        }
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug)]
+enum Mode {
+    #[default]
+    Get,
+    Set,
+}
+
+impl Mode {
+    pub fn next(&mut self) -> () {
+        match self {
+            Mode::Get => {
+                *self = Mode::Set;
+            }
+            Mode::Set => {
+                *self = Mode::Get;
+            }
+        }
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug)]
+enum Place{
+    #[default]
+    Tab,
+    Pane
+}
+
+impl Place {
+    pub fn next(&mut self) -> () {
+        match self {
+            Place::Tab => {
+                *self = Place::Pane;
+            }
+            Place::Pane => {
+                *self = Place::Tab;
+            }
+        }
+    }
+    pub fn is_pane(&self) -> bool {
+        matches!(self, Place::Pane)
+    }
+    pub fn is_tab(&self) -> bool {
+        matches!(self, Place::Tab)
     }
 }

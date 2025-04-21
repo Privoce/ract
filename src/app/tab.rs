@@ -77,7 +77,7 @@ impl<'a> Tab<'a> {
                             lens.push(len as usize);
                             (cons, lens)
                         });
-                let max = tab_lens.into_iter().max().unwrap_or(0) + 3;
+                let max = tab_lens.into_iter().max().unwrap_or(0) + 4;
                 let [tab_area, pane_area] = Layout::horizontal([
                     Constraint::Length(max as u16),
                     Constraint::Percentage(100),
@@ -99,7 +99,7 @@ impl<'a> Tab<'a> {
                         Layout::vertical([Constraint::Length(1)]).areas(line_area);
                     frame.render_widget(Span::styled(unicode::LINE_V, style), select_line_area);
                     frame.render_widget(
-                        Span::styled(format!("{}{}{}", l, tab, r.repeat(max - tab.len())), style),
+                        Span::styled(format!("{} {}{}", l, tab, r.repeat(max - tab.len())), style),
                         tab_area,
                     );
                 }

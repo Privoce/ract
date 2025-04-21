@@ -8,6 +8,8 @@ mod timeline;
 pub mod unicode;
 #[allow(unused)]
 mod tab;
+#[allow(unused)]
+mod input;
 use crate::{
     cli::{
         command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, Commands},
@@ -20,11 +22,7 @@ use crate::{
 use clap::Parser;
 pub use state::*;
 
-// use crossterm::{
-//     event::DisableMouseCapture,
-//     execute,
-//     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-// };
+
 use ratatui::{
     crossterm::{
         event::{self, DisableMouseCapture, Event, KeyCode},
@@ -41,6 +39,7 @@ pub use dashboard::Dashboard;
 pub use select::*;
 pub use timeline::*;
 pub use tab::*;
+pub use input::*;
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
