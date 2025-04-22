@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    app::{AppComponent, ComponentState, Dashboard, Select, State, Tab},
+    app::{AppComponent, ComponentState, Dashboard, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
     log::{error::Error, ConfigLogs, Log, LogExt, LogItem, LogType},
@@ -14,9 +14,9 @@ use crate::{
 use gen_utils::common::{fs, ToToml};
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Text},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap},
     DefaultTerminal, Frame,
 };
@@ -30,6 +30,8 @@ pub struct ConfigCmd {
     cost: Option<Duration>,
     mode: Mode,
     place: Place,
+    kv_length: usize,
+    kv_index: usize,
 }
 
 impl AppComponent for ConfigCmd {
@@ -44,6 +46,8 @@ impl AppComponent for ConfigCmd {
             cost: None,
             mode: Mode::default(),
             place: Place::default(),
+            kv_length: 0,
+            kv_index: 0,
         }
     }
 
@@ -74,6 +78,11 @@ impl AppComponent for ConfigCmd {
                 self.log.push(LogItem::success(
                     ConfigLogs::LoadSuccess.t(&self.lang).to_string(),
                 ));
+                if self.kv_length == 0 {
+                    if let Some(data) = self.data.as_ref() {
+                        self.kv_length = data.chain_env.lines_length();
+                    }
+                }
                 self.state.next();
             }
             ComponentState::Run(r) => {
@@ -87,22 +96,42 @@ impl AppComponent for ConfigCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') => self.quit(),
-                        event::KeyCode::Up | event::KeyCode::Down => {
-                            match self.place {
-                                Place::Tab => {
-                                    if let Some(data) = self.data.as_mut() {
-                                        data.next();
-                                    }
-                                },
-                                Place::Pane => {},
-                            }
+                        event::KeyCode::Esc | event::KeyCode::Char('q') => {
+                            self.quit();
                         }
+                        event::KeyCode::Up => match self.place {
+                            Place::Tab => {
+                                if let Some(data) = self.data.as_mut() {
+                                    data.next();
+                                }
+                            }
+                            Place::Pane => {
+                                if self.kv_index as isize - 1 < 0 {
+                                    self.kv_index = self.kv_length - 1;
+                                } else {
+                                    self.kv_index -= 1;
+                                }
+                            }
+                        },
+                        event::KeyCode::Down => match self.place {
+                            Place::Tab => {
+                                if let Some(data) = self.data.as_mut() {
+                                    data.next();
+                                }
+                            }
+                            Place::Pane => {
+                                if self.kv_index + 1 > self.kv_length - 1 {
+                                    self.kv_index = 0;
+                                } else {
+                                    self.kv_index += 1;
+                                }
+                            }
+                        },
                         event::KeyCode::Left | event::KeyCode::Right => {
                             self.place.next();
                         }
                         event::KeyCode::Char('i') => {
-                            if self.place.is_pane(){
+                            if self.place.is_pane() {
                                 self.mode.next();
                             }
                         }
@@ -140,15 +169,32 @@ impl AppComponent for ConfigCmd {
                             .fg(Color::Rgb(255, 112, 67))
                             .add_modifier(Modifier::BOLD),
                     )
-                    .render(main_area, frame, |area, frame| match data.current {
-                        Configs::Env => {
-                            frame.render_widget(
-                                Paragraph::new(Line::from(fs::path_to_str(&data.env.0)))
-                                    .wrap(Wrap { trim: true }),
-                                area,
-                            );
-                        }
-                        Configs::ChainEnvToml => {}
+                    .render(main_area, frame, |area, frame| {
+                        let p = match data.current {
+                            Configs::Env => {
+                                vec![Line::from(fs::path_to_str(&data.env.0))]
+                            }
+                            Configs::ChainEnvToml => data
+                                .chain_env
+                                .to_lines()
+                                .into_iter()
+                                .enumerate()
+                                .map(|(index, (k, v, is_kv))| {
+                                    if is_kv {
+                                        Line::from(if let Place::Pane = self.place {
+                                            KV::new(k, v).selected(index == self.kv_index)
+                                        } else {
+                                            KV::new(k, v)
+                                        })
+                                    } else {
+                                        Line::from(Span::styled(k, Color::Rgb(255, 112, 67)))
+                                            .alignment(Alignment::Left)
+                                    }
+                                })
+                                .collect(),
+                        };
+
+                        frame.render_widget(Paragraph::new(p).wrap(Wrap { trim: true }), area);
                     });
             }
 
@@ -167,20 +213,21 @@ impl ConfigCmd {
     fn draw_msg(&self) -> Text {
         self.log.draw_text()
     }
-    pub fn before<'a>(
-        lang: &'a Language,
-        terminal: &mut ratatui::DefaultTerminal,
-    ) -> Result<(Configs, &'a Language)> {
-        let options = Configs::options();
-        let config = Select::new_with_options(
-            &ConfigLogs::Select.t(lang).to_string(),
-            *lang,
-            &options,
-            Color::White.into(),
-        )
-        .run(terminal, true)?;
-        Ok((Configs::from_str(options[config]).unwrap(), lang))
-    }
+    // pub fn before<'a>(
+    //     lang: &'a Language,
+    //     terminal: &mut ratatui::DefaultTerminal,
+    // ) -> Result<(Configs, &'a Language)> {
+    //     let options = Configs::options();
+    //     let config = Select::new_with_options(
+    //         &ConfigLogs::Select.t(lang).to_string(),
+    //         *lang,
+    //         &options,
+    //         Color::White.into(),
+    //         None
+    //     )
+    //     .run(terminal, true)?;
+    //     Ok((Configs::from_str(options[config]).unwrap(), lang))
+    // }
 }
 
 impl From<(Configs, &Language)> for ConfigCmd {
@@ -193,6 +240,8 @@ impl From<(Configs, &Language)> for ConfigCmd {
             cost: None,
             mode: Mode::default(),
             place: Place::default(),
+            kv_index: 0,
+            kv_length: 0,
         }
     }
 }
@@ -288,10 +337,10 @@ impl Mode {
 }
 
 #[derive(Default, Clone, Copy, Debug)]
-enum Place{
+enum Place {
     #[default]
     Tab,
-    Pane
+    Pane,
 }
 
 impl Place {

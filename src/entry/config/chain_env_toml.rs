@@ -5,6 +5,7 @@ use gen_utils::{
     compiler::Version,
     error::{EnvError, Error},
 };
+
 use toml_edit::{value, DocumentMut, Formatted, InlineTable, Item, Table, Value};
 
 use crate::{common::exe_path, log::TerminalLogger};
@@ -100,6 +101,37 @@ impl ChainEnvToml {
                     .map_or(Language::default(), |v| Language::from(v)))
             },
         )
+    }
+    pub fn lines_length(&self) -> usize {
+        5 + self.dependencies.len()
+    }
+    pub fn to_lines(&self) -> Vec<(String, String, bool)> {
+        let mut res = vec![
+            (
+                "auto_update".to_string(),
+                self.auto_update.to_string(),
+                true,
+            ),
+            (
+                "language".to_string(),
+                self.language.as_str().to_string(),
+                true,
+            ),
+            ("[check]".to_string(), String::new(), false),
+            (
+                "frequency".to_string(),
+                self.check.frequency.to_string(),
+                true,
+            ),
+            ("[dependencies]".to_string(), String::new(), false),
+        ];
+        res.extend(
+            self.dependencies
+                .iter()
+                .map(|(k, v)| (k.to_string(), fs::path_to_str(v.as_path()), true)),
+        );
+
+        res
     }
 }
 

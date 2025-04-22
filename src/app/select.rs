@@ -63,14 +63,15 @@ impl<'s> Select<'s> {
         lang: Language,
         options: &Vec<&str>,
         option_style: Style,
+        icon: Option<&'s str>,
     ) -> Self {
         let options = options
             .iter()
             .map(|s| Span::styled(s.to_string(), option_style))
             .collect::<Vec<_>>();
-
+        let icon = Span::styled(icon.unwrap_or("?"), Color::Rgb(255, 112, 67));
         let title = Text::from(Line::from_iter(vec![
-            Span::styled(unicode::ARROW_RIGHT_SHARP, Color::Rgb(255, 112, 67)),
+            icon,
             Span::from(" "),
             Span::from(title).bold(),
         ]));

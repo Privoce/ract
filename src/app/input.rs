@@ -1,5 +1,17 @@
-use ratatui::style::Style;
+use ratatui::{
+    layout::Rect,
+    style::{Color, Style},
+    text::Span,
+    widgets::{Block, BorderType, Paragraph, Wrap},
+    Frame,
+};
 
+/// # Input
+/// ```
+///  ┌─────────────────────────────────┐
+///  │${value}/${placeholder} │        │         
+///  └─────────────────────────────────┘
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct Input {
     pub mode: InputMode,
@@ -80,6 +92,21 @@ impl Input {
             self.move_cursor(-1);
         }
     }
+    pub fn render(&self, area: Rect, frame: &mut Frame) {
+        let text = if self.value.is_empty() {
+            Span::styled(&self.placeholder, Color::Rgb(51, 51, 51))
+        } else {
+            Span::styled(&self.value, Style::default())
+        };
+
+        frame.render_widget(
+            Paragraph::new(text)
+                .block(Block::bordered().border_type(BorderType::Rounded))
+                .wrap(Wrap { trim: true })
+                .scroll((1, 0)),
+            area,
+        );
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -114,7 +141,9 @@ impl InputMode {
 mod input_test {
     #[test]
     fn test1() {
-        let mut input = super::Input::new().value("你好!".to_string()).mode(super::InputMode::Edit);
+        let mut input = super::Input::new()
+            .value("你好!".to_string())
+            .mode(super::InputMode::Edit);
 
         input.input("123");
         input.delete();

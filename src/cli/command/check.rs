@@ -134,6 +134,7 @@ impl CheckCmd {
             *lang,
             &options,
             Color::White.into(),
+            None
         )
         .run(terminal, true)?;
 

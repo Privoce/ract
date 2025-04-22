@@ -10,6 +10,9 @@ pub mod unicode;
 mod tab;
 #[allow(unused)]
 mod input;
+#[allow(unused)]
+mod list;
+
 use crate::{
     cli::{
         command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, Commands},
@@ -40,6 +43,7 @@ pub use select::*;
 pub use timeline::*;
 pub use tab::*;
 pub use input::*;
+pub use list::*;
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     // [match cli command] ------------------------------------------------------------------------------
