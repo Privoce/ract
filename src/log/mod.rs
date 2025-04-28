@@ -188,6 +188,7 @@ pub enum Common{
     Total,
     Doc,
     Help(Help)
+
 }
 
 impl LogExt for Common {
@@ -205,7 +206,8 @@ impl LogExt for Common {
 }
 
 pub enum Help {
-    Select
+    Select,
+    Edit
 }
 
 impl LogExt for Help {
@@ -213,6 +215,7 @@ impl LogExt for Help {
         let lang = lang.as_str();
         match self {
             Help::Select => t!("common.help.select", locale = lang),
+            Help::Edit => t!("common.help.edit", locale = lang),
         }
     }
 }

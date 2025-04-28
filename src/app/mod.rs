@@ -1,17 +1,15 @@
 #[allow(unused)]
 mod dashboard;
+#[allow(unused)]
+mod list;
 mod select;
 mod state;
+#[allow(unused)]
+mod tab;
 #[allow(unused)]
 mod timeline;
 #[allow(unused)]
 pub mod unicode;
-#[allow(unused)]
-mod tab;
-#[allow(unused)]
-mod input;
-#[allow(unused)]
-mod list;
 
 use crate::{
     cli::{
@@ -24,7 +22,6 @@ use crate::{
 };
 use clap::Parser;
 pub use state::*;
-
 
 use ratatui::{
     crossterm::{
@@ -40,9 +37,9 @@ use std::time::Duration;
 
 pub use dashboard::Dashboard;
 pub use select::*;
-pub use timeline::*;
 pub use tab::*;
-pub use input::*;
+pub use timeline::*;
+
 pub use list::*;
 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
@@ -59,7 +56,7 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Config => {
                 // let cmd: ConfigCmd = ConfigCmd::before(&lang, terminal)?.into();
                 // cmd.run(terminal, false)?;
-                ConfigCmd::new(lang).run(terminal, false)?; 
+                ConfigCmd::new(lang).run(terminal, false)?;
             }
             Commands::Uninstall => service::uninstall::run(),
             // Commands::Studio => {service::run::makepad::run();},
@@ -92,4 +89,32 @@ pub trait AppComponent {
     fn handle_events(&mut self) -> Result<()>;
     fn render(&mut self, frame: &mut Frame);
     fn quit(&mut self) -> ();
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum InputMode {
+    Edit,
+    #[default]
+    Normal,
+}
+
+impl InputMode {
+    pub fn next(&mut self) -> () {
+        match self {
+            InputMode::Edit => {
+                *self = InputMode::Normal;
+            }
+            InputMode::Normal => {
+                *self = InputMode::Edit;
+            }
+        }
+    }
+
+    pub fn is_edit(&self) -> bool {
+        matches!(self, InputMode::Edit)
+    }
+
+    pub fn is_normal(&self) -> bool {
+        matches!(self, InputMode::Normal)
+    }
 }

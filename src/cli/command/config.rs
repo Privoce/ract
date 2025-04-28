@@ -5,21 +5,22 @@ use std::{
 };
 
 use crate::{
-    app::{AppComponent, ComponentState, Dashboard, Select, State, Tab, KV},
+    app::{AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
-    log::{error::Error, ConfigLogs, Log, LogExt, LogItem, LogType},
+    log::{error::Error, Common, ConfigLogs, Help, Log, LogExt, LogItem, LogType},
     service,
 };
 use gen_utils::common::{fs, ToToml};
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Tabs, Wrap},
     DefaultTerminal, Frame,
 };
+use tui_textarea::{Input, Key, TextArea};
 
 use super::init::InitCmd;
 pub struct ConfigCmd {
@@ -28,26 +29,36 @@ pub struct ConfigCmd {
     log: Log,
     data: Option<ConfigData>,
     cost: Option<Duration>,
-    mode: Mode,
+    mode: InputMode,
     place: Place,
     kv_length: usize,
     kv_index: usize,
+    value: String,
+    textarea: TextArea<'static>,
 }
 
 impl AppComponent for ConfigCmd {
     type Outupt = ();
 
     fn new(lang: Language) -> Self {
+        let mut textarea = TextArea::default();
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        );
         Self {
             state: Default::default(),
             lang,
             log: Log::new(),
             data: None,
             cost: None,
-            mode: Mode::default(),
+            mode: InputMode::default(),
             place: Place::default(),
             kv_length: 0,
             kv_index: 0,
+            value: Default::default(),
+            textarea,
         }
     }
 
@@ -96,7 +107,7 @@ impl AppComponent for ConfigCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') => {
+                        event::KeyCode::Char('q') => {
                             self.quit();
                         }
                         event::KeyCode::Up => match self.place {
@@ -127,15 +138,67 @@ impl AppComponent for ConfigCmd {
                                 }
                             }
                         },
-                        event::KeyCode::Left | event::KeyCode::Right => {
-                            self.place.next();
-                        }
-                        event::KeyCode::Char('i') => {
-                            if self.place.is_pane() {
-                                self.mode.next();
+                        event::KeyCode::Left => {
+                            if self.place.is_tab() {
+                                self.place.next();
+                            } else {
+                                if self.mode.is_normal() {
+                                    self.place.next();
+                                } else {
+                                    let _ = self.textarea.input(Input {
+                                        key: Key::Left,
+                                        ctrl: false,
+                                        alt: false,
+                                        shift: false,
+                                    });
+                                }
                             }
                         }
-                        _ => {}
+                        event::KeyCode::Right => {
+                            if self.place.is_tab() {
+                                self.place.next();
+                            } else {
+                                if self.mode.is_normal() {
+                                    self.place.next();
+                                } else {
+                                    let _ = self.textarea.input(Input {
+                                        key: Key::Right,
+                                        ctrl: false,
+                                        alt: false,
+                                        shift: false,
+                                    });
+                                }
+                            }
+                        }
+                        event::KeyCode::Char('i') => {
+                            if self.place.is_pane() && self.mode.is_normal() {
+                                self.mode = InputMode::Edit;
+                            }
+
+                            if let InputMode::Edit = self.mode {
+                                let data = self.data.as_ref().unwrap();
+                                match data.current {
+                                    Configs::Env => {
+                                        self.value = fs::path_to_str(&data.env.0);
+                                    }
+                                    Configs::ChainEnvToml => {}
+                                }
+                            }
+                        }
+                        event::KeyCode::Esc => {
+                            if self.place.is_pane() && self.mode.is_edit() {
+                                self.mode = InputMode::Normal;
+                            }
+                        }
+                        _ => {
+                            if self.place.is_pane() && self.mode.is_edit() {
+                                self.textarea.input(key);
+                            }
+                        }
+                    }
+                }else{
+                    if self.place.is_pane() && self.mode.is_edit() {
+                        self.textarea.input(key);
                     }
                 }
             }
@@ -145,6 +208,7 @@ impl AppComponent for ConfigCmd {
 
     fn render(&mut self, frame: &mut ratatui::Frame) {
         let area = frame.area();
+        // self.textarea.insert_str(self.value.as_str());
         let msg = Paragraph::new(self.draw_msg())
             .scroll((0, 0))
             .wrap(Wrap { trim: true })
@@ -159,8 +223,13 @@ impl AppComponent for ConfigCmd {
             .as_ref()
             .map(|data| data.current_index())
             .unwrap_or(0);
-        dashboard.render(frame, area, 12, 8, |frame, [main_area, msg_area]| {
+        dashboard.render(frame, area, 16, 8, |frame, [main_area, msg_area]| {
             if let Some(data) = self.data.as_ref() {
+                let [tab_area, input_area] =
+                    Layout::vertical([Constraint::Length(13), Constraint::Length(3)])
+                        .flex(Flex::SpaceBetween)
+                        .areas(main_area);
+
                 Tab::new(Configs::options())
                     .direction(Direction::Horizontal)
                     .selected(selected_index)
@@ -169,7 +238,7 @@ impl AppComponent for ConfigCmd {
                             .fg(Color::Rgb(255, 112, 67))
                             .add_modifier(Modifier::BOLD),
                     )
-                    .render(main_area, frame, |area, frame| {
+                    .render(tab_area, frame, |area, frame| {
                         let p = match data.current {
                             Configs::Env => {
                                 vec![Line::from(fs::path_to_str(&data.env.0))]
@@ -194,8 +263,27 @@ impl AppComponent for ConfigCmd {
                                 .collect(),
                         };
 
-                        frame.render_widget(Paragraph::new(p).wrap(Wrap { trim: true }), area);
+                        frame.render_widget(
+                            Paragraph::new(p).wrap(Wrap { trim: true }).scroll((0, 0)),
+                            area,
+                        );
                     });
+                // [input] ------------------------------------------------------------------------------
+                // Input::new()
+                //     .value(self.value.to_string())
+                //     .mode(self.mode)
+                //     .margin(3)
+                //     .scroll_h(self.scroll_h)
+                //     .render(input_area, frame);
+                if self.mode.is_edit() {
+                    frame.render_widget(&self.textarea, input_area);
+                } else {
+                    let help_msg = Common::Help(Help::Edit).t(&self.lang).to_string();
+                    frame.render_widget(
+                        Text::from_iter(vec![Line::raw(""), Line::raw(""), help_msg.into()]),
+                        input_area,
+                    );
+                }
             }
 
             frame.render_widget(msg, msg_area);
@@ -212,37 +300,6 @@ impl AppComponent for ConfigCmd {
 impl ConfigCmd {
     fn draw_msg(&self) -> Text {
         self.log.draw_text()
-    }
-    // pub fn before<'a>(
-    //     lang: &'a Language,
-    //     terminal: &mut ratatui::DefaultTerminal,
-    // ) -> Result<(Configs, &'a Language)> {
-    //     let options = Configs::options();
-    //     let config = Select::new_with_options(
-    //         &ConfigLogs::Select.t(lang).to_string(),
-    //         *lang,
-    //         &options,
-    //         Color::White.into(),
-    //         None
-    //     )
-    //     .run(terminal, true)?;
-    //     Ok((Configs::from_str(options[config]).unwrap(), lang))
-    // }
-}
-
-impl From<(Configs, &Language)> for ConfigCmd {
-    fn from((config, lang): (Configs, &Language)) -> Self {
-        Self {
-            state: Default::default(),
-            lang: *lang,
-            log: Log::default(),
-            data: None,
-            cost: None,
-            mode: Mode::default(),
-            place: Place::default(),
-            kv_index: 0,
-            kv_length: 0,
-        }
     }
 }
 
