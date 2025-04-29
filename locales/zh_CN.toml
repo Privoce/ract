@@ -68,6 +68,7 @@ arch = "架构"
 language = "语言"
 total = "总耗时"
 doc = "文档"
+tmp_store = "临时存储: %{value}"
 
 [common.command]
 select = "选择以下选项进行处理"
@@ -80,3 +81,13 @@ select = "按下 ↑/↓ 进行选项调整，按下回车键进行选择，按�
 [common.help.edit]
 normal = "按 'i' 进入编辑模式"
 complex = "按 ←/→ 进行面板调整，按 ↑/↓ 进行选项调整，按 'i' 进入编辑模式，按 ESC 退出编辑，按 'q' 退出"
+
+[common.fs]
+
+[common.fs.read]
+success = "✅ 读取文件%{name}成功!"
+failed = "❌ 读取文件失败, 原因: %{reason}"
+
+[common.fs.write]
+success = "✅ 写入文件%{name}成功!"
+failed = "❌ 写入文件失败, 原因: %{reason}"

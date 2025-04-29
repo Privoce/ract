@@ -119,6 +119,15 @@ impl LogItem {
             is_success: false,
         }
     }
+    pub fn warning(msg: String) -> Self {
+        Self {
+            level: LogLevel::Warn,
+            ty: Default::default(),
+            msg,
+            datetime: Local::now(),
+            is_success: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -181,15 +190,16 @@ impl Log {
     }
 }
 
-pub enum Common{
+pub enum Common {
     Os,
     Version,
     Language,
     Total,
     Doc,
     Help(Help),
-    Command(Command)
-
+    Command(Command),
+    Fs(Fs),
+    TmpStore(String)
 }
 
 impl LogExt for Common {
@@ -203,6 +213,8 @@ impl LogExt for Common {
             Common::Doc => t!("common.doc", locale = lang_str),
             Common::Help(help) => help.t(lang),
             Common::Command(cmd) => cmd.t(lang),
+            Common::Fs(fs) => fs.t(lang),
+            Common::TmpStore(value) => t!("common.tmp_store", locale = lang_str, value = value),
         }
     }
 }
@@ -210,7 +222,7 @@ impl LogExt for Common {
 pub enum Help {
     Select,
     EditNormal,
-    EditComplex
+    EditComplex,
 }
 
 impl LogExt for Help {
@@ -228,12 +240,20 @@ pub enum Command {
     Select,
     Q,
     Wq,
-    W
+    W,
 }
 
 impl Command {
     pub fn options() -> Vec<&'static str> {
         vec!["q", "wq", "w"]
+    }
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "q" => Self::Q,
+            "wq" => Self::Wq,
+            "w" => Self::W,
+            _ => unreachable!("Select Component can not be reached!"),
+        }
     }
 }
 
@@ -245,6 +265,25 @@ impl LogExt for Command {
             Command::Q => t!("common.command.quit", locale = lang),
             Command::Wq => t!("common.command.write_quit", locale = lang),
             Command::W => t!("common.command.write", locale = lang),
+        }
+    }
+}
+
+pub enum Fs {
+    ReadSuccess(String),
+    ReadError(String),
+    WriteSuccess(String),
+    WriteError(String),
+}
+
+impl LogExt for Fs {
+    fn t(&self, lang: &Language) -> Cow<str> {
+        let lang = lang.as_str();
+        match self {
+            Fs::ReadSuccess(name) => t!("common.fs.read.success", locale = lang, name = name),
+            Fs::ReadError(reason) => t!("common.fs.read.error", locale = lang, reason = reason),
+            Fs::WriteSuccess(name) => t!("common.fs.write.success", locale = lang, name = name),
+            Fs::WriteError(reason) => t!("common.fs.write.error", locale = lang, reason = reason),
         }
     }
 }

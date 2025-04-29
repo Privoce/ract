@@ -1,24 +1,19 @@
-use std::{
-    fs::File,
-    str::FromStr,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use crate::{
     app::{unicode, AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
-    log::{error::Error, Command, Common, ConfigLogs, Help, Log, LogExt, LogItem, LogType},
-    service,
+    log::{error::Error, Command, Common, ConfigLogs, Fs, Help, Log, LogExt, LogItem, LogType},
 };
-use gen_utils::common::{fs, ToToml};
+use gen_utils::common::fs;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Tabs, Wrap},
-    DefaultTerminal, Frame,
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    DefaultTerminal,
 };
 use tui_textarea::{Input, Key, TextArea};
 
@@ -42,12 +37,6 @@ impl AppComponent for ConfigCmd {
     type Outupt = ();
 
     fn new(lang: Language) -> Self {
-        let mut textarea = TextArea::default();
-        textarea.set_block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        );
         Self {
             state: Default::default(),
             lang,
@@ -59,7 +48,7 @@ impl AppComponent for ConfigCmd {
             kv_length: 0,
             kv_index: 0,
             value: Default::default(),
-            textarea,
+            textarea: Self::textarea_init(),
             cmd_selected: 0,
         }
     }
@@ -86,6 +75,41 @@ impl AppComponent for ConfigCmd {
     }
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
+        fn write_success(name: String, lang: &Language) -> LogItem {
+            LogItem::success(Common::Fs(Fs::WriteSuccess(name)).t(lang).to_string())
+        }
+
+        fn write_fail(reason: String, lang: &Language) -> LogItem {
+            LogItem::error(Common::Fs(Fs::WriteError(reason)).t(lang).to_string())
+        }
+
+        fn write_and_store(cmp: &mut ConfigCmd, quit: bool) {
+            let data = cmp.data.as_mut().unwrap();
+            match data.current {
+                Configs::Env => match data.env.write() {
+                    Ok(_) => {
+                        cmp.log.push(write_success(".env".to_string(), &cmp.lang));
+                    }
+                    Err(e) => {
+                        cmp.log.push(write_fail(e.to_string(), &cmp.lang));
+                    }
+                },
+                Configs::ChainEnvToml => match data.chain_env.write() {
+                    Ok(_) => {
+                        cmp.log
+                            .push(write_success("env.toml".to_string(), &cmp.lang));
+                    }
+                    Err(e) => {
+                        cmp.log.push(write_fail(e.to_string(), &cmp.lang));
+                    }
+                },
+            }
+
+            if quit {
+                cmp.quit();
+            }
+        }
+
         match self.state {
             ComponentState::Start => {
                 self.log.push(LogItem::success(
@@ -98,11 +122,7 @@ impl AppComponent for ConfigCmd {
                 }
                 self.state.next();
             }
-            ComponentState::Run(r) => {
-                // self.handle_running(r)
-            }
-            ComponentState::Pause => {}
-            ComponentState::Quit => {}
+            _ => {}
         }
 
         if event::poll(Duration::from_millis(100))? {
@@ -170,12 +190,12 @@ impl AppComponent for ConfigCmd {
                             }
                         },
                         event::KeyCode::Left => match self.place {
-                            Place::Tab | Place::Select => {
-                                self.place.next();
+                            Place::Tab => {
+                                self.place = Place::Select;
                             }
                             Place::Pane => {
                                 if self.mode.is_normal() {
-                                    self.place.next();
+                                    self.place = Place::Tab;
                                 } else {
                                     let _ = self.textarea.input(Input {
                                         key: Key::Left,
@@ -184,6 +204,9 @@ impl AppComponent for ConfigCmd {
                                         shift: false,
                                     });
                                 }
+                            }
+                            Place::Select => {
+                                self.place = Place::Tab;
                             }
                         },
                         event::KeyCode::Right => match self.place {
@@ -228,19 +251,83 @@ impl AppComponent for ConfigCmd {
                         }
 
                         event::KeyCode::Esc => {
-                            
                             match self.place {
                                 Place::Tab => {
                                     self.place = Place::Select;
-                                },
+                                }
                                 Place::Pane => {
                                     if self.mode.is_edit() {
                                         self.mode = InputMode::Normal;
-                                    }else{
+                                        // save value to tmp data
+                                        let data = self.data.as_mut().unwrap();
+                                        match data.current {
+                                            Configs::Env => {
+                                                let old_value = fs::path_to_str(&data.env.0);
+                                                let new_value = self.textarea.lines().join("");
+                                                if old_value != new_value {
+                                                    data.env.set(&new_value);
+                                                    self.log.push(LogItem::warning(
+                                                        Common::TmpStore(new_value)
+                                                            .t(&self.lang)
+                                                            .to_string(),
+                                                    ));
+                                                }
+                                            }
+                                            Configs::ChainEnvToml => {
+                                                let old_value = data.chain_env.to_lines()
+                                                    [self.kv_index]
+                                                    .1
+                                                    .to_string();
+                                                let new_value = self.textarea.lines().join("");
+                                                if old_value != new_value {
+                                                    data.chain_env.set(self.kv_index, &new_value);
+                                                    self.log.push(LogItem::warning(
+                                                        Common::TmpStore(new_value)
+                                                            .t(&self.lang)
+                                                            .to_string(),
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                    } else {
                                         self.place.next();
                                     }
-                                },
-                                Place::Select => {},
+                                    // clear value
+                                    self.value.clear();
+
+                                    self.textarea = Self::textarea_init();
+                                }
+                                Place::Select => {}
+                            }
+                        }
+                        event::KeyCode::Enter => {
+                            match self.place {
+                                Place::Tab => {}
+                                Place::Pane => {
+                                    if self.mode.is_edit() {
+                                        self.textarea.input(Input {
+                                            key: Key::Enter,
+                                            ctrl: false,
+                                            alt: false,
+                                            shift: false,
+                                        });
+                                    }
+                                }
+                                Place::Select => {
+                                    // confirm the command
+                                    match Command::from_str(Command::options()[self.cmd_selected]) {
+                                        Command::Q => {
+                                            self.quit();
+                                        }
+                                        Command::Wq => {
+                                            write_and_store(self, true);
+                                        }
+                                        Command::W => {
+                                            write_and_store(self, false);
+                                        }
+                                        _ => {}
+                                    }
+                                }
                             }
                         }
                         _ => {
@@ -398,6 +485,15 @@ impl ConfigCmd {
     fn draw_msg(&self) -> Text {
         self.log.draw_text()
     }
+    fn textarea_init() -> TextArea<'static> {
+        let mut textarea = TextArea::default();
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        );
+        textarea
+    }
 }
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -471,26 +567,6 @@ impl ConfigData {
 }
 
 #[derive(Default, Clone, Copy, Debug)]
-enum Mode {
-    #[default]
-    Get,
-    Set,
-}
-
-impl Mode {
-    pub fn next(&mut self) -> () {
-        match self {
-            Mode::Get => {
-                *self = Mode::Set;
-            }
-            Mode::Set => {
-                *self = Mode::Get;
-            }
-        }
-    }
-}
-
-#[derive(Default, Clone, Copy, Debug)]
 enum Place {
     #[default]
     Tab,
@@ -498,6 +574,7 @@ enum Place {
     Select,
 }
 
+#[allow(unused)]
 impl Place {
     pub fn next(&mut self) -> () {
         match self {

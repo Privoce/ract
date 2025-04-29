@@ -105,6 +105,29 @@ impl ChainEnvToml {
     pub fn lines_length(&self) -> usize {
         5 + self.dependencies.len()
     }
+    pub fn set(&mut self, index: usize, value: &str) {
+        match index {
+            0 => {
+                self.auto_update = value.parse::<bool>().unwrap_or(true);
+            }
+            1 => {
+                self.language = Language::from(value);
+            }
+            3 => {
+                self.check.frequency = value.parse::<i64>().unwrap_or(2 * 24 * 60 * 60);
+            }
+            2 | 4 => {}
+            other => {
+                if other > self.dependencies.len() + 5 {
+                    return;
+                }
+
+                if let Some((_, v)) = self.dependencies.iter_mut().nth(other - 5) {
+                    *v = PathBuf::from_str(value).unwrap_or_default();
+                }
+            }
+        }
+    }
     pub fn to_lines(&self) -> Vec<(String, String, bool)> {
         let mut res = vec![
             (
@@ -144,6 +167,8 @@ impl ToToml for ChainEnvToml {
         doc.insert("is_latest", value(self.is_latest));
         // [auto_update] --------------------------------------------------------------
         doc.insert("auto_update", value(self.auto_update));
+        // [language] ----------------------------------------------------------------
+        doc.insert("language", value(self.language.as_str()));
         // [check] --------------------------------------------------------------------
         let mut check = InlineTable::new();
         check.insert("auto", Value::Boolean(Formatted::new(self.check.auto)));
