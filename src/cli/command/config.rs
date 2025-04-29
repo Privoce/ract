@@ -5,10 +5,10 @@ use std::{
 };
 
 use crate::{
-    app::{AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
+    app::{unicode, AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
-    log::{error::Error, Common, ConfigLogs, Help, Log, LogExt, LogItem, LogType},
+    log::{error::Error, Command, Common, ConfigLogs, Help, Log, LogExt, LogItem, LogType},
     service,
 };
 use gen_utils::common::{fs, ToToml};
@@ -35,6 +35,7 @@ pub struct ConfigCmd {
     kv_index: usize,
     value: String,
     textarea: TextArea<'static>,
+    cmd_selected: usize,
 }
 
 impl AppComponent for ConfigCmd {
@@ -59,6 +60,7 @@ impl AppComponent for ConfigCmd {
             kv_index: 0,
             value: Default::default(),
             textarea,
+            cmd_selected: 0,
         }
     }
 
@@ -107,9 +109,24 @@ impl AppComponent for ConfigCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Char('q') => {
-                            self.quit();
-                        }
+                        event::KeyCode::Char('q') => match self.place {
+                            Place::Tab => {
+                                self.quit();
+                            }
+                            Place::Pane => {
+                                if self.mode.is_edit() {
+                                    self.textarea.input(Input {
+                                        key: Key::Char('q'),
+                                        ctrl: false,
+                                        alt: false,
+                                        shift: false,
+                                    });
+                                }
+                            }
+                            Place::Select => {
+                                self.quit();
+                            }
+                        },
                         event::KeyCode::Up => match self.place {
                             Place::Tab => {
                                 if let Some(data) = self.data.as_mut() {
@@ -121,6 +138,13 @@ impl AppComponent for ConfigCmd {
                                     self.kv_index = self.kv_length - 1;
                                 } else {
                                     self.kv_index -= 1;
+                                }
+                            }
+                            Place::Select => {
+                                if self.cmd_selected > 0 {
+                                    self.cmd_selected -= 1;
+                                } else {
+                                    self.cmd_selected = 3;
                                 }
                             }
                         },
@@ -137,11 +161,19 @@ impl AppComponent for ConfigCmd {
                                     self.kv_index += 1;
                                 }
                             }
+                            Place::Select => {
+                                if self.cmd_selected < 3 {
+                                    self.cmd_selected += 1;
+                                } else {
+                                    self.cmd_selected = 0;
+                                }
+                            }
                         },
-                        event::KeyCode::Left => {
-                            if self.place.is_tab() {
+                        event::KeyCode::Left => match self.place {
+                            Place::Tab | Place::Select => {
                                 self.place.next();
-                            } else {
+                            }
+                            Place::Pane => {
                                 if self.mode.is_normal() {
                                     self.place.next();
                                 } else {
@@ -153,11 +185,12 @@ impl AppComponent for ConfigCmd {
                                     });
                                 }
                             }
-                        }
-                        event::KeyCode::Right => {
-                            if self.place.is_tab() {
+                        },
+                        event::KeyCode::Right => match self.place {
+                            Place::Tab | Place::Select => {
                                 self.place.next();
-                            } else {
+                            }
+                            Place::Pane => {
                                 if self.mode.is_normal() {
                                     self.place.next();
                                 } else {
@@ -169,7 +202,7 @@ impl AppComponent for ConfigCmd {
                                     });
                                 }
                             }
-                        }
+                        },
                         event::KeyCode::Char('i') => {
                             if self.place.is_pane() && self.mode.is_normal() {
                                 self.mode = InputMode::Edit;
@@ -180,25 +213,49 @@ impl AppComponent for ConfigCmd {
                                 match data.current {
                                     Configs::Env => {
                                         self.value = fs::path_to_str(&data.env.0);
+                                        self.textarea.insert_str(self.value.as_str());
                                     }
-                                    Configs::ChainEnvToml => {}
+                                    Configs::ChainEnvToml => {
+                                        let (_, v_v, is_key) =
+                                            &data.chain_env.to_lines()[self.kv_index];
+                                        if *is_key {
+                                            self.value = v_v.to_string();
+                                            self.textarea.insert_str(self.value.as_str());
+                                        }
+                                    }
                                 }
                             }
                         }
+
                         event::KeyCode::Esc => {
-                            if self.place.is_pane() && self.mode.is_edit() {
-                                self.mode = InputMode::Normal;
+                            
+                            match self.place {
+                                Place::Tab => {
+                                    self.place = Place::Select;
+                                },
+                                Place::Pane => {
+                                    if self.mode.is_edit() {
+                                        self.mode = InputMode::Normal;
+                                    }else{
+                                        self.place.next();
+                                    }
+                                },
+                                Place::Select => {},
                             }
                         }
                         _ => {
-                            if self.place.is_pane() && self.mode.is_edit() {
-                                self.textarea.input(key);
+                            if self.place.is_pane() {
+                                if self.mode.is_edit() {
+                                    self.textarea.input(key);
+                                }
                             }
                         }
                     }
-                }else{
-                    if self.place.is_pane() && self.mode.is_edit() {
-                        self.textarea.input(key);
+                } else {
+                    if self.place.is_pane() {
+                        if self.mode.is_edit() {
+                            self.textarea.input(key);
+                        }
                     }
                 }
             }
@@ -223,71 +280,111 @@ impl AppComponent for ConfigCmd {
             .as_ref()
             .map(|data| data.current_index())
             .unwrap_or(0);
-        dashboard.render(frame, area, 16, 8, |frame, [main_area, msg_area]| {
-            if let Some(data) = self.data.as_ref() {
-                let [tab_area, input_area] =
-                    Layout::vertical([Constraint::Length(13), Constraint::Length(3)])
-                        .flex(Flex::SpaceBetween)
-                        .areas(main_area);
 
-                Tab::new(Configs::options())
-                    .direction(Direction::Horizontal)
-                    .selected(selected_index)
-                    .selected_style(
-                        Style::default()
-                            .fg(Color::Rgb(255, 112, 67))
-                            .add_modifier(Modifier::BOLD),
-                    )
-                    .render(tab_area, frame, |area, frame| {
-                        let p = match data.current {
-                            Configs::Env => {
-                                vec![Line::from(fs::path_to_str(&data.env.0))]
-                            }
-                            Configs::ChainEnvToml => data
-                                .chain_env
-                                .to_lines()
-                                .into_iter()
-                                .enumerate()
-                                .map(|(index, (k, v, is_kv))| {
-                                    if is_kv {
-                                        Line::from(if let Place::Pane = self.place {
-                                            KV::new(k, v).selected(index == self.kv_index)
-                                        } else {
-                                            KV::new(k, v)
-                                        })
-                                    } else {
-                                        Line::from(Span::styled(k, Color::Rgb(255, 112, 67)))
-                                            .alignment(Alignment::Left)
+        let input_height = match self.place {
+            Place::Tab => 2,
+            Place::Pane => 3,
+            Place::Select => 5,
+        };
+
+        dashboard.render(
+            frame,
+            area,
+            13 + input_height,
+            8,
+            |frame, [main_area, msg_area]| {
+                if let Some(data) = self.data.as_ref() {
+                    let [tab_area, input_area] = Layout::vertical([
+                        Constraint::Length(13),
+                        Constraint::Length(input_height),
+                    ])
+                    .spacing(1)
+                    .areas(main_area);
+
+                    Tab::new(Configs::options())
+                        .direction(Direction::Horizontal)
+                        .selected(selected_index)
+                        .selected_style(
+                            Style::default()
+                                .fg(Color::Rgb(255, 112, 67))
+                                .add_modifier(Modifier::BOLD),
+                        )
+                        .render(tab_area, frame, |area, frame| {
+                            let p = match data.current {
+                                Configs::Env => {
+                                    let mut env_text = vec![];
+                                    if self.place.is_pane() {
+                                        env_text.push(Span::styled(
+                                            unicode::ARROW_RIGHT_SHARP,
+                                            Color::Rgb(255, 112, 67),
+                                        ));
                                     }
-                                })
-                                .collect(),
-                        };
+                                    env_text.push(Span::from(fs::path_to_str(&data.env.0)));
 
-                        frame.render_widget(
-                            Paragraph::new(p).wrap(Wrap { trim: true }).scroll((0, 0)),
-                            area,
-                        );
-                    });
-                // [input] ------------------------------------------------------------------------------
-                // Input::new()
-                //     .value(self.value.to_string())
-                //     .mode(self.mode)
-                //     .margin(3)
-                //     .scroll_h(self.scroll_h)
-                //     .render(input_area, frame);
-                if self.mode.is_edit() {
-                    frame.render_widget(&self.textarea, input_area);
-                } else {
-                    let help_msg = Common::Help(Help::Edit).t(&self.lang).to_string();
-                    frame.render_widget(
-                        Text::from_iter(vec![Line::raw(""), Line::raw(""), help_msg.into()]),
-                        input_area,
-                    );
+                                    vec![Line::from(env_text)]
+                                }
+                                Configs::ChainEnvToml => data
+                                    .chain_env
+                                    .to_lines()
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(index, (k, v, is_kv))| {
+                                        if is_kv {
+                                            Line::from(if let Place::Pane = self.place {
+                                                KV::new(k, v).selected(index == self.kv_index)
+                                            } else {
+                                                KV::new(k, v)
+                                            })
+                                        } else {
+                                            Line::from(Span::styled(k, Color::Rgb(255, 112, 67)))
+                                                .alignment(Alignment::Left)
+                                        }
+                                    })
+                                    .collect(),
+                            };
+
+                            frame.render_widget(
+                                Paragraph::new(p).wrap(Wrap { trim: true }).scroll((0, 0)),
+                                area,
+                            );
+                        });
+                    // [input] ------------------------------------------------------------------------------
+
+                    match self.place {
+                        Place::Tab => {
+                            frame.render_widget(
+                                Paragraph::new(
+                                    Common::Help(Help::EditComplex).t(&self.lang).to_string(),
+                                )
+                                .wrap(Wrap { trim: true }),
+                                input_area,
+                            );
+                        }
+                        Place::Pane => {
+                            if self.mode.is_edit() {
+                                frame.render_widget(&self.textarea, input_area);
+                            }
+                        }
+                        Place::Select => {
+                            Select::new_with_options(
+                                Common::Command(Command::Select)
+                                    .t(&self.lang)
+                                    .to_string()
+                                    .as_str(),
+                                self.lang,
+                                &Command::options(),
+                                Style::default(),
+                                None,
+                            )
+                            .selected(self.cmd_selected)
+                            .render_from(input_area, frame);
+                        }
+                    }
                 }
-            }
 
-            frame.render_widget(msg, msg_area);
-        });
+                frame.render_widget(msg, msg_area);
+            },
+        );
 
         // frame.render_widget(tab, area);
     }
@@ -398,6 +495,7 @@ enum Place {
     #[default]
     Tab,
     Pane,
+    Select,
 }
 
 impl Place {
@@ -407,6 +505,9 @@ impl Place {
                 *self = Place::Pane;
             }
             Place::Pane => {
+                *self = Place::Select;
+            }
+            Place::Select => {
                 *self = Place::Tab;
             }
         }
@@ -416,5 +517,8 @@ impl Place {
     }
     pub fn is_tab(&self) -> bool {
         matches!(self, Place::Tab)
+    }
+    pub fn is_select(&self) -> bool {
+        matches!(self, Place::Select)
     }
 }

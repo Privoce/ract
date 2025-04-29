@@ -187,7 +187,8 @@ pub enum Common{
     Language,
     Total,
     Doc,
-    Help(Help)
+    Help(Help),
+    Command(Command)
 
 }
 
@@ -201,13 +202,15 @@ impl LogExt for Common {
             Common::Total => t!("common.total", locale = lang_str),
             Common::Doc => t!("common.doc", locale = lang_str),
             Common::Help(help) => help.t(lang),
+            Common::Command(cmd) => cmd.t(lang),
         }
     }
 }
 
 pub enum Help {
     Select,
-    Edit
+    EditNormal,
+    EditComplex
 }
 
 impl LogExt for Help {
@@ -215,7 +218,33 @@ impl LogExt for Help {
         let lang = lang.as_str();
         match self {
             Help::Select => t!("common.help.select", locale = lang),
-            Help::Edit => t!("common.help.edit", locale = lang),
+            Help::EditNormal => t!("common.help.edit.normal", locale = lang),
+            Help::EditComplex => t!("common.help.edit.complex", locale = lang),
+        }
+    }
+}
+
+pub enum Command {
+    Select,
+    Q,
+    Wq,
+    W
+}
+
+impl Command {
+    pub fn options() -> Vec<&'static str> {
+        vec!["q", "wq", "w"]
+    }
+}
+
+impl LogExt for Command {
+    fn t(&self, lang: &Language) -> Cow<str> {
+        let lang = lang.as_str();
+        match self {
+            Command::Select => t!("common.command.select", locale = lang),
+            Command::Q => t!("common.command.quit", locale = lang),
+            Command::Wq => t!("common.command.write_quit", locale = lang),
+            Command::W => t!("common.command.write", locale = lang),
         }
     }
 }
