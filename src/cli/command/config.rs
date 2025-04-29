@@ -353,8 +353,15 @@ impl AppComponent for ConfigCmd {
     fn render(&mut self, frame: &mut ratatui::Frame) {
         let area = frame.area();
         // self.textarea.insert_str(self.value.as_str());
-        let msg = Paragraph::new(self.draw_msg())
-            .scroll((0, 0))
+        // [calc scroll y] ----------------------------------------------------------------
+        let (msg, lines) = self.draw_msg(area.width);
+        let mut y = 0;
+        // here should be 8 - 1 because of the top border is 1
+        if lines > 7 {
+            y = lines - 7;
+        }
+        let msg = Paragraph::new(msg)
+            .scroll((y, 0))
             .wrap(Wrap { trim: true })
             .block(Block::new().borders(Borders::TOP));
         // [dashboard] -----------------------------------------------------------
@@ -482,8 +489,8 @@ impl AppComponent for ConfigCmd {
 }
 
 impl ConfigCmd {
-    fn draw_msg(&self) -> Text {
-        self.log.draw_text()
+    fn draw_msg(&self, w: u16) -> (Text, u16) {
+        self.log.draw_text_with_width(w)
     }
     fn textarea_init() -> TextArea<'static> {
         let mut textarea = TextArea::default();

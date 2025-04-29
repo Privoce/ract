@@ -161,7 +161,7 @@ impl Display for LogType {
 #[derive(Debug, Clone, Default)]
 pub struct Log {
     pub items: Vec<LogItem>,
-    pub cache: RefCell<Option<Text<'static>>>,
+    pub cache: RefCell<Option<(Text<'static>, u16)>>,
 }
 
 impl Log {
@@ -176,13 +176,27 @@ impl Log {
         self.items.iter()
     }
     pub fn draw_text(&self) -> Text {
+       self.draw_text_with_width(100).0
+    }
+    /// ## draw text with width
+    /// which will return Text and line length
+    pub fn draw_text_with_width(&self, w: u16) -> (Text, u16) {
         if let Some(text) = self.cache.borrow().as_ref() {
             return text.clone();
         }
-        let items: Vec<Line> = self.items.iter().map(|log| log.fmt_line()).collect();
+        let mut line_length = 0;
+        let items: Vec<Line> = self.items.iter().map(|log| {
+            let line = log.fmt_line();
+            if line.width() > w as usize {
+                line_length += 2;
+            }else{
+                line_length += 1;
+            }
+            line
+        }).collect();
         let text = Text::from_iter(items);
-        *self.cache.borrow_mut() = Some(text.clone());
-        text
+        *self.cache.borrow_mut() = Some((text.clone(), line_length));
+        (text, line_length)
     }
     pub fn extend(&mut self, items: Vec<LogItem>) -> () {
         self.items.extend(items);
