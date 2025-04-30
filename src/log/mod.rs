@@ -11,6 +11,7 @@ mod package;
 mod run;
 mod terminal;
 mod wasm;
+mod uninstall;
 
 use std::{
     borrow::Cow,
@@ -26,6 +27,7 @@ use compiler::CompilerLogs;
 pub use config::ConfigLogs;
 pub use create::CreateLogs;
 pub use init::InitLogs;
+pub use uninstall::UninstallLogs;
 pub use install::InstallLogs;
 pub use level::LogLevel;
 pub use package::PackageLogs;

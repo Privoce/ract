@@ -13,7 +13,7 @@ pub mod unicode;
 
 use crate::{
     cli::{
-        command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, Commands},
+        command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, uninstall::UninstallCmd, Commands},
         Cli,
     },
     common::Result,
@@ -54,11 +54,11 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 cmd.run(terminal, false)?;
             }
             Commands::Config => {
-                // let cmd: ConfigCmd = ConfigCmd::before(&lang, terminal)?.into();
-                // cmd.run(terminal, false)?;
                 ConfigCmd::new(lang).run(terminal, false)?;
             }
-            Commands::Uninstall => service::uninstall::run(),
+            Commands::Uninstall => {
+                UninstallCmd::new(lang).run(terminal, false)?;
+            },
             // Commands::Studio => {service::run::makepad::run();},
             _ => {}
         }

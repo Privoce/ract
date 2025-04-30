@@ -70,7 +70,7 @@ impl AppComponent for CheckCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') | event::KeyCode::Enter => {
+                        event::KeyCode::Char('q') => {
                             self.quit()
                         }
                         _ => {}

@@ -230,3 +230,17 @@ impl<'s> AppComponent for Select<'s> {
         self.state.quit();
     }
 }
+
+pub struct Confirm<'c>(pub Select<'c>);
+
+impl<'c> Confirm<'c> {
+    pub fn new(title: &'c str, lang: Language) -> Self {
+        Self(Select::new_with_options(
+            title,
+            lang,
+            &vec!["Yes", "No"],
+            Default::default(),
+            Some(unicode::WARNING),
+        ))
+    }
+}
