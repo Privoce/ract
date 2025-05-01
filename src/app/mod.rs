@@ -13,7 +13,9 @@ pub mod unicode;
 
 use crate::{
     cli::{
-        command::{check::CheckCmd, config::ConfigCmd, init::InitCmd, uninstall::UninstallCmd, Commands},
+        command::{
+            check::CheckCmd, config::ConfigCmd, init::InitCmd, uninstall::UninstallCmd, Commands,
+        },
         Cli,
     },
     common::Result,
@@ -58,8 +60,10 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             }
             Commands::Uninstall => {
                 UninstallCmd::new(lang).run(terminal, false)?;
-            },
-            // Commands::Studio => {service::run::makepad::run();},
+            }
+            Commands::Studio => {
+                service::studio::run();
+            }
             _ => {}
         }
         // match cmd {
@@ -82,12 +86,32 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
 }
 
 pub trait AppComponent {
-    type Outupt;
-
+    type Output;
+    type State;
+    /// # Create a new app instance
     fn new(lang: Language) -> Self;
-    fn run(self, terminal: &mut DefaultTerminal, quit: bool) -> Result<Self::Outupt>;
+    /// # Run the app
+    fn run(mut self, terminal: &mut DefaultTerminal, quit: bool) -> Result<Self::Output>
+    where
+        Self: Sized,
+        Self::State: State,
+        Self::Output: Default,
+    {
+        while !self.state().is_quit() {
+            terminal.draw(|frame| self.render(frame))?;
+            self.handle_events()?;
+            if quit && self.state().is_pause() {
+                self.quit();
+            }
+        }
+        Ok(Self::Output::default())
+    }
     fn handle_events(&mut self) -> Result<()>;
     fn render(&mut self, frame: &mut Frame);
+    fn state(&self) -> &ComponentState<Self::State>
+    where
+        Self::State: State;
+    /// # Quit the app
     fn quit(&mut self) -> ();
 }
 

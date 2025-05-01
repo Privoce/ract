@@ -12,6 +12,11 @@ use ratatui::{
 };
 use std::time::Duration;
 
+/// # Uninstall Ract
+/// 由于Ract是一个工具链，所以卸载Ract就是删除Ract的所有文件，包括:
+/// 1. Ract的环境配置文件(.env)
+/// 2. .env同级的chain目录(chain是链依赖目录，存放链依赖的环墫配置文件和相关的依赖包)
+/// 3. Ract的可执行文件(name = ract)
 pub struct UninstallCmd {
     lang: Language,
     state: ComponentState<BaseRunState>,
@@ -20,7 +25,8 @@ pub struct UninstallCmd {
 }
 
 impl AppComponent for UninstallCmd {
-    type Outupt = ();
+    type Output = ();
+    type State = BaseRunState;
 
     fn new(lang: Language) -> Self {
         Self {
@@ -31,16 +37,7 @@ impl AppComponent for UninstallCmd {
         }
     }
 
-    fn run(mut self, terminal: &mut ratatui::DefaultTerminal, quit: bool) -> Result<Self::Outupt> {
-        while !self.state.is_quit() {
-            terminal.draw(|frame| self.render(frame))?;
-            self.handle_events()?;
-            if quit && self.state.is_pause() {
-                self.quit();
-            }
-        }
-        Ok(())
-    }
+   
 
     fn handle_events(&mut self) -> Result<()> {
         if event::poll(Duration::from_millis(100))? {
@@ -49,9 +46,11 @@ impl AppComponent for UninstallCmd {
                     match key.code {
                         event::KeyCode::Char('q') => self.quit(),
                         event::KeyCode::Up | event::KeyCode::Down => {
+                            // [use up and down to change weather to uninstall Ract] -----------------------------------------
                             self.selected = !self.selected;
                         }
                         event::KeyCode::Enter => {
+                            // [if selected is true, run uninstall service] --------------------------------------------------
                             if self.selected {
                                 match uninstall_all() {
                                     Ok(_) => {
@@ -84,7 +83,8 @@ impl AppComponent for UninstallCmd {
         }
         Ok(())
     }
-
+    /// ## Render the uninstall Confirm Component
+    /// this component will ask user to confirm uninstall Ract
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         let _ = Confirm::new(
@@ -96,6 +96,10 @@ impl AppComponent for UninstallCmd {
         .0
         .selected(if self.selected { 0 } else { 1 })
         .render_from(area, frame);
+    }
+
+    fn state(&self) -> &ComponentState<Self::State> {
+        &self.state
     }
 
     fn quit(&mut self) -> () {

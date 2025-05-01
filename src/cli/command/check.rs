@@ -28,7 +28,8 @@ pub struct CheckCmd {
 }
 
 impl AppComponent for CheckCmd {
-    type Outupt = ();
+    type Output = ();
+    type State = CheckState;
 
     fn new(lang: crate::entry::Language) -> Self {
         Self {
@@ -45,7 +46,7 @@ impl AppComponent for CheckCmd {
         mut self,
         terminal: &mut ratatui::DefaultTerminal,
         quit: bool,
-    ) -> crate::common::Result<Self::Outupt> {
+    ) -> crate::common::Result<Self::Output> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
@@ -115,6 +116,11 @@ impl AppComponent for CheckCmd {
             },
         );
     }
+
+    fn state(&self) -> &ComponentState<Self::State> {
+        &self.state
+    }
+
     fn quit(&mut self) -> () {
         self.state.quit();
     }
@@ -221,7 +227,7 @@ impl From<(Checks, &Language)> for CheckCmd {
 }
 
 #[derive(Default, Clone, Copy, Debug)]
-enum CheckState {
+pub enum CheckState {
     #[default]
     Basic,
     Underlayer,

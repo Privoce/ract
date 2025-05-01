@@ -162,7 +162,8 @@ impl<'s> Select<'s> {
 }
 
 impl<'s> AppComponent for Select<'s> {
-    type Outupt = usize;
+    type Output = usize;
+    type State = BaseRunState;
 
     fn new(lang: Language) -> Self {
         Self {
@@ -175,7 +176,7 @@ impl<'s> AppComponent for Select<'s> {
         mut self,
         terminal: &mut ratatui::DefaultTerminal,
         quit: bool,
-    ) -> crate::common::Result<Self::Outupt> {
+    ) -> crate::common::Result<Self::Output> {
         while !self.state.is_quit() {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_events()?;
@@ -224,6 +225,12 @@ impl<'s> AppComponent for Select<'s> {
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         self.render_from(area, frame);
+    }
+
+    fn state(&self) -> &ComponentState<Self::State>
+        where
+            Self::State: super::State {
+        &self.state
     }
 
     fn quit(&mut self) -> () {

@@ -20,6 +20,8 @@ pub mod update;
 pub mod uninstall;
 /// run wasm project
 pub mod wasm;
+/// run makepad studio
+pub mod studio;
 
 use clap::Subcommand;
 use create::CreateArgs;

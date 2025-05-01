@@ -34,7 +34,8 @@ pub struct ConfigCmd {
 }
 
 impl AppComponent for ConfigCmd {
-    type Outupt = ();
+    type Output = ();
+    type State = ConfigState;
 
     fn new(lang: Language) -> Self {
         Self {
@@ -57,7 +58,7 @@ impl AppComponent for ConfigCmd {
         mut self,
         terminal: &mut ratatui::DefaultTerminal,
         quit: bool,
-    ) -> crate::common::Result<Self::Outupt> {
+    ) -> crate::common::Result<Self::Output> {
         if self.state.is_start() {
             // 加载data
             let start = Instant::now();
@@ -483,6 +484,10 @@ impl AppComponent for ConfigCmd {
         // frame.render_widget(tab, area);
     }
 
+    fn state(&self) -> &ComponentState<Self::State> {
+        &self.state
+    }
+
     fn quit(&mut self) -> () {
         self.state.quit();
     }
@@ -504,7 +509,7 @@ impl ConfigCmd {
 }
 
 #[derive(Default, Clone, Copy, Debug)]
-enum ConfigState {
+pub enum ConfigState {
     #[default]
     Select,
     GetSet,

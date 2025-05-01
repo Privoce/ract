@@ -1,6 +1,8 @@
 use std::{error::Error, fmt::Display};
 
-use super::TerminalLogger;
+use rust_i18n::t;
+
+use super::{LogExt, TerminalLogger};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -46,7 +48,6 @@ const PROJECT_DESC: &str = r#"
 
 #[derive(Debug)]
 pub enum StudioLogs {
-    Welcome,
     Desc,
     Gui,
     Stop,
@@ -61,12 +62,22 @@ impl StudioLogs {
     }
 }
 
+impl LogExt for StudioLogs {
+    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+        let lang_str = lang.as_str();
+        match self {
+            StudioLogs::Desc => t!("studio.desc", locale = lang_str),
+            StudioLogs::Gui => t!("studio.gui", locale = lang_str),
+            StudioLogs::Stop => t!("studio.stop", locale = lang_str),
+            StudioLogs::Error => t!("studio.error", locale = lang_str),
+        }
+    }
+}
+
 impl Display for StudioLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StudioLogs::Welcome => f.write_str("🥳 Welcome to use ract studio!"),
             StudioLogs::Gui => f.write_str("🚀 Start to run the studio in desktop"),
-
             StudioLogs::Stop => f.write_str("🛑 Stop the studio ..."),
             StudioLogs::Error => f.write_str("❌ Run the studio failed"),
             StudioLogs::Desc => f.write_str(STUDIO_DESC),
