@@ -47,6 +47,7 @@ pub enum StudioLogs {
     Gui,
     Stop,
     Error(String),
+    Select,
 }
 
 impl StudioLogs {
@@ -66,6 +67,7 @@ impl LogExt for StudioLogs {
             StudioLogs::Gui => t!("studio.gui", locale = lang_str),
             StudioLogs::Stop => t!("studio.stop", locale = lang_str),
             StudioLogs::Error(reason) => t!("studio.error", locale = lang_str, reason = reason),
+            StudioLogs::Select => t!("studio.select", locale = lang_str),
         }
     }
 }

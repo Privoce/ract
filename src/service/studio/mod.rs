@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    process::{exit, Command, Stdio},
+    process::{exit, Command, ExitStatus, Stdio},
     str::FromStr,
 };
 
@@ -39,23 +39,7 @@ fn conf_run() -> Result<(), Error> {
         .map_err(|e| e.to_string())?;
 
     let path = if is_default {
-        let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
-        let makepad_studio_path = chain_env_toml
-            .makepad_widgets_path()
-            .map_or_else(
-                || {
-                    Err(Error::from(
-                        "can not find [dependencies.makepad-widgets] in env.toml, maybe config broken, use `ract init` to fix it",
-                    ))
-                },
-                |path| Ok(path.join("studio")),
-            )?;
-
-        if !makepad_studio_path.exists() {
-            Err(Error::from("The path is not exist!"))
-        } else {
-            Ok(makepad_studio_path)
-        }
+        default_makepad_studio_path()
     } else {
         let path = Text::new("Path for the target studio")
             .prompt()
@@ -70,9 +54,40 @@ fn conf_run() -> Result<(), Error> {
     }?;
 
     run_gui(path)
+     .map_or_else(
+        |e| Err(e),
+        |status| {
+            if status.success() {
+                StudioLogs::Stop.terminal().success();
+                Ok(())
+            } else {
+                Err(StudioLogs::Error("-".to_string()).to_string().into())
+            }
+        },
+    )
 }
 
-fn run_gui<P>(path: P) -> Result<(), Error>
+pub fn default_makepad_studio_path() -> Result<PathBuf, Error> {
+    let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+    let makepad_studio_path = chain_env_toml
+        .makepad_widgets_path()
+        .map_or_else(
+            || {
+                Err(Error::from(
+                    "can not find [dependencies.makepad-widgets] in env.toml, maybe config broken, use `ract init` to fix it",
+                ))
+            },
+            |path| Ok(path.join("studio")),
+        )?;
+
+    if !makepad_studio_path.exists() {
+        Err(Error::from("The path is not exist!"))
+    } else {
+        Ok(makepad_studio_path)
+    }
+}
+
+pub fn run_gui<P>(path: P, ) -> Result<ExitStatus, Error>
 where
     P: AsRef<Path>,
 {
@@ -91,15 +106,15 @@ where
         |line| TerminalLogger::new(&line).info(),
         |line| TerminalLogger::new(&line).warning(),
     )
-    .map_or_else(
-        |e| Err(e),
-        |status| {
-            if status.success() {
-                StudioLogs::Stop.terminal().success();
-                Ok(())
-            } else {
-                Err(StudioLogs::Error("-".to_string()).to_string().into())
-            }
-        },
-    )
+    // .map_or_else(
+    //     |e| Err(e),
+    //     |status| {
+    //         if status.success() {
+    //             StudioLogs::Stop.terminal().success();
+    //             Ok(())
+    //         } else {
+    //             Err(StudioLogs::Error("-".to_string()).to_string().into())
+    //         }
+    //     },
+    // )
 }

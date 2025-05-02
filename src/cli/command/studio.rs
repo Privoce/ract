@@ -1,9 +1,13 @@
 use crate::{
-    app::{AppComponent, ComponentState, Confirm, Dashboard, State},
+    app::{AppComponent, ComponentState, Confirm, Dashboard, Select, State},
     common::Result,
     entry::Language,
-    log::{Log, LogExt, LogItem, LogType, StudioLogs, UninstallLogs},
-    service::{check::check_makepad, uninstall::uninstall_all},
+    log::{Common, Log, LogExt, LogItem, LogType, Options, StudioLogs, UninstallLogs},
+    service::{
+        check::check_makepad,
+        studio::{default_makepad_studio_path, run_gui},
+        uninstall::uninstall_all,
+    },
 };
 
 use ratatui::{
@@ -21,17 +25,27 @@ pub struct StudioCmd {
     state: ComponentState<StudioState>,
     log: Log,
     cost: Option<Duration>,
+    place: Place,
+    selected: bool,
+    options: Vec<String>,
 }
 
 impl AppComponent for StudioCmd {
     type Output = ();
     type State = StudioState;
     fn new(lang: Language) -> Self {
+        let options = vec![
+            Common::Option(Options::Default).t(&lang).to_string(),
+            Common::Option(Options::Custom).t(&lang).to_string(),
+        ];
         Self {
             lang,
             state: Default::default(),
             log: Log::new(),
             cost: None,
+            place: Default::default(),
+            selected: true,
+            options,
         }
     }
 
@@ -56,9 +70,17 @@ impl AppComponent for StudioCmd {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         event::KeyCode::Char('q') => self.quit(),
-                        event::KeyCode::Up | event::KeyCode::Down => {}
+                        event::KeyCode::Up | event::KeyCode::Down => {
+                            if self.place.is_select() {
+                                self.selected = !self.selected;
+                            }
+                        }
                         event::KeyCode::Enter => {
-                            self.quit();
+                            if self.place.is_select() {
+                                self.state.next();
+                            } else {
+                                self.place = Place::Input;
+                            }
                         }
                         _ => {}
                     }
@@ -86,9 +108,43 @@ impl AppComponent for StudioCmd {
         dashboard.ty = LogType::Config;
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
-        dashboard.render(frame, area, 0, 17, |frame, [main_area, msg_area]| {
-            frame.render_widget(msg, msg_area);
-        });
+        let main_height = if self.state.is_run() {
+            match self.place {
+                Place::Select => 4,
+                Place::Input => 3,
+            }
+        }else{
+            0
+        };
+
+        dashboard.render(
+            frame,
+            area,
+            main_height,
+            17,
+            |frame, [main_area, msg_area]| {
+                // [select is use default or custom] --------------------------
+                if self.state.is_run() {
+                    match self.place {
+                        Place::Select => {
+                            let selected = if self.selected { 0 } else { 1 };
+                            let _ = Select::new_with_options(
+                                &StudioLogs::Select.t(&self.lang).to_string(),
+                                self.lang,
+                                &self.options,
+                                Default::default(),
+                                None,
+                            )
+                            .selected(selected)
+                            .render_from(main_area, frame);
+                        }
+                        Place::Input => {}
+                    }
+                }
+
+                frame.render_widget(msg, msg_area);
+            },
+        );
     }
 
     fn quit(&mut self) -> () {
@@ -113,20 +169,66 @@ impl StudioCmd {
                 self.cost = Some(start.elapsed());
                 match res {
                     Ok(checks) => {
+                        let mut err = false;
                         self.log.extend(
                             checks
                                 .iter()
-                                .map(|item| (item, &self.lang).into())
+                                .map(|item| {
+                                    if !item.state {
+                                        err = true;
+                                    }
+                                    (item, &self.lang).into()
+                                })
                                 .collect::<Vec<LogItem>>(),
                         );
+                        if err {
+                            self.state.to_pause();
+                        } else {
+                            self.state.next();
+                        }
                     }
                     Err(e) => {
                         self.log.push(LogItem::error(e.to_string()));
+                        self.state.to_pause();
                     }
                 }
-                self.state.next();
             }
-            StudioState::Running => {}
+            StudioState::Select => {}
+            StudioState::Running => {
+                if self.selected {
+                    // [use default] ------------------------------------------------
+                    let start = Instant::now();
+                    match default_makepad_studio_path() {
+                        Ok(path) => {
+                            self.cost.map(|cost| cost + start.elapsed());
+                            match run_gui(path) {
+                                Ok(status) => {
+                                    if status.success() {
+                                        self.log.push(LogItem::error(
+                                            StudioLogs::Stop.t(&self.lang).to_string(),
+                                        ));
+                                    }
+                                    self.state.next();
+                                }
+                                Err(e) => {
+                                    self.log.push(LogItem::error(
+                                        StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                                    ));
+                                    self.state.to_pause();
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            self.log.push(LogItem::error(
+                                StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                            ));
+                            self.state.to_pause();
+                        }
+                    }
+                } else {
+                    // [use custom] -----------------------------------------------
+                }
+            }
         }
     }
 }
@@ -135,6 +237,7 @@ impl StudioCmd {
 pub enum StudioState {
     #[default]
     Check,
+    Select,
     Running,
 }
 
@@ -142,6 +245,9 @@ impl State for StudioState {
     fn next(&mut self) -> () {
         match self {
             StudioState::Check => {
+                *self = StudioState::Select;
+            }
+            StudioState::Select => {
                 *self = StudioState::Running;
             }
             StudioState::Running => {}
@@ -154,5 +260,26 @@ impl State for StudioState {
 
     fn to_run_end(&mut self) -> () {
         *self = StudioState::Running;
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+enum Place {
+    #[default]
+    Select,
+    Input,
+}
+
+impl Place {
+    fn next(&mut self) -> () {
+        match self {
+            Place::Select => {
+                *self = Place::Input;
+            }
+            Place::Input => {}
+        }
+    }
+    fn is_select(&self) -> bool {
+        matches!(self, Place::Select)
     }
 }

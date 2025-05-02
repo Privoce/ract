@@ -253,6 +253,7 @@ pub enum Common {
     Command(Command),
     Fs(Fs),
     TmpStore(String),
+    Option(Options)
 }
 
 impl LogExt for Common {
@@ -268,6 +269,26 @@ impl LogExt for Common {
             Common::Command(cmd) => cmd.t(lang),
             Common::Fs(fs) => fs.t(lang),
             Common::TmpStore(value) => t!("common.tmp_store", locale = lang_str, value = value),
+            Common::Option(options) => options.t(lang),
+        }
+    }
+}
+
+pub enum Options {
+    Default,
+    Custom,
+    Yes,
+    No,
+}
+
+impl LogExt for Options {
+    fn t(&self, lang: &Language) -> Cow<str> {
+        let lang = lang.as_str();
+        match self {
+            Options::Default => t!("common.option.default", locale = lang),
+            Options::Custom => t!("common.option.custom", locale = lang),
+            Options::Yes => t!("common.option.yes", locale = lang),
+            Options::No => t!("common.option.no", locale = lang),
         }
     }
 }

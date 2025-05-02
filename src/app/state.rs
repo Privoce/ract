@@ -23,6 +23,9 @@ impl<S: State> ComponentState<S> {
     pub fn quit(&mut self) {
         *self = ComponentState::Quit;
     }
+    pub fn to_pause(&mut self) {
+        *self = ComponentState::Pause;
+    }
 }
 
 impl<S: State> State for ComponentState<S> {

@@ -58,13 +58,14 @@ impl<'s> Default for Select<'s> {
 
 #[allow(unused)]
 impl<'s> Select<'s> {
-    pub fn new_with_options(
+    pub fn new_with_options<S>(
         title: &'s str,
         lang: Language,
-        options: &Vec<&str>,
+        options: &Vec<S>,
         option_style: Style,
         icon: Option<&'s str>,
-    ) -> Self {
+    ) -> Self 
+    where  S: ToString {
         let options = options
             .iter()
             .map(|s| Span::styled(s.to_string(), option_style))
