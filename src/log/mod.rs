@@ -10,8 +10,8 @@ mod level;
 mod package;
 mod run;
 mod terminal;
-mod wasm;
 mod uninstall;
+mod wasm;
 
 use std::{
     borrow::Cow,
@@ -26,8 +26,8 @@ use colored::Colorize;
 use compiler::CompilerLogs;
 pub use config::ConfigLogs;
 pub use create::CreateLogs;
+use gen_utils::common::string::FixedString;
 pub use init::InitLogs;
-pub use uninstall::UninstallLogs;
 pub use install::InstallLogs;
 pub use level::LogLevel;
 pub use package::PackageLogs;
@@ -38,6 +38,7 @@ use ratatui::{
 pub use run::{ProjectLogs, RunLogs, StudioLogs};
 use rust_i18n::t;
 pub use terminal::TerminalLogger;
+pub use uninstall::UninstallLogs;
 pub use wasm::WasmLogs;
 
 use super::entry::Language;
@@ -55,6 +56,8 @@ pub struct LogItem {
     /// The datetime of the log （use `chrono` crate）
     datetime: DateTime<Local>,
     is_success: bool,
+    /// set fmt as multi line
+    multi: bool,
 }
 
 impl LogItem {
@@ -70,18 +73,36 @@ impl LogItem {
     /// ## fmt as ratatui text line for colorful display
     /// display as:
     /// Ract [${fmt_date_time}]: [${level}] >>> ${msg}
-    pub fn fmt_line(&self) -> Line<'static> {
-        Line::from(vec![
-            Span::styled("Ract", Style::default().bold().fg(Color::Rgb(255, 112, 67))).into(),
-            Span::styled(self.fmt_timestamp(), Style::default().fg(Color::White)).into(),
+    pub fn fmt_lines(&self) -> Vec<Line<'static>> {
+        let mut fmt: Vec<Span> = vec![
+            Span::styled("Ract", Style::default().bold().fg(Color::Rgb(255, 112, 67))),
+            Span::styled(self.fmt_timestamp(), Style::default().fg(Color::White)),
             Span::styled(
                 format!("[{}]", self.level.fmt_level()),
                 Style::default().fg(self.level_color()),
-            )
-            .into(),
-            Span::styled(" >>> ", Style::default().fg(Color::White)).into(),
-            Span::styled(self.msg.clone(), Style::default().fg(Color::White)).into(),
-        ])
+            ),
+            Span::styled(" >>> ", Style::default().fg(Color::White)),
+        ];
+
+        if self.multi {
+            // split msg by '\n'
+            let mut res = vec![Line::from(fmt)];
+            res.push(Line::raw(""));
+            self.msg.split("\n").for_each(|item| {
+                res.push(Line::from(Span::styled(
+                    item.to_string(),
+                    Style::default().fg(Color::White),
+                )));
+            });
+
+            return res;
+        } else {
+            fmt.push(Span::styled(
+                self.msg.clone(),
+                Style::default().fg(Color::White),
+            ));
+            return vec![Line::from(fmt)];
+        }
     }
     fn level_color(&self) -> Color {
         if self.is_success {
@@ -101,6 +122,7 @@ impl LogItem {
             msg,
             datetime: Local::now(),
             is_success: false,
+            multi: false,
         }
     }
     pub fn success(msg: String) -> Self {
@@ -110,6 +132,7 @@ impl LogItem {
             msg,
             datetime: Local::now(),
             is_success: true,
+            multi: false,
         }
     }
     pub fn error(msg: String) -> Self {
@@ -119,6 +142,7 @@ impl LogItem {
             msg,
             datetime: Local::now(),
             is_success: false,
+            multi: false,
         }
     }
     pub fn warning(msg: String) -> Self {
@@ -128,7 +152,12 @@ impl LogItem {
             msg,
             datetime: Local::now(),
             is_success: false,
+            multi: false,
         }
+    }
+    pub fn multi(mut self) -> Self {
+        self.multi = true;
+        self
     }
 }
 
@@ -178,7 +207,7 @@ impl Log {
         self.items.iter()
     }
     pub fn draw_text(&self) -> Text {
-       self.draw_text_with_width(100).0
+        self.draw_text_with_width(100).0
     }
     /// ## draw text with width
     /// which will return Text and line length
@@ -186,16 +215,24 @@ impl Log {
         if let Some(text) = self.cache.borrow().as_ref() {
             return text.clone();
         }
-        let mut line_length = 0;
-        let items: Vec<Line> = self.items.iter().map(|log| {
-            let line = log.fmt_line();
-            if line.width() > w as usize {
-                line_length += 2;
-            }else{
-                line_length += 1;
-            }
-            line
-        }).collect();
+
+        let (items, line_length) =
+            self.items
+                .iter()
+                .fold((Vec::new(), 0_u16), |(mut lines, mut line_length), log| {
+                    let line = log.fmt_lines();
+                    for item in &line {
+                        if item.width() < w as usize {
+                            line_length += 1;
+                        } else {
+                            line_length += (item.width() / (w as usize)) as u16;
+                        }
+                    }
+
+                    lines.extend(line);
+                    (lines, line_length)
+                });
+
         let text = Text::from_iter(items);
         *self.cache.borrow_mut() = Some((text.clone(), line_length));
         (text, line_length)
@@ -215,7 +252,7 @@ pub enum Common {
     Help(Help),
     Command(Command),
     Fs(Fs),
-    TmpStore(String)
+    TmpStore(String),
 }
 
 impl LogExt for Common {

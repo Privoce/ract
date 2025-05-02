@@ -14,7 +14,8 @@ pub mod unicode;
 use crate::{
     cli::{
         command::{
-            check::CheckCmd, config::ConfigCmd, init::InitCmd, uninstall::UninstallCmd, Commands,
+            check::CheckCmd, config::ConfigCmd, init::InitCmd, studio::StudioCmd,
+            uninstall::UninstallCmd, Commands,
         },
         Cli,
     },
@@ -25,17 +26,7 @@ use crate::{
 use clap::Parser;
 pub use state::*;
 
-use ratatui::{
-    crossterm::{
-        event::{self, DisableMouseCapture, Event, KeyCode},
-        execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    },
-    prelude::CrosstermBackend,
-    widgets::{Paragraph, Widget},
-    DefaultTerminal, Frame, Terminal,
-};
-use std::time::Duration;
+use ratatui::{DefaultTerminal, Frame};
 
 pub use dashboard::Dashboard;
 pub use select::*;
@@ -62,7 +53,8 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 UninstallCmd::new(lang).run(terminal, false)?;
             }
             Commands::Studio => {
-                service::studio::run();
+                // service::studio::run();
+                StudioCmd::new(lang).run(terminal, false)?;
             }
             _ => {}
         }

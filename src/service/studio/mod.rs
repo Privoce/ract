@@ -8,9 +8,9 @@ use gen_utils::{common::stream_terminal, error::Error};
 use inquire::{Confirm, Text};
 
 use crate::{
-    service::check::current_states,
     entry::ChainEnvToml,
     log::{InstallLogs, StudioLogs, TerminalLogger},
+    service::check::current_states,
 };
 
 pub fn run() -> () {
@@ -98,7 +98,7 @@ where
                 StudioLogs::Stop.terminal().success();
                 Ok(())
             } else {
-                Err(StudioLogs::Error.to_string().into())
+                Err(StudioLogs::Error("-".to_string()).to_string().into())
             }
         },
     )

@@ -34,12 +34,6 @@ impl From<ProjectLogs> for RunLogs {
 
 impl Error for RunLogs {}
 
-const STUDIO_DESC: &str = r#"
-🔸 Currently `studio` is only for Makepad
-🔸 WASM and GUI are supported
-🔸 Default Studio: Which is the studio in ract env.toml
-"#;
-
 const PROJECT_DESC: &str = r#"
 🔸 Now you can run makepad and gen_ui (Comming Soon) project
 ❗️ Please make sure your project root has a `.ract` file to point the project kind
@@ -49,9 +43,10 @@ const PROJECT_DESC: &str = r#"
 #[derive(Debug)]
 pub enum StudioLogs {
     Desc,
+    Check,
     Gui,
     Stop,
-    Error,
+    Error(String),
 }
 
 impl StudioLogs {
@@ -67,21 +62,17 @@ impl LogExt for StudioLogs {
         let lang_str = lang.as_str();
         match self {
             StudioLogs::Desc => t!("studio.desc", locale = lang_str),
+            StudioLogs::Check => t!("studio.check", locale = lang_str),
             StudioLogs::Gui => t!("studio.gui", locale = lang_str),
             StudioLogs::Stop => t!("studio.stop", locale = lang_str),
-            StudioLogs::Error => t!("studio.error", locale = lang_str),
+            StudioLogs::Error(reason) => t!("studio.error", locale = lang_str, reason = reason),
         }
     }
 }
 
 impl Display for StudioLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StudioLogs::Gui => f.write_str("🚀 Start to run the studio in desktop"),
-            StudioLogs::Stop => f.write_str("🛑 Stop the studio ..."),
-            StudioLogs::Error => f.write_str("❌ Run the studio failed"),
-            StudioLogs::Desc => f.write_str(STUDIO_DESC),
-        }
+        f.write_str(self.t(&crate::entry::Language::default()).as_ref())
     }
 }
 

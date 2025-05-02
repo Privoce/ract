@@ -42,21 +42,6 @@ impl AppComponent for CheckCmd {
         }
     }
 
-    fn run(
-        mut self,
-        terminal: &mut ratatui::DefaultTerminal,
-        quit: bool,
-    ) -> crate::common::Result<Self::Output> {
-        while !self.state.is_quit() {
-            terminal.draw(|frame| self.render(frame))?;
-            self.handle_events()?;
-            if quit && self.state.is_pause() {
-                self.quit();
-            }
-        }
-        Ok(())
-    }
-
     fn handle_events(&mut self) -> crate::common::Result<()> {
         match self.state {
             ComponentState::Start => {

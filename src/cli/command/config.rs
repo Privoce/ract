@@ -54,11 +54,12 @@ impl AppComponent for ConfigCmd {
         }
     }
 
-    fn run(
-        mut self,
-        terminal: &mut ratatui::DefaultTerminal,
-        quit: bool,
-    ) -> crate::common::Result<Self::Output> {
+    fn run(mut self, terminal: &mut DefaultTerminal, quit: bool) -> Result<Self::Output>
+    where
+        Self: Sized,
+        Self::State: State,
+        Self::Output: Default,
+    {
         if self.state.is_start() {
             // 加载data
             let start = Instant::now();
