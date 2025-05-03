@@ -1,8 +1,10 @@
 use crate::{
-    app::{AppComponent, ComponentState, Confirm, Dashboard, Select, State},
+    app::{AppComponent, ComponentState, Confirm, Dashboard, Select, State, Tab},
     common::Result,
     entry::Language,
-    log::{Common, Log, LogExt, LogItem, LogType, Options, StudioLogs, UninstallLogs},
+    log::{
+        Common, ComponentChannel, Log, LogExt, LogItem, LogType, Options, StudioLogs, UninstallLogs,
+    },
     service::{
         check::check_makepad,
         studio::{default_makepad_studio_path, run_gui},
@@ -10,6 +12,7 @@ use crate::{
     },
 };
 
+use gen_utils::common::fs;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Alignment, Constraint, Direction, Layout},
@@ -18,16 +21,27 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     DefaultTerminal, Frame,
 };
-use std::time::{Duration, Instant};
+use std::{
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
+use tui_textarea::TextArea;
 
 pub struct StudioCmd {
     lang: Language,
     state: ComponentState<StudioState>,
     log: Log,
+    child_log: Log,
+    tab_index: usize,
     cost: Option<Duration>,
     place: Place,
-    selected: bool,
+    /// log scroll y
+    scroll_y: u16,
+    is_default: bool,
     options: Vec<String>,
+    textarea: TextArea<'static>,
+    channel: ComponentChannel,
+    selected: bool,
 }
 
 impl AppComponent for StudioCmd {
@@ -38,18 +52,27 @@ impl AppComponent for StudioCmd {
             Common::Option(Options::Default).t(&lang).to_string(),
             Common::Option(Options::Custom).t(&lang).to_string(),
         ];
+        let textarea = Self::init_textarea(&lang);
         Self {
             lang,
             state: Default::default(),
             log: Log::new(),
+            child_log: Log::new(),
             cost: None,
             place: Default::default(),
-            selected: true,
+            is_default: true,
             options,
+            textarea,
+            channel: ComponentChannel::new(),
+            selected: false,
+            tab_index: 0,
+            scroll_y: 0,
         }
     }
 
     fn handle_events(&mut self) -> Result<()> {
+        self.handle_child_log();
+
         match self.state {
             ComponentState::Start => {
                 self.log.extend(vec![
@@ -58,9 +81,15 @@ impl AppComponent for StudioCmd {
                 ]);
                 self.state.next();
             }
-            ComponentState::Run(state) => {
-                self.handle_running(state);
-            }
+            ComponentState::Run(state) => match state {
+                StudioState::Check => {
+                    self.handle_check();
+                }
+                StudioState::Select => {}
+                StudioState::Running => {
+                    self.handle_running();
+                }
+            },
             ComponentState::Pause => {}
             ComponentState::Quit => {}
         }
@@ -72,62 +101,71 @@ impl AppComponent for StudioCmd {
                         event::KeyCode::Char('q') => self.quit(),
                         event::KeyCode::Up | event::KeyCode::Down => {
                             if self.place.is_select() {
-                                self.selected = !self.selected;
+                                self.is_default = !self.is_default;
                             }
                         }
                         event::KeyCode::Enter => {
                             if self.place.is_select() {
-                                self.state.next();
-                            } else {
-                                self.place = Place::Input;
+                                if self.is_default {
+                                    self.log.push(LogItem::info(
+                                        StudioLogs::Gui.t(&self.lang).to_string(),
+                                    ));
+                                    self.state.next();
+                                } else {
+                                    self.place = Place::Input;
+                                }
+                                self.selected = true;
                             }
                         }
-                        _ => {}
+                        _ => {
+                            if self.place.is_input() {
+                                self.textarea.input(key);
+                            }
+                        }
+                    }
+                } else {
+                    if self.place.is_input() {
+                        self.textarea.input(key);
                     }
                 }
             }
         }
+
         Ok(())
     }
 
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let (msg, lines) = self.draw_msg(area.width);
-        let mut y = 0;
-        // here should be 8 - 1 because of the top border is 1
-        if lines > 16 {
-            y = lines - 16;
-        }
-        let msg = Paragraph::new(msg)
-            .scroll((y, 0))
-            .wrap(Wrap { trim: true })
-            .block(Block::new().borders(Borders::TOP));
 
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Config;
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
-        let main_height = if self.state.is_run() {
-            match self.place {
-                Place::Select => 4,
-                Place::Input => 3,
-            }
-        }else{
+        let main_height = if self.selected {
             0
+        } else {
+            if self.state.is_run() {
+                match self.place {
+                    Place::Select => 4,
+                    Place::Input => 3,
+                }
+            } else {
+                0
+            }
         };
 
         dashboard.render(
             frame,
             area,
             main_height,
-            17,
+            13,
             |frame, [main_area, msg_area]| {
                 // [select is use default or custom] --------------------------
-                if self.state.is_run() {
+                if self.state.is_run() && !self.selected {
                     match self.place {
                         Place::Select => {
-                            let selected = if self.selected { 0 } else { 1 };
+                            let is_default = if self.is_default { 0 } else { 1 };
                             let _ = Select::new_with_options(
                                 &StudioLogs::Select.t(&self.lang).to_string(),
                                 self.lang,
@@ -135,14 +173,40 @@ impl AppComponent for StudioCmd {
                                 Default::default(),
                                 None,
                             )
-                            .selected(selected)
+                            .selected(is_default)
                             .render_from(main_area, frame);
                         }
-                        Place::Input => {}
+                        Place::Input => {
+                            frame.render_widget(&self.textarea, main_area);
+                        }
                     }
                 }
-
-                frame.render_widget(msg, msg_area);
+                // [创建Tab来显示主进程和子进程的日志] -----------------------------
+                Tab::new(vec!["Ract", "Studio"])
+                    .direction(Direction::Horizontal)
+                    .selected(self.tab_index)
+                    .selected_style(
+                        Style::default()
+                            .fg(Color::Rgb(255, 112, 67))
+                            .add_modifier(Modifier::BOLD),
+                    )
+                    .render(msg_area, frame, |area, frame| {
+                        if self.tab_index == 0 {
+                            // [主进程日志] ----------------------------------------
+                            let (msg, lines) = self.log.draw_text_with_width(area.width - 2);
+                            // here should be 8 - 1 because of the top border is 1
+                            if lines > 12 {
+                                self.scroll_y = lines - 12;
+                            }
+                            let msg = Paragraph::new(msg)
+                                .scroll((self.scroll_y, 0))
+                                .wrap(Wrap { trim: true })
+                                .block(Block::new().borders(Borders::TOP));
+                            frame.render_widget(msg, msg_area);
+                        } else {
+                            // [子进程日志] ------------------------------------------------
+                        }
+                    });
             },
         );
     }
@@ -157,66 +221,77 @@ impl AppComponent for StudioCmd {
 }
 
 impl StudioCmd {
-    fn draw_msg(&self, w: u16) -> (Text, u16) {
-        self.log.draw_text_with_width(w - 2)
+    fn handle_child_log(&mut self) {
+        if let Ok(log) = self.channel.receiver.try_recv() {
+            self.child_log.push(log);
+        }
     }
-    fn handle_running(&mut self, state: StudioState) {
-        match state {
-            StudioState::Check => {
-                // [check makepad env] ------------------------------------------
-                let start = Instant::now();
-                let res = check_makepad();
-                self.cost = Some(start.elapsed());
-                match res {
-                    Ok(checks) => {
-                        let mut err = false;
-                        self.log.extend(
-                            checks
-                                .iter()
-                                .map(|item| {
-                                    if !item.state {
-                                        err = true;
-                                    }
-                                    (item, &self.lang).into()
-                                })
-                                .collect::<Vec<LogItem>>(),
-                        );
-                        if err {
-                            self.state.to_pause();
-                        } else {
-                            self.state.next();
-                        }
-                    }
-                    Err(e) => {
-                        self.log.push(LogItem::error(e.to_string()));
-                        self.state.to_pause();
-                    }
+    fn init_textarea(lang: &Language) -> TextArea<'static> {
+        let mut textarea = TextArea::default();
+        textarea.set_block(Block::bordered().border_type(BorderType::Rounded));
+        textarea.set_placeholder_text(StudioLogs::Placeholder.t(lang));
+
+        textarea
+    }
+    /// check makepad env
+    fn handle_check(&mut self) {
+        let start = Instant::now();
+        let res = check_makepad();
+        self.cost = Some(start.elapsed());
+        match res {
+            Ok(checks) => {
+                let mut err = false;
+                self.log.extend(
+                    checks
+                        .iter()
+                        .map(|item| {
+                            if !item.state {
+                                err = true;
+                            }
+                            (item, &self.lang).into()
+                        })
+                        .collect::<Vec<LogItem>>(),
+                );
+                if err {
+                    self.state.to_pause();
+                } else {
+                    self.state.next();
                 }
             }
-            StudioState::Select => {}
-            StudioState::Running => {
-                if self.selected {
-                    // [use default] ------------------------------------------------
-                    let start = Instant::now();
-                    match default_makepad_studio_path() {
-                        Ok(path) => {
-                            self.cost.map(|cost| cost + start.elapsed());
-                            match run_gui(path) {
-                                Ok(status) => {
-                                    if status.success() {
-                                        self.log.push(LogItem::error(
-                                            StudioLogs::Stop.t(&self.lang).to_string(),
-                                        ));
-                                    }
-                                    self.state.next();
-                                }
-                                Err(e) => {
-                                    self.log.push(LogItem::error(
-                                        StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
-                                    ));
-                                    self.state.to_pause();
-                                }
+            Err(e) => {
+                self.log.push(LogItem::error(e.to_string()));
+                self.state.to_pause();
+            }
+        }
+    }
+
+    fn handle_running(&mut self) -> () {
+        if self.is_default {
+            // [use default] ------------------------------------------------
+            let start = Instant::now();
+            match default_makepad_studio_path() {
+                Ok(path) => {
+                    self.cost.map(|cost| cost + start.elapsed());
+                    // get sender
+                    let info_sender = self.channel.sender.clone();
+                    let warn_sender = self.channel.sender.clone();
+                    let res = run_gui(
+                        path,
+                        move |msg| {
+                            let _ = info_sender.send(LogItem::info(msg));
+                        },
+                        move |msg| {
+                            let _ = warn_sender.send(LogItem::warning(msg));
+                        },
+                    );
+                    match res {
+                        Ok(status) => {
+                            if status.success() {
+                                self.log.push(LogItem::warning(
+                                    StudioLogs::Stop.t(&self.lang).to_string(),
+                                ));
                             }
+                            self.state.next();
                         }
                         Err(e) => {
                             self.log.push(LogItem::error(
@@ -225,10 +300,16 @@ impl StudioCmd {
                             self.state.to_pause();
                         }
                     }
-                } else {
-                    // [use custom] -----------------------------------------------
+                }
+                Err(e) => {
+                    self.log.push(LogItem::error(
+                        StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                    ));
+                    self.state.to_pause();
                 }
             }
+        } else {
+            // [use custom] -----------------------------------------------
         }
     }
 }
@@ -281,5 +362,8 @@ impl Place {
     }
     fn is_select(&self) -> bool {
         matches!(self, Place::Select)
+    }
+    fn is_input(&self) -> bool {
+        matches!(self, Place::Input)
     }
 }

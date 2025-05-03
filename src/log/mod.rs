@@ -16,7 +16,7 @@ mod wasm;
 use std::{
     borrow::Cow,
     cell::{OnceCell, RefCell},
-    fmt::Display,
+    fmt::Display, sync::mpsc::{Receiver, Sender},
 };
 
 pub use add::AddLogs;
@@ -69,6 +69,9 @@ impl LogItem {
             self.level.colorize(),
             self.msg
         );
+    }
+    pub fn msg(&self) -> &str {
+        &self.msg
     }
     /// ## fmt as ratatui text line for colorful display
     /// display as:
@@ -359,5 +362,25 @@ impl LogExt for Fs {
             Fs::WriteSuccess(name) => t!("common.fs.write.success", locale = lang, name = name),
             Fs::WriteError(reason) => t!("common.fs.write.error", locale = lang, reason = reason),
         }
+    }
+}
+
+/// # Channel for log item
+/// which will be used to send log item to the main thread in component
+pub struct ComponentChannel {
+    pub sender: Sender<LogItem>,
+    pub receiver: Receiver<LogItem>,
+}
+
+impl ComponentChannel {
+    pub fn new() -> Self {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        Self { sender, receiver }
+    }
+    pub fn send(&self, item: LogItem) -> () {
+        self.sender.send(item).unwrap();
+    }
+    pub fn recv(&self) -> LogItem {
+        self.receiver.recv().unwrap()
     }
 }

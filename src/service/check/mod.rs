@@ -122,11 +122,11 @@ fn makepad_exist() -> Result<((bool, Option<PathBuf>), (bool, Option<PathBuf>)),
 
     Ok((
         (
-            is_empty_dir(makepad_widgets_path)?,
+            !is_empty_dir(makepad_widgets_path)?,
             makepad_widgets_path.cloned(),
         ),
         (
-            is_empty_dir(gen_components_path)?,
+            !is_empty_dir(gen_components_path)?,
             gen_components_path.cloned(),
         ),
     ))
@@ -143,5 +143,5 @@ where
         }
     }
 
-    Ok(false)
+    Ok(true)
 }

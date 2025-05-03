@@ -53,8 +53,12 @@ fn conf_run() -> Result<(), Error> {
         }
     }?;
 
-    run_gui(path)
-     .map_or_else(
+    run_gui(
+        path,
+        |line| TerminalLogger::new(&line).info(),
+        |line| TerminalLogger::new(&line).warning(),
+    )
+    .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
@@ -87,11 +91,13 @@ pub fn default_makepad_studio_path() -> Result<PathBuf, Error> {
     }
 }
 
-pub fn run_gui<P>(path: P, ) -> Result<ExitStatus, Error>
+pub fn run_gui<P, I, E>(path: P, info: I, err: E) -> Result<ExitStatus, Error>
 where
     P: AsRef<Path>,
+    I: Fn(String) + Send + 'static,
+    E: Fn(String) + Send + 'static,
 {
-    StudioLogs::Gui.terminal().info();
+    // StudioLogs::Gui.terminal().info();
     // cargo run -p makepad-studio --release
     let mut child = Command::new("cargo")
         .args(&["run", "-p", "makepad-studio", "--release"])
@@ -101,11 +107,7 @@ where
         .spawn()
         .map_err(|e| e.to_string())?;
 
-    stream_terminal(
-        &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
-    )
+    stream_terminal(&mut child, info, err)
     // .map_or_else(
     //     |e| Err(e),
     //     |status| {
