@@ -98,10 +98,11 @@ write = ":w 写入"
 
 [common.help]
 select = "按下 ↑/↓ 进行选项调整，按下回车键进行选择，按下 q 退出"
+log_tab = "按 'l' 进行日志标签页的切换，按 'q' 退出"
+
 [common.help.edit]
 normal = "按 'i' 进入编辑模式"
 complex = "按 ←/→ 进行面板调整，按 ↑/↓ 进行选项调整，按 'i' 进入编辑模式，按 ESC 退出编辑，按 'q' 退出"
-log = "按 'l' 进行日志标签页的切换，按 'q' 退出"
 
 [common.fs]
 

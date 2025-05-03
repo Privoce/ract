@@ -16,7 +16,8 @@ mod wasm;
 use std::{
     borrow::Cow,
     cell::{OnceCell, RefCell},
-    fmt::Display, sync::mpsc::{Receiver, Sender},
+    fmt::Display,
+    sync::mpsc::{Receiver, Sender},
 };
 
 pub use add::AddLogs;
@@ -256,7 +257,7 @@ pub enum Common {
     Command(Command),
     Fs(Fs),
     TmpStore(String),
-    Option(Options)
+    Option(Options),
 }
 
 impl LogExt for Common {
@@ -300,7 +301,7 @@ pub enum Help {
     Select,
     EditNormal,
     EditComplex,
-    Log
+    Log,
 }
 
 impl LogExt for Help {
@@ -310,7 +311,7 @@ impl LogExt for Help {
             Help::Select => t!("common.help.select", locale = lang),
             Help::EditNormal => t!("common.help.edit.normal", locale = lang),
             Help::EditComplex => t!("common.help.edit.complex", locale = lang),
-            Help::Log => t!("common.help.log", locale = lang),
+            Help::Log => t!("common.help.log_tab", locale = lang),
         }
     }
 }
@@ -369,20 +370,37 @@ impl LogExt for Fs {
 
 /// # Channel for log item
 /// which will be used to send log item to the main thread in component
-pub struct ComponentChannel {
+pub struct ComponentChannel<T> {
     pub sender: Sender<LogItem>,
     pub receiver: Receiver<LogItem>,
+    pub run_channel: Option<RunChannel<T>>,
 }
 
-impl ComponentChannel {
-    pub fn new() -> Self {
+impl<T> ComponentChannel<T> {
+    pub fn new(run_channel: Option<RunChannel<T>>) -> Self {
         let (sender, receiver) = std::sync::mpsc::channel();
-        Self { sender, receiver }
+        Self {
+            sender,
+            receiver,
+            run_channel,
+        }
     }
     pub fn send(&self, item: LogItem) -> () {
         self.sender.send(item).unwrap();
     }
     pub fn recv(&self) -> LogItem {
         self.receiver.recv().unwrap()
+    }
+}
+
+pub struct RunChannel<T> {
+    pub sender: Sender<T>,
+    pub receiver: Receiver<T>,
+}
+
+impl<T> RunChannel<T> {
+    pub fn new() -> Self {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        Self { sender, receiver }
     }
 }

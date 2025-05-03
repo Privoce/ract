@@ -3,7 +3,8 @@ use crate::{
     common::Result,
     entry::Language,
     log::{
-        Common, ComponentChannel, Log, LogExt, LogItem, LogType, Options, StudioLogs, UninstallLogs,
+        Common, ComponentChannel, Help, Log, LogExt, LogItem, LogType, Options, RunChannel,
+        StudioLogs, UninstallLogs,
     },
     service::{
         check::check_makepad,
@@ -22,7 +23,12 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 use std::{
-    sync::{Arc, Mutex},
+    process::ExitStatus,
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc, Mutex,
+    },
+    thread,
     time::{Duration, Instant},
 };
 use tui_textarea::TextArea;
@@ -40,8 +46,9 @@ pub struct StudioCmd {
     is_default: bool,
     options: Vec<String>,
     textarea: TextArea<'static>,
-    channel: ComponentChannel,
+    channel: ComponentChannel<std::result::Result<ExitStatus, gen_utils::error::Error>>,
     selected: bool,
+    is_running: bool,
 }
 
 impl AppComponent for StudioCmd {
@@ -63,10 +70,11 @@ impl AppComponent for StudioCmd {
             is_default: true,
             options,
             textarea,
-            channel: ComponentChannel::new(),
+            channel: ComponentChannel::new(Some(RunChannel::new())),
             selected: false,
             tab_index: 0,
             scroll_y: 0,
+            is_running: false,
         }
     }
 
@@ -169,7 +177,7 @@ impl AppComponent for StudioCmd {
             14,
             |frame, [main_area, msg_area]| {
                 // [select is use default or custom] --------------------------
-                let help_msg = Line::raw("press l to focus on log tab");
+                let help_msg = Line::raw(Common::Help(Help::Log).t(&self.lang).to_string());
                 if self.state.is_run() && !self.selected {
                     // [layout for help msg and select/input] ----------------------
 
@@ -303,30 +311,22 @@ impl StudioCmd {
                     // get sender
                     let info_sender = self.channel.sender.clone();
                     let warn_sender = self.channel.sender.clone();
-                    let res = run_gui(
-                        path,
-                        move |msg| {
-                            let _ = info_sender.send(LogItem::info(msg));
-                        },
-                        move |msg| {
-                            let _ = warn_sender.send(LogItem::warning(msg));
-                        },
-                    );
-                    match res {
-                        Ok(status) => {
-                            if status.success() {
-                                self.log.push(LogItem::warning(
-                                    StudioLogs::Stop.t(&self.lang).to_string(),
-                                ));
-                            }
-                            self.state.next();
-                        }
-                        Err(e) => {
-                            self.log.push(LogItem::error(
-                                StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
-                            ));
-                            self.state.to_pause();
-                        }
+                    let run_sender = self.channel.run_channel.as_ref().unwrap().sender.clone();
+                    if !self.is_running {
+                        self.is_running = true;
+                        thread::spawn(move || {
+                            let res = run_gui(
+                                path,
+                                move |msg| {
+                                    let _ = info_sender.send(LogItem::info(msg));
+                                },
+                                move |msg| {
+                                    let _ = warn_sender.send(LogItem::warning(msg));
+                                },
+                            );
+
+                            let _ = run_sender.send(res);
+                        });
                     }
                 }
                 Err(e) => {
@@ -338,6 +338,35 @@ impl StudioCmd {
             }
         } else {
             // [use custom] -----------------------------------------------
+        }
+
+        // [means the child process is running] --------------------------
+        if self.is_running {
+            if let Ok(res) = self
+                .channel
+                .run_channel
+                .as_ref()
+                .unwrap()
+                .receiver
+                .try_recv()
+            {
+                self.is_running = false;
+                match res {
+                    Ok(status) => {
+                        if status.success() {
+                            self.log
+                                .push(LogItem::warning(StudioLogs::Stop.t(&self.lang).to_string()));
+                        }
+                        self.state.next();
+                    }
+                    Err(e) => {
+                        self.log.push(LogItem::error(
+                            StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                        ));
+                        self.state.to_pause();
+                    }
+                }
+            }
         }
     }
 }
