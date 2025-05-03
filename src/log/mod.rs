@@ -300,6 +300,7 @@ pub enum Help {
     Select,
     EditNormal,
     EditComplex,
+    Log
 }
 
 impl LogExt for Help {
@@ -309,6 +310,7 @@ impl LogExt for Help {
             Help::Select => t!("common.help.select", locale = lang),
             Help::EditNormal => t!("common.help.edit.normal", locale = lang),
             Help::EditComplex => t!("common.help.edit.complex", locale = lang),
+            Help::Log => t!("common.help.log", locale = lang),
         }
     }
 }

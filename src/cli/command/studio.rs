@@ -99,6 +99,13 @@ impl AppComponent for StudioCmd {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         event::KeyCode::Char('q') => self.quit(),
+                        event::KeyCode::Char('l') => {
+                            if self.tab_index == 0 {
+                                self.tab_index = 1;
+                            } else {
+                                self.tab_index = 0;
+                            }
+                        }
                         event::KeyCode::Up | event::KeyCode::Down => {
                             if self.place.is_select() {
                                 self.is_default = !self.is_default;
@@ -143,15 +150,15 @@ impl AppComponent for StudioCmd {
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
         let main_height = if self.selected {
-            0
+            1
         } else {
             if self.state.is_run() {
                 match self.place {
-                    Place::Select => 4,
-                    Place::Input => 3,
+                    Place::Select => 6,
+                    Place::Input => 5,
                 }
             } else {
-                0
+                1
             }
         };
 
@@ -159,10 +166,23 @@ impl AppComponent for StudioCmd {
             frame,
             area,
             main_height,
-            13,
+            14,
             |frame, [main_area, msg_area]| {
                 // [select is use default or custom] --------------------------
+                let help_msg = Line::raw("press l to focus on log tab");
                 if self.state.is_run() && !self.selected {
+                    // [layout for help msg and select/input] ----------------------
+
+                    let [help_msg_area, other_area] = Layout::vertical([
+                        Constraint::Length(1),
+                        Constraint::Length(match self.place {
+                            Place::Select => 4,
+                            Place::Input => 3,
+                        }),
+                    ])
+                    .flex(ratatui::layout::Flex::SpaceBetween)
+                    .areas(main_area);
+
                     match self.place {
                         Place::Select => {
                             let is_default = if self.is_default { 0 } else { 1 };
@@ -174,14 +194,21 @@ impl AppComponent for StudioCmd {
                                 None,
                             )
                             .selected(is_default)
-                            .render_from(main_area, frame);
+                            .render_from(other_area, frame);
                         }
                         Place::Input => {
-                            frame.render_widget(&self.textarea, main_area);
+                            frame.render_widget(&self.textarea, other_area);
                         }
                     }
+                    frame.render_widget(&help_msg, help_msg_area);
+                } else {
+                    frame.render_widget(&help_msg, main_area);
                 }
                 // [创建Tab来显示主进程和子进程的日志] -----------------------------
+                let msg_block = Block::bordered().borders(Borders::TOP);
+                let [msg_tab_area] = Layout::vertical([Constraint::Length(msg_area.height)])
+                    .areas(msg_block.inner(msg_area));
+                frame.render_widget(msg_block, msg_area);
                 Tab::new(vec!["Ract", "Studio"])
                     .direction(Direction::Horizontal)
                     .selected(self.tab_index)
@@ -190,22 +217,23 @@ impl AppComponent for StudioCmd {
                             .fg(Color::Rgb(255, 112, 67))
                             .add_modifier(Modifier::BOLD),
                     )
-                    .render(msg_area, frame, |area, frame| {
-                        if self.tab_index == 0 {
+                    .render(msg_tab_area, frame, |area, frame| {
+                        let (msg, lines) = if self.tab_index == 0 {
                             // [主进程日志] ----------------------------------------
-                            let (msg, lines) = self.log.draw_text_with_width(area.width - 2);
-                            // here should be 8 - 1 because of the top border is 1
-                            if lines > 12 {
-                                self.scroll_y = lines - 12;
-                            }
-                            let msg = Paragraph::new(msg)
-                                .scroll((self.scroll_y, 0))
-                                .wrap(Wrap { trim: true })
-                                .block(Block::new().borders(Borders::TOP));
-                            frame.render_widget(msg, msg_area);
+                            self.log.draw_text_with_width(area.width - 2)
                         } else {
                             // [子进程日志] ------------------------------------------------
+                            self.child_log.draw_text_with_width(area.width - 2)
+                        };
+
+                        if lines > 12 {
+                            self.scroll_y = lines - 12;
                         }
+                        let msg = Paragraph::new(msg)
+                            .scroll((self.scroll_y, 0))
+                            .wrap(Wrap { trim: true });
+
+                        frame.render_widget(msg, area);
                     });
             },
         );
