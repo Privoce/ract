@@ -56,6 +56,9 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 // service::studio::run();
                 StudioCmd::new(lang).run(terminal, false)?;
             }
+            Commands::Wasm(wasm_args) => {
+                wasm_args.run(&lang);
+            }
             _ => {}
         }
         // match cmd {

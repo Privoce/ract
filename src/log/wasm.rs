@@ -1,41 +1,47 @@
 use std::{error::Error, fmt::Display};
 
-use super::terminal::TerminalLogger;
+use rust_i18n::t;
+
+use super::{terminal::TerminalLogger, LogExt};
 
 #[derive(Debug, Clone, Copy)]
 pub enum WasmLogs {
-    Welcome,
     Desc,
     Package,
     Start,
-    Stop
+    Stop,
+    Port,
+    Placeholder,
+    NoRactConf,
 }
 
 impl Display for WasmLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WasmLogs::Welcome => f.write_str("🥳 Welcome to use ract wasm!"),
-            WasmLogs::Desc => f.write_str(DESC),
-            WasmLogs::Package => f.write_str("📦 wasm is being packaged"),
-            WasmLogs::Start => f.write_str("🚀 wasm is being started"),
-            WasmLogs::Stop => f.write_str("🛑 wasm is being stopped"),
-        }
+        f.write_str(self.t(&crate::entry::Language::default()).as_ref())
     }
 }
 
 impl WasmLogs {
-    pub fn terminal(&self) -> TerminalLogger {
+    pub fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
         TerminalLogger {
-            output: std::borrow::Cow::Owned(self.to_string()),
+            output: self.t(lang),
         }
     }
 }
 
-const DESC: &str = r#"
-🔸 Now only support makepad wasm
-🔸 You can directly run in makepad project
-🔸 If the project is in rust workspace, use -p to point target project
-🔸 Or you can run `ract wasm` to build and start
-"#;
+impl LogExt for WasmLogs {
+    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+        let lang_str = lang.as_str();
+        match self {
+            WasmLogs::Desc => t!("wasm.desc", locale = lang_str),
+            WasmLogs::Package => t!("wasm.package", locale = lang_str),
+            WasmLogs::Start => t!("wasm.start", locale = lang_str),
+            WasmLogs::Stop => t!("wasm.stop", locale = lang_str),
+            WasmLogs::Port => t!("wasm.port", locale = lang_str),
+            WasmLogs::Placeholder => t!("wasm.placeholder", locale = lang_str),
+            WasmLogs::NoRactConf => t!("wasm.no_ract_conf", locale = lang_str),
+        }
+    }
+}
 
 impl Error for WasmLogs {}

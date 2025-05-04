@@ -18,15 +18,15 @@ pub mod run;
 pub mod update;
 /// uninstall the cli
 pub mod uninstall;
-/// run wasm project
-pub mod wasm;
+// /// run wasm project
+// pub mod wasm;
 /// run makepad studio
 pub mod studio;
 
 use clap::Subcommand;
 use create::CreateArgs;
 use update::UpdateArgs;
-use wasm::WasmArgs;
+use crate::service::wasm::WasmArgs;
 
 #[derive(Subcommand)]
 pub enum Commands {
