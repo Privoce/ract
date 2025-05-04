@@ -21,7 +21,7 @@ use crate::{
     },
     common::Result,
     entry::Language,
-    service,
+    service::{self, package},
 };
 use clap::Parser;
 pub use state::*;
@@ -62,21 +62,24 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Update(args) => {
                 args.run();
             }
+            Commands::Pkg => {
+                package::run();
+            }
             _ => {}
         }
         // match cmd {
         //     Commands::Create(create_args) => create_args.run(),
-        //     Commands::Check => check::run(),
+        //
         //     Commands::Install => install::run(),
         //     Commands::Run => run::run(),
-        //     Commands::Init => {}
-        //     Commands::Config => config::run(),
-        //     Commands::Studio => run::makepad::studio::run(),
-        //     Commands::Wasm(wasm_args) => wasm_args.run(),
-        //     Commands::Pkg => package::run(),
+        //
+        //
+        //
+        //     ,
+        //
         //     Commands::Add { name } => add::run(name),
-        //     Commands::Update(args) => args.run(),
-        //     Commands::Uninstall => uninstall::run(),
+        //
+        //
         // }
     }
 

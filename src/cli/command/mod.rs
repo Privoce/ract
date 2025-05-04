@@ -14,8 +14,8 @@ pub mod install;
 pub mod package;
 /// run the current project
 pub mod run;
-/// update the cli
-pub mod update;
+// /// update the cli
+// pub mod update;
 /// uninstall the cli
 pub mod uninstall;
 // /// run wasm project

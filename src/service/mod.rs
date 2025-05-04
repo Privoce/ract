@@ -5,3 +5,4 @@ pub mod check;
 pub mod config;
 pub mod studio;
 pub mod wasm;
+pub mod package;
