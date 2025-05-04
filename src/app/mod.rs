@@ -53,7 +53,6 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 UninstallCmd::new(lang).run(terminal, false)?;
             }
             Commands::Studio => {
-                // service::studio::run();
                 StudioCmd::new(lang).run(terminal, false)?;
             }
             Commands::Wasm(wasm_args) => {
@@ -74,23 +73,11 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Install => {
                 service::install::run();
             }
-            Commands::Add { name } => service::add::run(name)
+            Commands::Add { name } => {
+                service::add::run(&name);
+            }
             _ => {}
         }
-        // match cmd {
-        //    
-        //
-        //    
-        //    
-        //
-        //
-        //
-        //     ,
-        //
-        //     ,
-        //
-        //
-        // }
     }
 
     Ok(())
