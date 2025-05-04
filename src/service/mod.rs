@@ -6,3 +6,7 @@ pub mod config;
 pub mod studio;
 pub mod wasm;
 pub mod package;
+pub mod run;
+pub mod create;
+pub mod install;
+pub mod add;

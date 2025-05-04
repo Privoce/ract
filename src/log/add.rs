@@ -33,6 +33,14 @@ impl Display for AddLogs {
 
 impl Error for AddLogs {}
 
+impl AddLogs {
+    pub fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
+        TerminalLogger {
+            output: self.t(lang),
+        }
+    }
+}
+
 impl LogExt for AddLogs {
     fn t(&self, lang: &Language) -> std::borrow::Cow<str> {
         match self {

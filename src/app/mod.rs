@@ -65,19 +65,29 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Pkg => {
                 package::run();
             }
+            Commands::Create(create_args) => {
+                create_args.run();
+            }
+            Commands::Run => {
+                service::run::run();
+            }
+            Commands::Install => {
+                service::install::run();
+            }
+            Commands::Add { name } => service::add::run(name)
             _ => {}
         }
         // match cmd {
-        //     Commands::Create(create_args) => create_args.run(),
+        //    
         //
-        //     Commands::Install => install::run(),
-        //     Commands::Run => run::run(),
+        //    
+        //    
         //
         //
         //
         //     ,
         //
-        //     Commands::Add { name } => add::run(name),
+        //     ,
         //
         //
         // }

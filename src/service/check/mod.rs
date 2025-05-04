@@ -1,49 +1,12 @@
 mod item;
 pub use item::*;
-use std::{
-    path::{Path, PathBuf},
-    process::exit,
-    str::FromStr,
-};
+use std::path::{Path, PathBuf};
 
-use gen_utils::{
-    common::{fs, RustDependence},
-    error::Error,
-};
-use inquire::Select;
-use rust_i18n::t;
-use toml_edit::DocumentMut;
+use gen_utils::{common::fs, error::Error};
+
 use which::which;
 
-use crate::{
-    entry::{ChainEnvToml, Checks, Language, Tools, Underlayer, UnderlayerTools},
-    log::{CheckLogs, LogExt, LogItem, TerminalLogger},
-};
-
-/// Check target toolchain
-pub fn run() -> () {
-    let lang = Language::from_conf();
-
-    let check = Select::new(&CheckLogs::Select.t(&lang).to_string(), Checks::options())
-        .prompt()
-        .expect("select check failed");
-
-    match Checks::from_str(check).unwrap() {
-        Checks::Basic => {
-            check_basic();
-        }
-        Checks::Underlayer(_) => {
-            // check_underlayer();
-        }
-        Checks::All(_) => {
-            check_basic();
-            // check_underlayer();
-        }
-    };
-
-    // CheckLogs::Confirm.terminal().success();
-    LogItem::success(CheckLogs::Complete.t(&lang).to_string()).log();
-}
+use crate::entry::{ChainEnvToml, Tools, Underlayer, UnderlayerTools};
 
 /// ## Check basic toolchain
 /// 1. rustc
@@ -55,18 +18,14 @@ pub fn check_basic() -> Vec<CheckItem> {
 
 pub fn current_states() -> Result<Tools, Error> {
     // [basic] ----------------------------------------------------------------------------------------------
-    // let rustc = basic_check("rustc").is_ok();
-    // let cargo = basic_check("cargo").is_ok();
-    // let git = basic_check("git").is_ok();
+    let rustc = check_rustc().state;
+    let cargo = check_cargo().state;
+    let git = check_git().state;
     // [underlayer] -----------------------------------------------------------------------------------------
     let ((makepad, _), (gen_ui, _)) = makepad_exist()?;
 
-    // Ok(Tools {
-    //     basic: (rustc, cargo, git).into(),
-    //     underlayer: UnderlayerTools::Makepad((makepad, gen_ui).into()),
-    // })
     Ok(Tools {
-        basic: Default::default(),
+        basic: (rustc, cargo, git).into(),
         underlayer: UnderlayerTools::Makepad((makepad, gen_ui).into()),
     })
 }

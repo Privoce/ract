@@ -24,7 +24,7 @@ pub mod uninstall;
 pub mod studio;
 
 use clap::Subcommand;
-use create::CreateArgs;
+use crate::service::create::CreateArgs;
 use crate::service::update::UpdateArgs;
 use crate::service::wasm::WasmArgs;
 
