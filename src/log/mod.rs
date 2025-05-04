@@ -91,8 +91,7 @@ impl LogItem {
         if self.multi {
             // split msg by '\n'
             let mut res = vec![Line::from(fmt)];
-            res.push(Line::raw(""));
-            self.msg.split("\n").for_each(|item| {
+            self.msg.split_fixed("\n").into_iter().for_each(|item| {
                 res.push(Line::from(Span::styled(
                     item.to_string(),
                     Style::default().fg(Color::White),

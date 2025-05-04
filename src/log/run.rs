@@ -49,6 +49,7 @@ pub enum StudioLogs {
     Error(String),
     Select,
     Placeholder,
+    Custom(String),
 }
 
 impl StudioLogs {
@@ -70,6 +71,7 @@ impl LogExt for StudioLogs {
             StudioLogs::Error(reason) => t!("studio.error", locale = lang_str, reason = reason),
             StudioLogs::Select => t!("studio.select", locale = lang_str),
             StudioLogs::Placeholder => t!("studio.placeholder", locale = lang_str),
+            StudioLogs::Custom(path) => t!("studio.custom", locale = lang_str, path = path),
         }
     }
 }
