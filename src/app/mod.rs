@@ -59,6 +59,9 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Wasm(wasm_args) => {
                 wasm_args.run(&lang);
             }
+            Commands::Update(args) => {
+                args.run();
+            }
             _ => {}
         }
         // match cmd {

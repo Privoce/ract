@@ -25,7 +25,7 @@ pub mod studio;
 
 use clap::Subcommand;
 use create::CreateArgs;
-use update::UpdateArgs;
+use crate::service::update::UpdateArgs;
 use crate::service::wasm::WasmArgs;
 
 #[derive(Subcommand)]
