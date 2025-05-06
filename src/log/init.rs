@@ -7,7 +7,6 @@ pub enum InitLogs {
     Init,
     Complete,
     Chain,
-   
     ChainSuccess,
     ChainFailed(String),
     Env,
@@ -22,7 +21,9 @@ impl Display for InitLogs {
             InitLogs::Init => f.write_str("🚀 Start to init ract..."),
             InitLogs::Complete => f.write_str("🎉 Init ract successfully!"),
             InitLogs::Chain => f.write_str("Init chain"),
-            InitLogs::EnvDesc => f.write_str("Ract will help you create an .env file for link chains"),
+            InitLogs::EnvDesc => {
+                f.write_str("Ract will help you create an .env file for link chains")
+            }
             InitLogs::ChainSuccess => f.write_str("✅ Chain init successfully!"),
             InitLogs::Env => f.write_str("Init env"),
             InitLogs::EnvSuccess => f.write_str("✅ Env init successfully!"),
@@ -37,9 +38,9 @@ impl Display for InitLogs {
 }
 
 impl InitLogs {
-    pub fn terminal(&self) -> TerminalLogger {
+    pub fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
         TerminalLogger {
-            output: std::borrow::Cow::Owned(self.to_string()),
+            output: self.t(lang),
         }
     }
 }

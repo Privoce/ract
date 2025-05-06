@@ -21,10 +21,10 @@ pub fn check() {
 }
 
 pub fn run() -> Result<(), Error> {
-    InitLogs::Init.terminal().info();
+    InitLogs::Init.terminal(&crate::entry::Language::En).info();
     create_env_file()?;
     create_chain()?;
-    InitLogs::Complete.terminal().success();
+    InitLogs::Complete.terminal(&crate::entry::Language::En).success();
     Ok(())
 }
 

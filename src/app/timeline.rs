@@ -119,7 +119,7 @@ impl<'a> Timeline<'a> {
             self.main
                 .replace(TimelineMain::new().description(description).draw());
             // 2 for footer, 1 for header, 2 for spacing
-            self.height = desc_height as u16 + 1 + 2 + 2;
+            self.height = desc_height as u16 + 1 + 2 + 3;
             Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(desc_height as u16),

@@ -291,7 +291,8 @@ impl<'c> Confirm<'c> {
 #[derive(Debug, Clone)]
 pub struct MultiSelect<'s> {
     pub options: Vec<Span<'s>>,
-    pub selected: Vec<usize>,
+    pub selected: usize,
+    pub selecteds: Vec<usize>,
     pub placeholder: Option<Text<'s>>,
     pub title: Text<'s>,
     pub help_msg: Text<'s>,
@@ -299,6 +300,7 @@ pub struct MultiSelect<'s> {
     pub option_style: Style,
     #[allow(unused)]
     pub lang: Language,
+    #[allow(unused)]
     pub state: ComponentState<BaseRunState>,
 }
 
@@ -306,7 +308,8 @@ impl<'s> Default for MultiSelect<'s> {
     fn default() -> Self {
         Self {
             options: Default::default(),
-            selected: Default::default(),
+            selected: 0,
+            selecteds: vec![0],
             placeholder: Default::default(),
             title: Default::default(),
             help_msg: Text::from(Line::styled(
@@ -350,7 +353,8 @@ impl<'s> MultiSelect<'s> {
         let select_style = Style::default().fg(Color::Rgb(255, 112, 67));
         Self {
             options,
-            selected: vec![0],
+            selected: 0,
+            selecteds: vec![0],
             placeholder: None,
             title,
             help_msg,
@@ -364,8 +368,12 @@ impl<'s> MultiSelect<'s> {
         self.placeholder = Some(placeholder);
         self
     }
-    pub fn selected(mut self, selected: Vec<usize>) -> Self {
+    pub fn selected(mut self, selected: usize) -> Self {
         self.selected = selected;
+        self
+    }
+    pub fn selecteds(mut self, selecteds: Vec<usize>) -> Self {
+        self.selecteds = selecteds;
         self
     }
     pub fn help_msg(mut self, help_msg: Text<'s>) -> Self {
@@ -409,12 +417,19 @@ impl<'s> MultiSelect<'s> {
                 Layout::horizontal([Constraint::Length(8), Constraint::Fill(1)])
                     .areas(option_areas[i]);
 
-            let is_selected = self.selected.contains(&i);
+            let is_selected = self.selecteds.contains(&i);
             let option = option.clone();
+
+            let prefix = if self.selected == i {
+                unicode::ARROW_DOUBLE_RIGHT
+            } else {
+                " "
+            };
+
             if is_selected {
                 frame.render_widget(
                     Span::styled(
-                        format!("  {} [{}] ", unicode::ARROW_DOUBLE_RIGHT, unicode::CHECK),
+                        format!("  {} [{}] ", prefix, unicode::CHECK),
                         Color::Rgb(255, 112, 67),
                     ),
                     choose_area,
@@ -422,7 +437,7 @@ impl<'s> MultiSelect<'s> {
                 frame.render_widget(option.style(self.select_style), option_line_area);
             } else {
                 frame.render_widget(
-                    Span::styled(format!("    [ ] "), self.option_style),
+                    Span::styled(format!("  {} [ ] ", prefix), self.option_style),
                     choose_area,
                 );
                 frame.render_widget(option.style(self.option_style), option_line_area);

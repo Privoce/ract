@@ -28,7 +28,8 @@ pub struct InstallCmd {
     log: Log,
     cost: Option<Duration>,
     check: Check,
-    selected: Vec<usize>,
+    selecteds: Vec<usize>,
+    selected: usize,
 }
 
 impl AppComponent for InstallCmd {
@@ -43,7 +44,8 @@ impl AppComponent for InstallCmd {
             log: Log::new(),
             cost: None,
             check: Check::default(),
-            selected: vec![0],
+            selecteds: vec![0],
+            selected: 0,
         }
     }
 
@@ -81,6 +83,23 @@ impl AppComponent for InstallCmd {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         event::KeyCode::Char('q') => self.quit(),
+                        event::KeyCode::Up => {
+                            if self.selected > 0 {
+                                self.selected -= 1;
+                            }
+                        }
+                        event::KeyCode::Down => {
+                            if self.selected < Tools::options().len() - 1 {
+                                self.selected += 1;
+                            }
+                        }
+                        event::KeyCode::Char(' ') => {
+                            if self.selecteds.contains(&self.selected) {
+                                self.selecteds.retain(|&x| x != self.selected);
+                            } else {
+                                self.selecteds.push(self.selected);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -110,17 +129,51 @@ impl AppComponent for InstallCmd {
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Install;
         dashboard.cost = self.cost.clone();
-        
+
         // [multi select] --------------------------------------------------------
-        let mut multi_select = MultiSelect::new(
-            InstallLogs::Select.t(&self.lang).to_string(),
-            self.lang,
-            &Tools::options(),
-            Default::default(),
-            None,
-        ).selected(self.selected.clone());
-        let multi_select_height = multi_select.height(area.width  - 4);
-        let main_height = timeline.height + multi_select_height + 1;
+        let (main_height, mut multi_select, layout) =
+            if let ComponentState::Run(run_state) = self.state {
+                match run_state {
+                    InstallState::Check(_) => (
+                        timeline.height,
+                        None,
+                        Layout::vertical([Constraint::Percentage(100)]),
+                    ),
+                    InstallState::Select => {
+                        let multi_select = MultiSelect::new(
+                            InstallLogs::Select.t(&self.lang).to_string(),
+                            self.lang,
+                            &Tools::options(),
+                            Default::default(),
+                            None,
+                        )
+                        .selecteds(self.selecteds.clone())
+                        .selected(self.selected);
+                    
+                        let multi_select_height = multi_select.height(area.width - 4);
+                        (
+                            timeline.height + multi_select_height,
+                            Some(multi_select),
+                            Layout::vertical([
+                                Constraint::Length(timeline.height),
+                                Constraint::Length(multi_select_height),
+                            ]),
+                        )
+                    }
+                    InstallState::Install => (
+                        timeline.height,
+                        None,
+                        Layout::vertical([Constraint::Percentage(100)]),
+                    ),
+                }
+            } else {
+                (
+                    timeline.height,
+                    None,
+                    Layout::vertical([Constraint::Percentage(100)]),
+                )
+            };
+
         // let path = "/Users/shengyifei/projects/gen_ui/ract_workspace/ract/log";
         // gen_utils::common::fs::write(path, & format!("{}|{}|{}", main_height, timeline.height, multi_select_height));
 
@@ -131,16 +184,20 @@ impl AppComponent for InstallCmd {
             13,
             |frame, [main_area, msg_area]| {
                 // [layout] -----------------------------------------------------------------
-                let [multi_check_area, select_area] = Layout::vertical([
-                    Constraint::Length(timeline.height),
-                    Constraint::Length(multi_select_height),
-                ])
-                .flex(ratatui::layout::Flex::SpaceBetween)
-                .areas(main_area);
+                let multi_check_area = if let Some(multi_select) = multi_select.as_mut() {
+                    let [multi_check_area, select_area] = layout
+                        .flex(ratatui::layout::Flex::SpaceBetween)
+                        .areas(main_area);
+                    multi_select.render_from(select_area, frame);
+                    multi_check_area
+                } else {
+                    let [multi_check_area] = layout
+                        .flex(ratatui::layout::Flex::SpaceBetween)
+                        .areas(main_area);
+                    multi_check_area
+                };
 
                 timeline.render(multi_check_area, frame);
-                // [multi select for install] -----------------------------------------------
-                multi_select.render_from(select_area, frame);
                 // [install progress] -------------------------------------------------------
                 frame.render_widget(msg, msg_area);
             },

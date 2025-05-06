@@ -302,6 +302,7 @@ impl LogExt for Options {
 
 pub enum Help {
     Select,
+    MultiSelect,
     EditNormal,
     EditComplex,
     Log,
@@ -312,6 +313,7 @@ impl LogExt for Help {
         let lang = lang.as_str();
         match self {
             Help::Select => t!("common.help.select", locale = lang),
+            Help::MultiSelect => t!("common.help.multi_select", locale = lang),
             Help::EditNormal => t!("common.help.edit.normal", locale = lang),
             Help::EditComplex => t!("common.help.edit.complex", locale = lang),
             Help::Log => t!("common.help.log_tab", locale = lang),
