@@ -1,6 +1,9 @@
 use crate::{
-    app::{AppComponent, BaseRunState, ComponentState, Dashboard, State, Timeline, TimelineState},
-    entry::Language,
+    app::{
+        AppComponent, BaseRunState, ComponentState, Dashboard, MultiSelect, State, Timeline,
+        TimelineState,
+    },
+    entry::{Language, Tools},
     log::{InstallLogs, Log, LogExt, LogItem, LogType},
     service::check::{
         check_basic, check_cargo, check_git, check_rustc, check_underlayer, CheckItem,
@@ -25,6 +28,7 @@ pub struct InstallCmd {
     log: Log,
     cost: Option<Duration>,
     check: Check,
+    selected: Vec<usize>,
 }
 
 impl AppComponent for InstallCmd {
@@ -39,6 +43,7 @@ impl AppComponent for InstallCmd {
             log: Log::new(),
             cost: None,
             check: Check::default(),
+            selected: vec![0],
         }
     }
 
@@ -53,7 +58,7 @@ impl AppComponent for InstallCmd {
                 InstallState::Check(state) => {
                     let err = false;
                     self.handle_check(err, state);
-                
+
                     if err {
                         self.check.state = TimelineState::Failed;
                         self.state.to_pause();
@@ -64,8 +69,8 @@ impl AppComponent for InstallCmd {
                     }
                     self.state.next();
                 }
-                InstallState::Select => {},
-                InstallState::Install => {},
+                InstallState::Select => {}
+                InstallState::Install => {}
             },
             ComponentState::Pause => {}
             ComponentState::Quit => {}
@@ -94,31 +99,52 @@ impl AppComponent for InstallCmd {
         let msg = Paragraph::new(msg)
             .scroll((y as u16, 0))
             .wrap(Wrap { trim: true });
+        // [multi check] ------------------------------------------------------------
+        let timeline = Timeline::new(InstallLogs::CheckTitle.t(&self.lang).to_string(), self.lang)
+            .progress(self.check.progress)
+            .cost(self.cost.unwrap_or_default())
+            .description(self.check.to_log().t(&self.lang).to_string())
+            .state(self.check.state)
+            .draw();
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = LogType::Install;
         dashboard.cost = self.cost.clone();
-        dashboard.render(frame, area, 12, 13, |frame, [main_area, msg_area]| {
-            // [layout] -----------------------------------------------------------------
-            // let [] = Layout::vertical([
-            //     Constraint::Length(2)
-            // ])
+        
+        // [multi select] --------------------------------------------------------
+        let mut multi_select = MultiSelect::new(
+            InstallLogs::Select.t(&self.lang).to_string(),
+            self.lang,
+            &Tools::options(),
+            Default::default(),
+            None,
+        ).selected(self.selected.clone());
+        let multi_select_height = multi_select.height(area.width  - 4);
+        let main_height = timeline.height + multi_select_height + 1;
+        // let path = "/Users/shengyifei/projects/gen_ui/ract_workspace/ract/log";
+        // gen_utils::common::fs::write(path, & format!("{}|{}|{}", main_height, timeline.height, multi_select_height));
 
-            // [multi check] ------------------------------------------------------------
+        dashboard.render(
+            frame,
+            area,
+            main_height,
+            13,
+            |frame, [main_area, msg_area]| {
+                // [layout] -----------------------------------------------------------------
+                let [multi_check_area, select_area] = Layout::vertical([
+                    Constraint::Length(timeline.height),
+                    Constraint::Length(multi_select_height),
+                ])
+                .flex(ratatui::layout::Flex::SpaceBetween)
+                .areas(main_area);
 
-            let timeline = Timeline::new(InstallLogs::CheckTitle.t(&self.lang).to_string(), self.lang)
-                .progress(self.check.progress)
-                .cost(self.cost.unwrap_or_default())
-                .description(self.check.to_log().t(&self.lang).to_string())
-                .state(self.check.state)
-                .draw();
-
-            timeline.render(main_area, frame);
-            // [multi select for install] -----------------------------------------------
-
-            // [install progress] -------------------------------------------------------
-            frame.render_widget(msg, msg_area);
-        });
+                timeline.render(multi_check_area, frame);
+                // [multi select for install] -----------------------------------------------
+                multi_select.render_from(select_area, frame);
+                // [install progress] -------------------------------------------------------
+                frame.render_widget(msg, msg_area);
+            },
+        );
     }
 
     fn state(&self) -> &ComponentState<Self::State>
