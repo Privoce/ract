@@ -238,14 +238,14 @@ impl AppComponent for ConfigCmd {
                                 match data.current {
                                     Configs::Env => {
                                         self.value = fs::path_to_str(&data.env.0);
-                                        self.textarea.insert_str(self.value.as_str());
+                                        // self.textarea.insert_str(self.value.as_str());
                                     }
                                     Configs::ChainEnvToml => {
                                         let (_, v_v, is_key) =
                                             &data.chain_env.to_lines()[self.kv_index];
                                         if *is_key {
                                             self.value = v_v.to_string();
-                                            self.textarea.insert_str(self.value.as_str());
+                                            // self.textarea.insert_str(self.value.as_str());
                                         }
                                     }
                                 }

@@ -17,7 +17,7 @@ use crate::{
 use super::check::current_states;
 
 pub fn run() {
-    InstallLogs::Welcome.terminal().info();
+    // InstallLogs::Welcome.terminal().info();
     InstallLogs::Desc.terminal().info();
 
     // first use check to show user the current status

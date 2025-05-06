@@ -213,7 +213,7 @@ impl AppComponent for StudioCmd {
         let area = frame.area();
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Config;
+        dashboard.ty = LogType::Studio;
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
         let help_msg = Line::from(Common::Help(Help::Log).t(&self.lang).to_string());

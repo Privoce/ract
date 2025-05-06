@@ -56,9 +56,7 @@ impl AppComponent for CheckCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Char('q') => {
-                            self.quit()
-                        }
+                        event::KeyCode::Char('q') => self.quit(),
                         _ => {}
                     }
                 }
@@ -68,8 +66,13 @@ impl AppComponent for CheckCmd {
     }
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let msg = Paragraph::new(self.draw_msg())
-            .scroll((0, 0))
+        let (msg, lines) = self.draw_msg(area.width - 4);
+        let mut y = 0;
+        if lines > 7 {
+            y = lines - 7;
+        }
+        let msg = Paragraph::new(msg)
+            .scroll((y, 0))
             .wrap(Wrap { trim: true })
             .block(Block::new().borders(Borders::TOP));
         // [dashboard] ----------------------------------------------------------------------------------------------
@@ -112,8 +115,8 @@ impl AppComponent for CheckCmd {
 }
 
 impl CheckCmd {
-    fn draw_msg(&self) -> Text {
-        self.log.draw_text()
+    fn draw_msg(&self, w: u16) -> (Text, u16) {
+        self.log.draw_text_with_width(w)
     }
     pub fn before<'a>(
         lang: &'a Language,
@@ -125,7 +128,7 @@ impl CheckCmd {
             *lang,
             &options,
             Color::White.into(),
-            None
+            None,
         )
         .run(terminal, true)?;
 

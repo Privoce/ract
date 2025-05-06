@@ -170,6 +170,8 @@ pub enum LogType {
     Check,
     Create,
     Config,
+    Studio,
+    Install,
     #[default]
     Unknown,
 }
@@ -188,6 +190,8 @@ impl Display for LogType {
             LogType::Create => "CREATE",
             LogType::Config => "CONFIG",
             LogType::Unknown => "UNKNOWN",
+            LogType::Install => "INSTALL",
+            LogType::Studio => "STUDIO",
         })
     }
 }

@@ -14,8 +14,7 @@ pub mod unicode;
 use crate::{
     cli::{
         command::{
-            check::CheckCmd, config::ConfigCmd, init::InitCmd, studio::StudioCmd,
-            uninstall::UninstallCmd, Commands,
+            check::CheckCmd, config::ConfigCmd, init::InitCmd, install::InstallCmd, studio::StudioCmd, uninstall::UninstallCmd, Commands
         },
         Cli,
     },
@@ -71,7 +70,8 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 service::run::run();
             }
             Commands::Install => {
-                service::install::run();
+                // service::install::run();
+                InstallCmd::new(lang).run(terminal, false)?;
             }
             Commands::Add { name } => {
                 service::add::run(&name);

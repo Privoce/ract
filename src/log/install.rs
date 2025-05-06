@@ -1,12 +1,15 @@
 use std::{error::Error, fmt::Display};
 
-use super::TerminalLogger;
+use rust_i18n::t;
+
+use super::{LogExt, TerminalLogger};
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum InstallLogs {
-    Welcome,
     Desc,
+    Check { current: String, num: u8, total: u8 },
+    CheckTitle,
     Install(String),
     Installed(String),
     UnInstalled(String),
@@ -22,7 +25,7 @@ pub enum InstallLogs {
 impl Display for InstallLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstallLogs::Welcome => f.write_str("🥳 Welcome to use ract Install!"),
+            // InstallLogs::Welcome => f.write_str("🥳 Welcome to use ract Install!"),
             InstallLogs::Rustc => f.write_str("✅ Rustc has been installed successfully!"),
             InstallLogs::Cargo => f.write_str("✅ Cargo has been installed successfully!"),
             InstallLogs::Git => f.write_str("✅ Git has been installed successfully!"),
@@ -40,6 +43,12 @@ impl Display for InstallLogs {
             InstallLogs::UnInstalled(t) => {
                 f.write_fmt(format_args!("❌ {} has not been installed!", t))
             }
+            InstallLogs::Check { current, num, total } => 
+                f.write_fmt(format_args!(
+                    "🔸 Check: {} ({}/{})",
+                    current, num, total
+                )),
+            InstallLogs::CheckTitle => f.write_str("🔸 Check:"),
         }
     }
 }
@@ -48,6 +57,38 @@ impl InstallLogs {
     pub fn terminal(&self) -> TerminalLogger {
         TerminalLogger {
             output: std::borrow::Cow::Owned(self.to_string()),
+        }
+    }
+}
+
+impl LogExt for InstallLogs {
+    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+        let lang = lang.as_str();
+
+        match self {
+            InstallLogs::Desc => t!("install.desc", locale = lang),
+            InstallLogs::Check {
+                current,
+                num,
+                total,
+            } => t!(
+                "install.check",
+                locale = lang,
+                current = current,
+                num = num,
+                total = total
+            ),
+            InstallLogs::CheckTitle => t!("install.check_title", locale = lang),
+            InstallLogs::Install(_) => todo!(),
+            InstallLogs::Installed(_) => todo!(),
+            InstallLogs::UnInstalled(_) => todo!(),
+            InstallLogs::InstallErr(_) => todo!(),
+            InstallLogs::Rustc => todo!(),
+            InstallLogs::Cargo => todo!(),
+            InstallLogs::Git => todo!(),
+            InstallLogs::All => todo!(),
+            InstallLogs::Default => todo!(),
+            InstallLogs::Confirm(_) => todo!(),
         }
     }
 }

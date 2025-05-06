@@ -1,5 +1,18 @@
 _version = 1
 
+# [install] ------------------------------------------------------
+[install]
+desc = """
+∙ Rustc：安装 rustc 编译器
+∙ Cargo：安装 Cargo 包管理器
+∙ Git：安装 Git 版本控制系统
+∙ All：安装所有依赖项（包括：[Rustc, Cargo, Git, All Underlayer]）
+∙ Default：安装默认依赖项（包括：[Rustc, Cargo, Git, Makepad, GenUI]）
+⚠ 请保证您的网络连接正常
+"""
+check = "检测: %{current} ░ [ %{num} / %{total} ]"
+check_title = "检测环境依赖项"
+
 # [wasm] ----------------------------------------------------------
 [wasm]
 desc = """

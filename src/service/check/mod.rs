@@ -30,15 +30,15 @@ pub fn current_states() -> Result<Tools, Error> {
     })
 }
 
-fn check_rustc() -> CheckItem {
+pub fn check_rustc() -> CheckItem {
     basic_check("rustc".to_string())
 }
 
-fn check_cargo() -> CheckItem {
+pub fn check_cargo() -> CheckItem {
     basic_check("cargo".to_string())
 }
 
-fn check_git() -> CheckItem {
+pub fn check_git() -> CheckItem {
     basic_check("git".to_string())
 }
 
