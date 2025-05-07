@@ -6,7 +6,7 @@ use gen_utils::{common::fs, error::Error};
 
 use which::which;
 
-use crate::entry::{ChainEnvToml, Tools, Underlayer, UnderlayerTools};
+use crate::{common::is_empty_dir, entry::{ChainEnvToml, MakepadState, ToolState, Tools, Underlayer, UnderlayerTools}};
 
 /// ## Check basic toolchain
 /// 1. rustc
@@ -16,7 +16,7 @@ pub fn check_basic() -> Vec<CheckItem> {
     vec![check_rustc(), check_cargo(), check_git()]
 }
 
-pub fn current_states() -> Result<Tools, Error> {
+pub fn current_states() -> Result<ToolState, Error> {
     // [basic] ----------------------------------------------------------------------------------------------
     let rustc = check_rustc().state;
     let cargo = check_cargo().state;
@@ -24,9 +24,9 @@ pub fn current_states() -> Result<Tools, Error> {
     // [underlayer] -----------------------------------------------------------------------------------------
     let ((makepad, _), (gen_ui, _)) = makepad_exist()?;
 
-    Ok(Tools {
+    Ok(ToolState {
         basic: (rustc, cargo, git).into(),
-        underlayer: UnderlayerTools::Makepad((makepad, gen_ui).into()),
+        underlayer: MakepadState::new(makepad, gen_ui),
     })
 }
 
@@ -91,16 +91,4 @@ fn makepad_exist() -> Result<((bool, Option<PathBuf>), (bool, Option<PathBuf>)),
     ))
 }
 
-fn is_empty_dir<P>(path: Option<P>) -> Result<bool, Error>
-where
-    P: AsRef<Path>,
-{
-    if let Some(path) = path {
-        if fs::exists_dir(path.as_ref()) {
-            let mut entries = std::fs::read_dir(path).map_err(|e| Error::from(e.to_string()))?;
-            return Ok(entries.next().is_none());
-        }
-    }
 
-    Ok(true)
-}

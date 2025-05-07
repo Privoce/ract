@@ -1,27 +1,37 @@
 use crate::{
-    app::{
-        AppComponent, BaseRunState, ComponentState, Dashboard, MultiSelect, State, Timeline,
-        TimelineState,
-    },
+    app::{AppComponent, ComponentState, Dashboard, MultiSelect, State, Timeline, TimelineState},
     entry::{Language, Tools},
     log::{InstallLogs, Log, LogExt, LogItem, LogType},
-    service::check::{
-        check_basic, check_cargo, check_git, check_rustc, check_underlayer, CheckItem,
+    service::{
+        self,
+        check::{check_cargo, check_git, check_rustc, check_underlayer, CheckItem},
     },
 };
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
-    style::Color,
-    text::Text,
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
-    Frame,
+    widgets::{Paragraph, Wrap},
+    DefaultTerminal,
 };
-use std::{
-    str::FromStr,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
+/// # Install Command
+/// command should have a dashboard
+/// 1. check the current state
+/// 2. select the tools to install
+/// 3. confirm the install options and quit tui (back to terminal and then do install)
+/// ## Install Options
+/// - rustc|cargo
+/// - git
+/// - makepad
+///     - gen_ui
+///     - android_build
+///     - ios_build
+///     - wasm_build
+///     - makepad_studio
+///     - default (makepad_widgets)
+/// ## Attention
+/// when install, should quit tui
 pub struct InstallCmd {
     lang: Language,
     state: ComponentState<InstallState>,
@@ -32,8 +42,10 @@ pub struct InstallCmd {
     selected: usize,
 }
 
+pub type InstallOptions = Vec<Tools>;
+
 impl AppComponent for InstallCmd {
-    type Output = ();
+    type Output = InstallOptions;
 
     type State = InstallState;
 
@@ -47,6 +59,26 @@ impl AppComponent for InstallCmd {
             selecteds: vec![0],
             selected: 0,
         }
+    }
+
+    fn run(
+        mut self,
+        terminal: &mut DefaultTerminal,
+        quit: bool,
+    ) -> crate::common::Result<Self::Output>
+    where
+        Self: Sized,
+        Self::State: State,
+        Self::Output: Default,
+    {
+        while !self.state().is_quit() {
+            terminal.draw(|frame| self.render(frame))?;
+            self.handle_events()?;
+            if quit && self.state().is_pause() {
+                self.quit();
+            }
+        }
+        Ok(self.handle_result())
     }
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
@@ -72,7 +104,6 @@ impl AppComponent for InstallCmd {
                     self.state.next();
                 }
                 InstallState::Select => {}
-                InstallState::Install => {}
             },
             ComponentState::Pause => {}
             ComponentState::Quit => {}
@@ -99,6 +130,9 @@ impl AppComponent for InstallCmd {
                             } else {
                                 self.selecteds.push(self.selected);
                             }
+                        }
+                        event::KeyCode::Enter => {
+                            self.state.quit();
                         }
                         _ => {}
                     }
@@ -149,7 +183,7 @@ impl AppComponent for InstallCmd {
                         )
                         .selecteds(self.selecteds.clone())
                         .selected(self.selected);
-                    
+
                         let multi_select_height = multi_select.height(area.width - 4);
                         (
                             timeline.height + multi_select_height,
@@ -160,11 +194,6 @@ impl AppComponent for InstallCmd {
                             ]),
                         )
                     }
-                    InstallState::Install => (
-                        timeline.height,
-                        None,
-                        Layout::vertical([Constraint::Percentage(100)]),
-                    ),
                 }
             } else {
                 (
@@ -217,6 +246,13 @@ impl AppComponent for InstallCmd {
 }
 
 impl InstallCmd {
+    fn handle_result(&self) -> InstallOptions {
+        let options = Tools::options();
+        self.selecteds
+            .iter()
+            .map(|&index| options[index].into())
+            .collect()
+    }
     fn handle_check(&mut self, mut err: bool, state: CheckState) -> () {
         let start = Instant::now();
         // [check basic env] ------------------------------------------------
@@ -260,7 +296,6 @@ impl InstallCmd {
 pub enum InstallState {
     Check(CheckState),
     Select,
-    Install,
 }
 
 impl Default for InstallState {
@@ -279,19 +314,16 @@ impl State for InstallState {
                     state.next();
                 }
             }
-            InstallState::Select => {
-                *self = InstallState::Install;
-            }
-            InstallState::Install => {}
+            InstallState::Select => {}
         }
     }
 
     fn is_run_end(&self) -> bool {
-        matches!(self, InstallState::Install)
+        matches!(self, InstallState::Select)
     }
 
     fn to_run_end(&mut self) -> () {
-        *self = InstallState::Install;
+        *self = InstallState::Select;
     }
 }
 
@@ -352,5 +384,25 @@ impl Check {
             num: num as u8,
             total: 5,
         }
+    }
+}
+
+/// # FollowUp for install command
+/// After install command app quit, it will return `InstallOptions`
+/// this trait is used to follow up the install command, analyze the result and then do install
+pub trait InstallCmdFollowUp {
+    fn follow_up(self) -> crate::common::Result<()>
+    where
+        Self: Sized;
+}
+
+impl InstallCmdFollowUp for InstallOptions {
+    fn follow_up(self) -> crate::common::Result<()>
+    where
+        Self: Sized,
+    {
+        service::install::run(self).map_err(|e| crate::log::error::Error::other(e.to_string()))?;
+
+        Ok(())
     }
 }

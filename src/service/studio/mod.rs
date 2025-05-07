@@ -13,63 +13,63 @@ use crate::{
     service::check::current_states,
 };
 
-pub fn run() -> () {
-    StudioLogs::Desc.terminal().info();
+// pub fn run() -> () {
+//     StudioLogs::Desc.terminal().info();
 
-    if let Err(e) = conf_run() {
-        TerminalLogger::new(e.to_string().as_str()).error();
-        exit(2);
-    }
-}
+//     if let Err(e) = conf_run() {
+//         TerminalLogger::new(e.to_string().as_str()).error();
+//         exit(2);
+//     }
+// }
 
-/// run makepad studio
-/// now support gui platform
-fn conf_run() -> Result<(), Error> {
-    let states = current_states()?;
+// /// run makepad studio
+// /// now support gui platform
+// fn conf_run() -> Result<(), Error> {
+//     let states = current_states()?;
 
-    if !states.underlayer.makepad_is_ok() {
-        return Err(InstallLogs::UnInstalled("makepad".to_string())
-            .to_string()
-            .into());
-    }
+//     if !states.underlayer.makepad_is_ok() {
+//         return Err(InstallLogs::UnInstalled("makepad".to_string())
+//             .to_string()
+//             .into());
+//     }
 
-    let is_default = Confirm::new("Do you want to run default studio?")
-        .with_default(true)
-        .prompt()
-        .map_err(|e| e.to_string())?;
+//     let is_default = Confirm::new("Do you want to run default studio?")
+//         .with_default(true)
+//         .prompt()
+//         .map_err(|e| e.to_string())?;
 
-    let path = if is_default {
-        default_makepad_studio_path()
-    } else {
-        let path = Text::new("Path for the target studio")
-            .prompt()
-            .map_err(|e| e.to_string())?;
+//     let path = if is_default {
+//         default_makepad_studio_path()
+//     } else {
+//         let path = Text::new("Path for the target studio")
+//             .prompt()
+//             .map_err(|e| e.to_string())?;
 
-        let path = PathBuf::from_str(&path).map_err(|e| e.to_string())?;
-        if !path.exists() {
-            Err(Error::from("The path is not exist!"))
-        } else {
-            Ok(path)
-        }
-    }?;
+//         let path = PathBuf::from_str(&path).map_err(|e| e.to_string())?;
+//         if !path.exists() {
+//             Err(Error::from("The path is not exist!"))
+//         } else {
+//             Ok(path)
+//         }
+//     }?;
 
-    run_gui(
-        path,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
-    )
-    .map_or_else(
-        |e| Err(e),
-        |status| {
-            if status.success() {
-                StudioLogs::Stop.terminal().success();
-                Ok(())
-            } else {
-                Err(StudioLogs::Error("-".to_string()).to_string().into())
-            }
-        },
-    )
-}
+//     run_gui(
+//         path,
+//         |line| TerminalLogger::new(&line).info(),
+//         |line| TerminalLogger::new(&line).warning(),
+//     )
+//     .map_or_else(
+//         |e| Err(e),
+//         |status| {
+//             if status.success() {
+//                 StudioLogs::Stop.terminal().success();
+//                 Ok(())
+//             } else {
+//                 Err(StudioLogs::Error("-".to_string()).to_string().into())
+//             }
+//         },
+//     )
+// }
 
 pub fn default_makepad_studio_path() -> Result<PathBuf, Error> {
     let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;

@@ -65,3 +65,17 @@ where
 
     handle(path, 0).unwrap_or(false)
 }
+
+pub fn is_empty_dir<P>(path: Option<P>) -> Result<bool, Error>
+where
+    P: AsRef<Path>,
+{
+    if let Some(path) = path {
+        if fs::exists_dir(path.as_ref()) {
+            let mut entries = std::fs::read_dir(path).map_err(|e| Error::from(e.to_string()))?;
+            return Ok(entries.next().is_none());
+        }
+    }
+
+    Ok(true)
+}

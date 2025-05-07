@@ -11,6 +11,12 @@ pub enum Error {
     AppExit
 }
 
+impl Error {
+    pub fn other(msg: String) -> Self {
+        Error::Other { ty: None, msg }
+    }
+}
+
 impl std::error::Error for Error {}
 
 impl Display for Error {

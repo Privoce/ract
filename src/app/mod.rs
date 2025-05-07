@@ -14,7 +14,7 @@ pub mod unicode;
 use crate::{
     cli::{
         command::{
-            check::CheckCmd, config::ConfigCmd, init::InitCmd, install::InstallCmd, studio::StudioCmd, uninstall::UninstallCmd, Commands
+            check::CheckCmd, config::ConfigCmd, init::InitCmd, install::{InstallCmd, InstallCmdFollowUp}, studio::StudioCmd, uninstall::UninstallCmd, Commands
         },
         Cli,
     },
@@ -25,7 +25,7 @@ use crate::{
 use clap::Parser;
 pub use state::*;
 
-use ratatui::{DefaultTerminal, Frame};
+use ratatui::{crossterm::{event::DisableMouseCapture, execute, terminal::{disable_raw_mode, LeaveAlternateScreen}}, DefaultTerminal, Frame};
 
 pub use dashboard::Dashboard;
 pub use select::*;
@@ -34,7 +34,12 @@ pub use timeline::*;
 
 pub use list::*;
 
+/// # Run app
+/// ## Return
+/// - `true` do not need to do destroy
+/// - 
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
+    let mut destroy_before = false;
     // [match cli command] ------------------------------------------------------------------------------
     let cmd = Cli::parse().commands;
     if let Commands::Init = cmd {
@@ -71,7 +76,11 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             }
             Commands::Install => {
                 // service::install::run();
-                InstallCmd::new(lang).run(terminal, false)?;
+                let options = InstallCmd::new(lang).run(terminal, false)?;
+                // do destroy before follow up
+                destroy(terminal)?;
+                options.follow_up()?;
+                destroy_before = true;
             }
             Commands::Add { name } => {
                 service::add::run(&name);
@@ -79,7 +88,23 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             _ => {}
         }
     }
+    // [destroy terminal] -------------------------------------------------------------------------------
+    if !destroy_before {
+        destroy(terminal)?;
+    }
 
+    Ok(())
+}
+
+fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {
+    ratatui::restore();
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
     Ok(())
 }
 

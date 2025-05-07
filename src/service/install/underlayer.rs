@@ -11,51 +11,80 @@ use inquire::{Confirm, MultiSelect};
 use which::which;
 
 use crate::{
-    entry::{ChainEnvToml, Tools},
+    common::is_empty_dir,
+    entry::{ChainEnvToml, MakepadTools, Tools},
     log::{InstallLogs, TerminalLogger},
 };
 
-pub fn install_makepad(tools: &Tools) -> Result<(), Error> {
-    let makepad_is_ok = tools.underlayer.makepad_is_ok();
-    let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
-    let chain_path = chain_env_toml.chain_path();
-    MultiSelect::new(
-        "What you need to (re)install?",
-        vec![
-            "gen_components",
-            "android_build",
-            "ios_build",
-            "wasm_build",
-            "makepad_studio",
-            "default",
-        ],
-    )
-    .with_help_message("if you do not want to install other tools just makepad, select default!")
-    .prompt()
-    .map_or_else(
-        |e| Err(e.to_string().into()),
-        |options| {
-            // first you must install makepad (so check and ask user need to update?)
-            update_makepad(makepad_is_ok, chain_path.as_path())?;
-            // then you can install other tools
-            for option in options {
-                let res = match option {
-                    "gen_components" => clone_gen_ui_components(chain_path.as_path()),
-                    "android_build" => install_android_build(chain_path.as_path()),
-                    "ios_build" => install_ios_build(chain_path.as_path()),
-                    "wasm_build" => install_wasm_build(chain_path.as_path()),
-                    "makepad_studio" => install_makepad_studio(chain_path.as_path()),
-                    "default" => Ok(()),
-                    _ => Err("❌ Invalid option!".to_string().into()),
-                };
+// pub fn install_makepad(tools: &Tools) -> Result<(), Error> {
+//     let makepad_is_ok = tools.underlayer.makepad_is_ok();
+//     let chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
+//     let chain_path = chain_env_toml.chain_path();
+//     MultiSelect::new(
+//         "What you need to (re)install?",
+//         vec![
+//             "gen_components",
+//             "android_build",
+//             "ios_build",
+//             "wasm_build",
+//             "makepad_studio",
+//             "default",
+//         ],
+//     )
+//     .with_help_message("if you do not want to install other tools just makepad, select default!")
+//     .prompt()
+//     .map_or_else(
+//         |e| Err(e.to_string().into()),
+//         |options| {
+//             // first you must install makepad (so check and ask user need to update?)
+//             update_makepad(makepad_is_ok, chain_path.as_path())?;
+//             // then you can install other tools
+//             for option in options {
+//                 let res = match option {
+//                     "gen_components" => clone_gen_ui_components(chain_path.as_path()),
+//                     "android_build" => install_android_build(chain_path.as_path()),
+//                     "ios_build" => install_ios_build(chain_path.as_path()),
+//                     "wasm_build" => install_wasm_build(chain_path.as_path()),
+//                     "makepad_studio" => install_makepad_studio(chain_path.as_path()),
+//                     "default" => Ok(()),
+//                     _ => Err("❌ Invalid option!".to_string().into()),
+//                 };
 
-                if res.is_err() {
-                    return res;
-                }
-            }
-            Ok(())
-        },
-    )
+//                 if res.is_err() {
+//                     return res;
+//                 }
+//             }
+//             Ok(())
+//         },
+//     )
+// }
+
+pub fn install<P>(path: P, makepad_is_ok: bool, makepad_tools: MakepadTools) -> Result<(), Error>
+where
+    P: AsRef<Path>,
+{
+    update_makepad(makepad_is_ok, path.as_ref())?;
+    
+    match makepad_tools {
+        crate::entry::MakepadTools::Makepad => {}
+        crate::entry::MakepadTools::GenUi => {
+            clone_gen_ui_components(path)?;
+        }
+        crate::entry::MakepadTools::Android => {
+            install_android_build(path)?;
+        }
+        crate::entry::MakepadTools::Ios => {
+            install_ios_build(path)?;
+        }
+        crate::entry::MakepadTools::Wasm => {
+            install_wasm_build(path)?;
+        }
+        crate::entry::MakepadTools::Studio => {
+            install_makepad_studio(path)?;
+        }
+    }
+
+    Ok(())
 }
 
 fn install_makepad_studio<P>(path: P) -> Result<(), Error>
