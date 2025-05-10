@@ -113,7 +113,10 @@ impl AppComponent for InstallCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Char('q') => self.quit(),
+                        event::KeyCode::Char('q') => {
+                            self.selecteds.clear();
+                            self.quit();
+                        },
                         event::KeyCode::Up => {
                             if self.selected > 0 {
                                 self.selected -= 1;

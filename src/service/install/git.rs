@@ -45,7 +45,7 @@ pub fn install_git() -> Result<(), Error> {
             |e| Err(e.to_string().into()),
             |out| {
                 if out.status.success() {
-                    InstallLogs::Git.terminal().success();
+                    InstallLogs::Installed("Git".to_string()).terminal().success();
                     Ok(())
                 } else {
                     Err(InstallLogs::InstallErr("git".to_string())
@@ -85,7 +85,7 @@ pub fn install_git() -> Result<(), Error> {
                         |e| Err(Error::FromDynError(e.to_string())),
                         |out| {
                             if out.status.success() {
-                                InstallLogs::Git.terminal().success();
+                                InstallLogs::Installed("Git".to_string()).terminal().success();
                                 Ok(())
                             } else {
                                 Err(InstallLogs::InstallErr("git".to_string())

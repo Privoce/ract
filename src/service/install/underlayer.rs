@@ -104,7 +104,7 @@ where
                         InstallLogs::Confirm("makepad_studio".to_string())
                             .terminal()
                             .success();
-                        TerminalLogger::new("ℹ️ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio")
+                        TerminalLogger::new("ℹ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio")
                             .info();
                         Ok(())
                     } else {
@@ -137,7 +137,7 @@ where
                         InstallLogs::Confirm("android_build".to_string())
                             .terminal()
                             .success();
-                        TerminalLogger::new("ℹ️ You can use `cargo makepad android run -p ${project_name} --release` to run the project")
+                        TerminalLogger::new("ℹ You can use `cargo makepad android run -p ${project_name} --release` to run the project")
                             .info();
                         Ok(())
                     } else {
@@ -185,7 +185,7 @@ where
                         InstallLogs::Confirm("ios_build".to_string())
                             .terminal()
                             .success();
-                        TerminalLogger::new("ℹ️ You can use `cargo makepad apple ios --org=my.test --app=${project_name} run-sim -p ${project_name} --release` to run the project\nFor more information, see: https://github.com/syf20020816/makepad/tree/rik?tab=readme-ov-file#5-ios-setup--install")
+                        TerminalLogger::new("ℹ You can use `cargo makepad apple ios --org=my.test --app=${project_name} run-sim -p ${project_name} --release` to run the project\nFor more information, see: https://github.com/syf20020816/makepad/tree/rik?tab=readme-ov-file#5-ios-setup--install")
                             .info();
                         Ok(())
                     } else {
@@ -230,7 +230,7 @@ where
                     InstallLogs::Confirm("wasm_build".to_string())
                     .terminal()
                     .success();
-                TerminalLogger::new("ℹ️ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project")
+                TerminalLogger::new("ℹ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project")
                     .info();
                     Ok(())
                 } else {
@@ -278,7 +278,7 @@ where
                     .terminal()
                     .success();
                 TerminalLogger::new(
-                    "ℹ️ You can use `cargo makepad -h` to see the help information",
+                    "ℹ You can use `cargo makepad -h` to see the help information",
                 )
                 .info();
                 Ok(())

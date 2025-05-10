@@ -15,11 +15,6 @@ pub enum InstallLogs {
     Installed(String),
     UnInstalled(String),
     InstallErr(String),
-    Rustc,
-    Cargo,
-    Git,
-    All,
-    Default,
     Confirm(String),
 }
 
@@ -82,15 +77,10 @@ impl LogExt for InstallLogs {
             ),
             InstallLogs::CheckTitle => t!("install.check_title", locale = lang),
             InstallLogs::Select => t!("install.select", locale = lang),
-            InstallLogs::Install(_) => todo!(),
-            InstallLogs::Installed(_) => todo!(),
-            InstallLogs::UnInstalled(_) => todo!(),
-            InstallLogs::InstallErr(_) => todo!(),
-            InstallLogs::Rustc => todo!(),
-            InstallLogs::Cargo => todo!(),
-            InstallLogs::Git => todo!(),
-            InstallLogs::All => todo!(),
-            InstallLogs::Default => todo!(),
+            InstallLogs::Install(name) => t!("install.install", locale = lang, name = name),
+            InstallLogs::Installed(name) => t!("install.installed", locale = lang, name = name),
+            InstallLogs::UnInstalled(name) => t!("install.uninstalled", locale = lang, name = name),
+            InstallLogs::InstallErr(name) => t!("install.install_err", locale = lang, name = name),
             InstallLogs::Confirm(_) => todo!(),
         }
     }

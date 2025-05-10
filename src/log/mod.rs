@@ -172,6 +172,7 @@ pub enum LogType {
     Config,
     Studio,
     Install,
+    Wasm,
     #[default]
     Unknown,
 }
@@ -192,6 +193,7 @@ impl Display for LogType {
             LogType::Unknown => "UNKNOWN",
             LogType::Install => "INSTALL",
             LogType::Studio => "STUDIO",
+            LogType::Wasm => "WASM",
         })
     }
 }

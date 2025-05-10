@@ -18,8 +18,8 @@ pub mod run;
 // pub mod update;
 /// uninstall the cli
 pub mod uninstall;
-// /// run wasm project
-// pub mod wasm;
+/// run wasm project
+pub mod wasm;
 /// run makepad studio
 pub mod studio;
 

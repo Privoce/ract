@@ -14,7 +14,14 @@ pub mod unicode;
 use crate::{
     cli::{
         command::{
-            check::CheckCmd, config::ConfigCmd, init::InitCmd, install::{InstallCmd, InstallCmdFollowUp}, studio::StudioCmd, uninstall::UninstallCmd, Commands
+            check::CheckCmd,
+            config::ConfigCmd,
+            init::InitCmd,
+            install::{InstallCmd, InstallCmdFollowUp},
+            studio::StudioCmd,
+            uninstall::UninstallCmd,
+            wasm::WasmCmd,
+            Commands,
         },
         Cli,
     },
@@ -25,7 +32,14 @@ use crate::{
 use clap::Parser;
 pub use state::*;
 
-use ratatui::{crossterm::{event::DisableMouseCapture, execute, terminal::{disable_raw_mode, LeaveAlternateScreen}}, DefaultTerminal, Frame};
+use ratatui::{
+    crossterm::{
+        event::DisableMouseCapture,
+        execute,
+        terminal::{disable_raw_mode, LeaveAlternateScreen},
+    },
+    DefaultTerminal, Frame,
+};
 
 pub use dashboard::Dashboard;
 pub use select::*;
@@ -37,7 +51,7 @@ pub use list::*;
 /// # Run app
 /// ## Return
 /// - `true` do not need to do destroy
-/// - 
+/// -
 pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
     let mut destroy_before = false;
     // [match cli command] ------------------------------------------------------------------------------
@@ -60,7 +74,8 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 StudioCmd::new(lang).run(terminal, false)?;
             }
             Commands::Wasm(wasm_args) => {
-                wasm_args.run(&lang);
+                // wasm_args.run(&lang);
+                WasmCmd::try_from((wasm_args, lang))?.run(terminal, false)?;
             }
             Commands::Update(args) => {
                 args.run();
@@ -75,7 +90,6 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 service::run::run();
             }
             Commands::Install => {
-                // service::install::run();
                 let options = InstallCmd::new(lang).run(terminal, false)?;
                 // do destroy before follow up
                 destroy(terminal)?;
@@ -145,6 +159,7 @@ pub enum InputMode {
     Normal,
 }
 
+#[allow(unused)]
 impl InputMode {
     pub fn next(&mut self) -> () {
         match self {

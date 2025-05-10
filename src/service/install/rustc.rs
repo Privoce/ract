@@ -33,7 +33,7 @@ pub fn install_rustc() -> Result<(), Error> {
         |e| Err(e),
         |status| {
             if status.success() {
-                InstallLogs::Rustc.terminal().success();
+                InstallLogs::Installed("Rustc".to_string()).terminal().success();
                 Ok(())
             } else {
                 Err(InstallLogs::InstallErr("rustc".to_string())
@@ -75,7 +75,7 @@ pub fn install_rustc() -> Result<(), Error> {
         |e| Err(e),
         |status| {
             if status.success() {
-                InstallLogs::Rustc.terminal().success();
+                InstallLogs::Installed("Rustc".to_string()).terminal().success();
                 Ok(())
             } else {
                 Err(InstallLogs::InstallErr("rustc".to_string())
@@ -115,7 +115,7 @@ pub fn install_rustc() -> Result<(), Error> {
                         |e| Err(Error::FromDynError(e.to_string())),
                         |out| {
                             if out.status.success() {
-                                InstallLogs::Rustc.terminal().success();
+                                InstallLogs::Installed("Rustc".to_string()).terminal().success();
                                 Ok(())
                             } else {
                                 Err(InstallLogs::InstallErr("rustc".to_string())
