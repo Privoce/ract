@@ -26,6 +26,17 @@ impl<S: State> ComponentState<S> {
     pub fn to_pause(&mut self) {
         *self = ComponentState::Pause;
     }
+    pub fn timeout<F>(&self, mut run: F) -> u64
+    where
+        F: Fn() -> u64,
+    {
+        match self {
+            ComponentState::Start => 100,
+            ComponentState::Run(_) => run(),
+            ComponentState::Pause => 500,
+            ComponentState::Quit => 500,
+        }
+    }
 }
 
 impl<S: State> State for ComponentState<S> {
@@ -78,11 +89,10 @@ pub trait State: Default + Clone + Copy {
     fn to_run_end(&mut self) -> ();
 }
 
-
 #[derive(Clone, Copy, Debug, Default)]
-pub enum BaseRunState{
+pub enum BaseRunState {
     #[default]
-    Running
+    Running,
 }
 
 impl State for BaseRunState {

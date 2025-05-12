@@ -1,7 +1,7 @@
 use std::{borrow::Cow, process::exit};
 
 use colored::{ColoredString, Colorize};
-use gen_utils::common::time::{local_time, local_time_format};
+use gen_utils::common::time::local_time_format;
 
 /// # TerminalLogger
 /// logging messages to the terminal with different colors and styles which can combine i18n with super impl
@@ -20,7 +20,6 @@ impl<'a> TerminalLogger<'a> {
             self.output
         )
     }
-
     pub fn info(&self) {
         self.unified_log("INFO".blue());
     }
@@ -36,9 +35,6 @@ impl<'a> TerminalLogger<'a> {
     pub fn warning(&self) {
         self.unified_log("WARN".yellow().bold());
     }
-    // pub fn rust(&self) {
-    //     println!("{}", self.output.on_truecolor(255, 112, 67).white().bold());
-    // }
     pub fn new(s: &str) -> TerminalLogger {
         TerminalLogger {
             output: Cow::Borrowed(s),

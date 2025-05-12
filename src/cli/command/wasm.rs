@@ -1,33 +1,26 @@
-use gen_utils::common::{fs, stream_terminal};
+use gen_utils::common::stream_terminal;
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
-    style::Color,
-    text::{Line, Text},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Wrap},
+    text::Line,
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     Frame,
 };
 use std::{
     env::current_dir,
-    io::{BufRead, BufReader},
-    path::PathBuf,
-    process::{Child, ExitStatus},
     str::FromStr,
     sync::mpsc::{Receiver, Sender},
-    time::Duration,
+    thread,
+    time::{Duration, Instant},
 };
 use tui_textarea::TextArea;
 
 use crate::{
-    app::{self, AppComponent, ComponentState, Dashboard, State},
+    app::{AppComponent, ComponentState, Dashboard, State},
     common::Result,
-    entry::{Checks, Language, Underlayer},
-    log::{CheckLogs, ComponentChannel, Log, LogExt, LogItem, CommandType, WasmLogs},
-    service::{
-        self,
-        check::{check_basic, CheckItem},
-        wasm::WasmArgs,
-    },
+    entry::Language,
+    log::{CommandType, Log, LogExt, LogItem, WasmLogs},
+    service::{self, wasm::WasmArgs},
 };
 
 pub struct WasmCmd {
@@ -42,6 +35,8 @@ pub struct WasmCmd {
     // channel: ComponentChannel<std::result::Result<ExitStatus, gen_utils::error::Error>>
     channel: RunChannel,
     is_running: bool,
+    last_log_time: Option<Instant>,
+    scroll_y: u16,
 }
 
 impl AppComponent for WasmCmd {
@@ -61,11 +56,13 @@ impl AppComponent for WasmCmd {
             cost: None,
             textarea: Self::init_textarea(&lang),
             channel: RunChannel {
-                process: None,
+                pid: None,
                 sender,
                 receiver,
             },
             is_running: false,
+            last_log_time: None,
+            scroll_y: 0,
         }
     }
 
@@ -83,9 +80,23 @@ impl AppComponent for WasmCmd {
             },
             ComponentState::Pause => {}
             ComponentState::Quit => {}
-        }
+        };
 
-        if event::poll(Duration::from_millis(100))? {
+        let timeout = self.state.timeout(|| {
+            if self.is_running {
+                // if over 2 s no new logs, turn to long waiting
+                if let Some(last_time) = self.last_log_time {
+                    if last_time.elapsed() > Duration::from_secs(2) {
+                        return 1000;
+                    }
+                }
+                20
+            } else {
+                20
+            }
+        });
+
+        if event::poll(Duration::from_millis(timeout))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
@@ -94,6 +105,22 @@ impl AppComponent for WasmCmd {
                                 self.stop_process()?;
                             } else {
                                 self.quit();
+                            }
+                        }
+                        event::KeyCode::Up => {
+                            if self.is_run_port() {
+                                self.textarea.input(key);
+                            } else {
+                                if self.scroll_y > 0 {
+                                    self.scroll_y -= 1;
+                                }
+                            }
+                        }
+                        event::KeyCode::Down => {
+                            if self.is_run_port() {
+                                self.textarea.input(key);
+                            } else {
+                                self.scroll_y += 1;
                             }
                         }
                         event::KeyCode::Enter => {
@@ -133,13 +160,12 @@ impl AppComponent for WasmCmd {
 
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let (msg, lines) = self.draw_msg(area.width - 4);
-        let mut y = 0;
-        if lines > 8 {
-            y = lines - 8;
+        let (msg, lines) = self.log.draw_text_with_width(area.width - 4);
+        if lines > 12 {
+            self.scroll_y = lines - 12;
         }
         let msg = Paragraph::new(msg)
-            .scroll((y, 0))
+            .scroll((self.scroll_y, 0))
             .wrap(Wrap { trim: true })
             .block(Block::new().borders(Borders::TOP));
 
@@ -154,7 +180,7 @@ impl AppComponent for WasmCmd {
             frame,
             area,
             main_height,
-            9,
+            14,
             |frame, [main_area, msg_area]| {
                 if self.is_run_port() {
                     // [ask user for port] ----------------------------------------------------------------------------------------------
@@ -190,7 +216,7 @@ impl WasmCmd {
         if self.is_running {
             return;
         }
-
+        let start = Instant::now();
         let path = current_dir().unwrap();
         let child_res = if let Some(project) = self.project.as_ref() {
             // do makepad run wasm
@@ -219,29 +245,33 @@ impl WasmCmd {
         };
 
         match child_res {
-            Ok(child) => {
-                self.channel.process = Some(child);
-                self.is_running = true;
-                self.log
-                    .push(LogItem::info(WasmLogs::Start.t(&self.lang).to_string()));
+            Ok(mut child) => {
+                self.cost = Some(start.elapsed());
+                self.channel.pid = Some(child.id());
                 let info_sender = self.channel.sender.clone();
                 let warn_sender = self.channel.sender.clone();
-                let _ = stream_terminal(
-                    self.channel.process.as_mut().unwrap(),
-                    move |msg| {
-                        let _ = info_sender.send(LogItem::info(msg));
-                    },
-                    move |msg| {
-                        let _ = warn_sender.send(LogItem::warning(msg));
-                    },
-                )
-                .map_err(|e| {
-                    self.log.push(LogItem::error(e.to_string()));
+                let err_sender = self.channel.sender.clone();
+
+                thread::spawn(move || {
+                    let res = stream_terminal(
+                        &mut child,
+                        move |msg| {
+                            let _ = info_sender.send(LogItem::info(msg));
+                        },
+                        move |msg| {
+                            let _ = warn_sender.send(LogItem::warning(msg));
+                        },
+                    );
+
+                    if let Err(e) = res {
+                        let _ = err_sender.send(LogItem::error(e.to_string()));
+                    }
                 });
 
                 self.log.push(LogItem::success(
                     WasmLogs::Package.t(&self.lang).to_string(),
                 ));
+                self.is_running = true;
             }
             Err(e) => {
                 self.log.push(LogItem::error(e.to_string()));
@@ -254,48 +284,51 @@ impl WasmCmd {
         if self.is_running {
             if let Ok(log) = self.channel.receiver.try_recv() {
                 self.log.push(log);
+                self.last_log_time = Some(Instant::now());
             }
         }
     }
 
     fn stop_process(&mut self) -> Result<()> {
-        if let Some(mut child) = self.channel.process.take() {
-            child.kill().map_err(|e| crate::log::error::Error::Other {
-                ty: Some("Wasm".to_string()),
-                msg: e.to_string(),
-            })?;
-
-            if let Ok(status) = child.wait() {
-                if !status.success() {
-                    let msg = child.stderr.map_or("".to_string(), |s| {
-                        let stderr_reader = BufReader::new(s);
-                        let mut res = vec![];
-                        for line in stderr_reader.lines() {
-                            if let Ok(line) = line {
-                                res.push(line);
-                            }
-                        }
-                        res.join("\n")
-                    });
-
-                    self.log.push(
-                        LogItem::error(WasmLogs::StopUnexpected(msg).t(&self.lang).to_string())
-                            .multi(),
-                    );
+        if let Some(pid) = self.channel.pid {
+            // 在 macOS 上使用 kill 命令终止进程
+            match std::process::Command::new("kill")
+                .arg("-9")
+                .arg(pid.to_string())
+                .status()
+            {
+                Ok(status) => {
+                    if status.success() {
+                        self.log
+                            .push(LogItem::warning(WasmLogs::Stop.t(&self.lang).to_string()));
+                        self.state.to_pause();
+                    } else {
+                        self.log.push(LogItem::error(
+                            WasmLogs::StopUnexpected(format!(
+                                "Kill command failed with status: {}",
+                                status
+                            ))
+                            .t(&self.lang)
+                            .to_string(),
+                        ));
+                    }
+                }
+                Err(e) => {
+                    self.log.push(LogItem::error(
+                        WasmLogs::StopUnexpected(e.to_string())
+                            .t(&self.lang)
+                            .to_string(),
+                    ));
                 }
             }
 
-            self.is_running = false;
-            self.log
-                .push(LogItem::warning(WasmLogs::Stop.t(&self.lang).to_string()));
-            self.state.to_pause();
+            // 清除 PID
+            self.channel.pid = None;
         }
+        self.is_running = false;
         Ok(())
     }
 
-    fn draw_msg(&self, w: u16) -> (Text, u16) {
-        self.log.draw_text_with_width(w)
-    }
     fn is_run_port(&self) -> bool {
         matches!(self.state, ComponentState::Run(WasmState::Port))
     }
@@ -321,11 +354,13 @@ impl From<(WasmArgs, Language)> for WasmCmd {
             cost: None,
             textarea: Self::init_textarea(&value.1),
             channel: RunChannel {
-                process: None,
+                pid: None,
                 sender,
                 receiver,
             },
             is_running: false,
+            last_log_time: None,
+            scroll_y: 0,
         }
     }
 }
@@ -335,6 +370,7 @@ pub enum WasmState {
     /// enter port
     #[default]
     Port,
+
     Running,
 }
 
@@ -344,6 +380,7 @@ impl State for WasmState {
             WasmState::Port => {
                 *self = WasmState::Running;
             }
+
             WasmState::Running => {}
         }
     }
@@ -358,7 +395,7 @@ impl State for WasmState {
 }
 
 struct RunChannel {
-    process: Option<Child>,
+    pid: Option<u32>,
     sender: Sender<LogItem>,
     receiver: Receiver<LogItem>,
 }
