@@ -90,6 +90,7 @@ impl AppComponent for StudioCmd {
                 }
                 StudioState::Select => {}
                 StudioState::Running => {
+                    self.before_running();
                     self.handle_running();
                 }
             },
@@ -372,7 +373,10 @@ impl StudioCmd {
         }
     }
 
-    fn handle_running(&mut self) -> () {
+    fn before_running(&mut self) {
+        if self.is_running {
+            return;
+        }
         let start = Instant::now();
         let studio_path = if self.is_default {
             // [use default] ------------------------------------------------
@@ -419,7 +423,9 @@ impl StudioCmd {
                 self.state.to_pause();
             }
         }
+    }
 
+    fn handle_running(&mut self) -> () {
         // [means the child process is running] --------------------------
         if self.is_running {
             if let Ok(res) = self

@@ -75,7 +75,7 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             }
             Commands::Wasm(wasm_args) => {
                 // wasm_args.run(&lang);
-                WasmCmd::try_from((wasm_args, lang))?.run(terminal, false)?;
+                WasmCmd::from((wasm_args, lang)).run(terminal, false)?;
             }
             Commands::Update(args) => {
                 args.run();

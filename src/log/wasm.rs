@@ -4,13 +4,14 @@ use rust_i18n::t;
 
 use super::{terminal::TerminalLogger, LogExt};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum WasmLogs {
     Desc,
     Package,
     Start,
     Stop,
     Port,
+    PortError(String),
     Placeholder,
     NoRactConf,
 }
@@ -38,6 +39,9 @@ impl LogExt for WasmLogs {
             WasmLogs::Start => t!("wasm.start", locale = lang_str),
             WasmLogs::Stop => t!("wasm.stop", locale = lang_str),
             WasmLogs::Port => t!("wasm.port", locale = lang_str),
+            WasmLogs::PortError(reason) => {
+                t!("wasm.port_err", locale = lang_str, reason = reason)
+            }
             WasmLogs::Placeholder => t!("wasm.placeholder", locale = lang_str),
             WasmLogs::NoRactConf => t!("wasm.no_ract_conf", locale = lang_str),
         }

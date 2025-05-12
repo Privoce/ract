@@ -1,15 +1,27 @@
 use gen_utils::common::fs;
 use ratatui::{
-    crossterm::event::{self, Event, KeyEventKind}, layout::{Constraint, Layout}, style::Color, text::{Line, Text}, widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Wrap}, Frame
+    crossterm::event::{self, Event, KeyEventKind},
+    layout::{Constraint, Layout},
+    style::Color,
+    text::{Line, Text},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Wrap},
+    Frame,
+};
+use std::{
+    env::current_dir,
+    path::PathBuf,
+    process::{Child, ExitStatus},
+    str::FromStr,
+    sync::mpsc::{Receiver, Sender},
+    time::Duration,
 };
 use tui_textarea::TextArea;
-use std::{path::PathBuf, str::FromStr, time::Duration};
 
 use crate::{
     app::{self, AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{CheckLogs, Log, LogExt, LogItem, LogType, WasmLogs},
+    log::{CheckLogs, ComponentChannel, Log, LogExt, LogItem, LogType, WasmLogs},
     service::{
         self,
         check::{check_basic, CheckItem},
@@ -22,10 +34,13 @@ pub struct WasmCmd {
     lang: Language,
     log: Log,
     /// if path is None, use current dir
-    path: Option<PathBuf>,
+    project: Option<String>,
     port: u16,
     cost: Option<Duration>,
-    textarea: TextArea<'static>
+    textarea: TextArea<'static>,
+    // channel: ComponentChannel<std::result::Result<ExitStatus, gen_utils::error::Error>>
+    channel: RunChannel,
+    is_running: bool,
 }
 
 impl AppComponent for WasmCmd {
@@ -34,14 +49,22 @@ impl AppComponent for WasmCmd {
     type State = WasmState;
 
     fn new(lang: Language) -> Self {
+        let (sender, receiver) = std::sync::mpsc::channel();
+
         Self {
             state: Default::default(),
             lang,
             log: Log::new(),
-            path: None,
+            project: None,
             port: 8010,
             cost: None,
             textarea: Self::init_textarea(&lang),
+            channel: RunChannel {
+                process: None,
+                sender,
+                receiver,
+            },
+            is_running: false,
         }
     }
 
@@ -50,10 +73,10 @@ impl AppComponent for WasmCmd {
             ComponentState::Start => {
                 self.state.next();
             }
-            ComponentState::Run(state) =>{
-                match state {
-                    WasmState::Port => {},
-                    WasmState::Running => {},
+            ComponentState::Run(state) => match state {
+                WasmState::Port => {}
+                WasmState::Running => {
+                    self.handle_running();
                 }
             },
             ComponentState::Pause => {}
@@ -64,8 +87,37 @@ impl AppComponent for WasmCmd {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Char('q') => self.quit(),
-                        _ => {}
+                        event::KeyCode::Char('q') => {
+                            self.quit();
+                        }
+                        event::KeyCode::Enter => {
+                            if self.is_run_port() {
+                                // confirm the port and run
+                                match u16::from_str(self.textarea.lines().join("").as_str()) {
+                                    Ok(port) => {
+                                        self.port = port;
+                                        self.state = ComponentState::Run(WasmState::Running);
+                                        self.log.push(LogItem::info(
+                                            WasmLogs::Start.t(&self.lang).to_string(),
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        self.textarea = Self::init_textarea(&self.lang);
+                                        self.log.push(LogItem::error(
+                                            WasmLogs::PortError(e.to_string())
+                                                .t(&self.lang)
+                                                .to_string(),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            if self.is_run_port() {
+                                // handle textarea input
+                                self.textarea.input(key);
+                            }
+                        }
                     }
                 }
             }
@@ -77,49 +129,42 @@ impl AppComponent for WasmCmd {
         let area = frame.area();
         let (msg, lines) = self.draw_msg(area.width - 4);
         let mut y = 0;
-        if lines > 7 {
-            y = lines - 7;
+        if lines > 8 {
+            y = lines - 8;
         }
         let msg = Paragraph::new(msg)
             .scroll((y, 0))
             .wrap(Wrap { trim: true })
             .block(Block::new().borders(Borders::TOP));
 
-         // [dashboard] ----------------------------------------------------------------------------------------------
-         let mut dashboard = Dashboard::new(self.lang.clone());
-         dashboard.ty = LogType::Wasm;
-         dashboard.cost = self.cost;
-         // [render components] ------------------------------------------------------------------------------------
-         let main_height = if self.is_run_port() {
-            4
-         }else{
-            1
-         };
-         
-         
-         dashboard.render(
-             frame,
-             area,
-             main_height,
-             8,
-             |frame, [main_area, msg_area]| {
+        // [dashboard] ----------------------------------------------------------------------------------------------
+        let mut dashboard = Dashboard::new(self.lang.clone());
+        dashboard.ty = LogType::Wasm;
+        dashboard.cost = self.cost;
+        // [render components] ------------------------------------------------------------------------------------
+        let main_height = if self.is_run_port() { 4 } else { 0 };
+
+        dashboard.render(
+            frame,
+            area,
+            main_height,
+            9,
+            |frame, [main_area, msg_area]| {
                 if self.is_run_port() {
                     // [ask user for port] ----------------------------------------------------------------------------------------------
-                    let port_text  = Line::from(WasmLogs::Port.t(&self.lang).to_string());
+                    let port_text = Line::from(WasmLogs::Port.t(&self.lang).to_string());
 
-                    let [text_area, input_area] = Layout::vertical([
-                        Constraint::Length(1),
-                        Constraint::Length(3),
-                    ]).areas(main_area);
+                    let [text_area, input_area] =
+                        Layout::vertical([Constraint::Length(1), Constraint::Length(3)])
+                            .areas(main_area);
 
                     frame.render_widget(port_text, text_area);
                     frame.render_widget(&self.textarea, input_area);
                 }
-                
-               
-                 frame.render_widget(msg, msg_area);
-             },
-         );
+
+                frame.render_widget(msg, msg_area);
+            },
+        );
     }
 
     fn state(&self) -> &ComponentState<Self::State>
@@ -135,6 +180,44 @@ impl AppComponent for WasmCmd {
 }
 
 impl WasmCmd {
+    fn handle_running(&mut self) -> Result<()> {
+        if self.is_running {
+            return Ok(());
+        }
+
+        let path = current_dir().unwrap();
+        let child = if let Some(project) = self.project.as_ref() {
+            // do makepad run wasm
+            service::wasm::makepad::run(path.as_path(), project, self.port).map_err(|e| {
+                crate::log::error::Error::Other {
+                    ty: Some("Wasm".to_string()),
+                    msg: e.to_string(),
+                }
+            })
+        } else {
+            // get current dir path and check has .ract file
+            let ract_path = path.join(".ract");
+            if !ract_path.exists() {
+                Err(crate::log::error::Error::Other {
+                    ty: Some("Wasm".to_string()),
+                    msg: WasmLogs::NoRactConf.t(&self.lang).to_string(),
+                })
+            } else {
+                service::wasm::run_wasm(path, ract_path, self.port).map_err(|e| {
+                    crate::log::error::Error::Other {
+                        ty: Some("Wasm".to_string()),
+                        msg: e.to_string(),
+                    }
+                })
+            }
+        }?;
+
+
+
+        self.state.next();
+        Ok(())
+    }
+
     fn draw_msg(&self, w: u16) -> (Text, u16) {
         self.log.draw_text_with_width(w)
     }
@@ -150,32 +233,25 @@ impl WasmCmd {
     }
 }
 
-impl TryFrom<(WasmArgs, Language)> for WasmCmd {
-    type Error = crate::log::error::Error;
+impl From<(WasmArgs, Language)> for WasmCmd {
+    fn from(value: (WasmArgs, Language)) -> Self {
+        let (sender, receiver) = std::sync::mpsc::channel();
 
-    fn try_from(value: (WasmArgs, Language)) -> std::result::Result<Self, Self::Error> {
-        let path = if let Some(path) = value.0.project {
-            if fs::exists_dir(&path) {
-                Some(PathBuf::from(path))
-            } else {
-                return Err(crate::log::error::Error::Other {
-                    ty: Some("Fs::DirNotFound".to_string()),
-                    msg: "can not find target dir path".to_string(),
-                });
-            }
-        } else {
-            None
-        };
-
-        Ok(Self {
+        Self {
             state: Default::default(),
             lang: value.1,
             log: Log::new(),
-            path,
+            project: value.0.project,
             port: 8010,
             cost: None,
             textarea: Self::init_textarea(&value.1),
-        })
+            channel: RunChannel {
+                process: None,
+                sender,
+                receiver,
+            },
+            is_running: false,
+        }
     }
 }
 
@@ -204,4 +280,10 @@ impl State for WasmState {
     fn to_run_end(&mut self) -> () {
         *self = WasmState::Running;
     }
+}
+
+struct RunChannel {
+    process: Option<Child>,
+    sender: Sender<LogItem>,
+    receiver: Receiver<LogItem>,
 }
