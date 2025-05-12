@@ -10,6 +10,7 @@ pub enum WasmLogs {
     Package,
     Start,
     Stop,
+    StopUnexpected(String),
     Port,
     PortError(String),
     Placeholder,
@@ -38,6 +39,9 @@ impl LogExt for WasmLogs {
             WasmLogs::Package => t!("wasm.package", locale = lang_str),
             WasmLogs::Start => t!("wasm.start", locale = lang_str),
             WasmLogs::Stop => t!("wasm.stop", locale = lang_str),
+            WasmLogs::StopUnexpected(reason) => {
+                t!("wasm.stop_unexpected", locale = lang_str, reason = reason)
+            }
             WasmLogs::Port => t!("wasm.port", locale = lang_str),
             WasmLogs::PortError(reason) => {
                 t!("wasm.port_err", locale = lang_str, reason = reason)

@@ -4,7 +4,7 @@ use crate::{
     app::{unicode, AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
-    log::{error::Error, Command, Common, ConfigLogs, Fs, Help, Log, LogExt, LogItem, LogType},
+    log::{error::Error, Command, Common, ConfigLogs, Fs, Help, Log, LogExt, LogItem, CommandType},
 };
 use gen_utils::common::fs;
 use ratatui::{
@@ -368,7 +368,7 @@ impl AppComponent for ConfigCmd {
             .block(Block::new().borders(Borders::TOP));
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Config;
+        dashboard.ty = CommandType::Config;
         dashboard.cost = self.cost.clone();
         // [render components] ------------------------------------------------------------------------------------
         let selected_index = self

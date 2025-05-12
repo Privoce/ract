@@ -1,7 +1,7 @@
 use crate::{
     app::{AppComponent, ComponentState, Dashboard, MultiSelect, State, Timeline, TimelineState},
     entry::{Language, Tools},
-    log::{InstallLogs, Log, LogExt, LogItem, LogType},
+    log::{InstallLogs, Log, LogExt, LogItem, CommandType},
     service::{
         self,
         check::{check_cargo, check_git, check_rustc, check_underlayer, CheckItem},
@@ -164,7 +164,7 @@ impl AppComponent for InstallCmd {
             .draw();
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Install;
+        dashboard.ty = CommandType::Install;
         dashboard.cost = self.cost.clone();
 
         // [multi select] --------------------------------------------------------

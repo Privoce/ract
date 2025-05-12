@@ -43,14 +43,9 @@ pub struct ToolState {
 
 impl Display for ToolState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "🔸 Basic Tools:\n\t\t{}\n\t\t{}\n\t\t{}\n",
-            self.basic.rustc, self.basic.cargo, self.basic.git
-        ))?;
-        f.write_fmt(format_args!(
-            "🔸 Makepad ToolChains:\n\t\t{}\n\t\t{}\n",
-            self.underlayer.makepad, self.underlayer.gen_ui
-        ))
+        f.write_str("ℹ Current states:\n")?;
+        f.write_fmt(format_args!("  ∙ Basic Tools:\n{}\n", self.basic))?;
+        f.write_fmt(format_args!("  ∙ Underlayer Tools:\n{}", self.underlayer))
     }
 }
 
@@ -78,6 +73,17 @@ impl BasicState {
 impl From<(bool, bool, bool)> for BasicState {
     fn from((rustc, cargo, git): (bool, bool, bool)) -> Self {
         Self { rustc, cargo, git }
+    }
+}
+
+impl Display for BasicState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "\t• rustc: {}\n\t• cargo: {}\n\t• git: {}",
+            icon(self.rustc),
+            icon(self.cargo),
+            icon(self.git)
+        ))
     }
 }
 
@@ -233,6 +239,16 @@ impl MakepadState {
     }
 }
 
+impl Display for MakepadState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "\t• Makepad: {}\n\t• GenUI: {}",
+            icon(self.makepad),
+            icon(self.gen_ui),
+        ))
+    }
+}
+
 // impl MakepadTools {
 //     pub fn is_ok(&self) -> bool {
 //         self.makepad && self.gen_ui
@@ -261,3 +277,27 @@ impl MakepadState {
 //         format!("{}: {} ", name, "❌").red()
 //     };
 // }
+
+fn icon(success: bool) -> &'static str {
+    if success {
+        "✔"
+    } else {
+        "✘"
+    }
+}
+
+#[cfg(test)]
+mod test_tool_display{
+    use crate::log::LogItem;
+
+    #[test]
+    fn test_tool_display() {
+        let basic = super::BasicState::new(true, true, true);
+        let underlayer = super::MakepadState::new(true, true);
+        let tool = super::ToolState {
+            basic,
+            underlayer,
+        };
+        LogItem::info(format!("{}", tool)).multi().log();
+    }
+}

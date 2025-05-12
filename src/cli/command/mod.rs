@@ -4,8 +4,8 @@ pub mod add;
 pub mod check;
 /// help you to config the cli and tool chain
 pub mod config;
-/// create a new project for GenUI
-pub mod create;
+// /// create a new project for GenUI
+// pub mod create;
 /// help you to init the cli
 pub mod init;
 /// install the tool chain
@@ -54,4 +54,20 @@ pub enum Commands {
     Update(UpdateArgs),
     /// Uninstall the CLI.
     Uninstall
+}
+
+impl Commands {
+    /// need use ratatui to init
+    pub fn need_init(&self) -> bool{
+        match self {
+            Commands::Init
+            | Commands::Check
+            | Commands::Config
+            | Commands::Uninstall
+            | Commands::Studio
+            | Commands::Wasm(_)
+            | Commands::Install => true,
+            _ => false,
+        }
+    }
 }

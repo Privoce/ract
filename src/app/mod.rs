@@ -12,24 +12,20 @@ mod timeline;
 pub mod unicode;
 
 use crate::{
-    cli::{
-        command::{
-            check::CheckCmd,
-            config::ConfigCmd,
-            init::InitCmd,
-            install::{InstallCmd, InstallCmdFollowUp},
-            studio::StudioCmd,
-            uninstall::UninstallCmd,
-            wasm::WasmCmd,
-            Commands,
-        },
-        Cli,
+    cli::command::{
+        check::CheckCmd,
+        config::ConfigCmd,
+        init::InitCmd,
+        install::{InstallCmd, InstallCmdFollowUp},
+        studio::StudioCmd,
+        uninstall::UninstallCmd,
+        wasm::WasmCmd,
+        Commands,
     },
     common::Result,
     entry::Language,
     service::{self, package},
 };
-use clap::Parser;
 pub use state::*;
 
 use ratatui::{
@@ -52,14 +48,16 @@ pub use list::*;
 /// ## Return
 /// - `true` do not need to do destroy
 /// -
-pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
-    let mut destroy_before = false;
-    // [match cli command] ------------------------------------------------------------------------------
-    let cmd = Cli::parse().commands;
-    if let Commands::Init = cmd {
-        InitCmd::new(lang).run(terminal, false)?;
-    } else {
+pub fn run(cmd: Commands, terminal: &mut Option<DefaultTerminal>) -> Result<()> {
+    // [do init before cli and app run] -------------------------------------------------------------
+    let lang = Language::from_conf();
+    // [need init? and run] -------------------------------------------------------------------------
+    if let Some(terminal) = terminal.as_mut() {
+        let mut destroy_before = false;
         match cmd {
+            Commands::Init => {
+                InitCmd::new(lang).run(terminal, false)?;
+            }
             Commands::Check => {
                 let cmd: CheckCmd = CheckCmd::before(&lang, terminal)?.into();
                 cmd.run(terminal, false)?;
@@ -77,6 +75,22 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
                 // wasm_args.run(&lang);
                 WasmCmd::from((wasm_args, lang)).run(terminal, false)?;
             }
+            Commands::Install => {
+                let options = InstallCmd::new(lang).run(terminal, false)?;
+                // do destroy before follow up
+                destroy(terminal)?;
+                options.follow_up()?;
+                destroy_before = true;
+            }
+            _ => {}
+        }
+        // [destroy terminal] -------------------------------------------------------------------------------
+        if !destroy_before {
+            destroy(terminal)?;
+        }
+    } else {
+        // [do not need ratatui init or destroy] ------------------------------------------------------------
+        match cmd {
             Commands::Update(args) => {
                 args.run();
             }
@@ -89,28 +103,16 @@ pub fn run(lang: Language, terminal: &mut DefaultTerminal) -> Result<()> {
             Commands::Run => {
                 service::run::run();
             }
-            Commands::Install => {
-                let options = InstallCmd::new(lang).run(terminal, false)?;
-                // do destroy before follow up
-                destroy(terminal)?;
-                options.follow_up()?;
-                destroy_before = true;
-            }
             Commands::Add { name } => {
                 service::add::run(&name);
             }
             _ => {}
         }
     }
-    // [destroy terminal] -------------------------------------------------------------------------------
-    if !destroy_before {
-        destroy(terminal)?;
-    }
-
     Ok(())
 }
 
-fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {
+pub fn destroy(terminal: &mut DefaultTerminal) -> Result<()> {
     ratatui::restore();
     disable_raw_mode()?;
     execute!(

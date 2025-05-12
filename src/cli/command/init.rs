@@ -11,7 +11,7 @@ use ratatui::{
 use crate::{
     app::{AppComponent, ComponentState, Dashboard, State, Timeline, TimelineState},
     entry::Language,
-    log::{InitLogs, Log, LogExt, LogItem, LogType},
+    log::{InitLogs, Log, LogExt, LogItem, CommandType},
     service,
 };
 
@@ -100,7 +100,7 @@ impl AppComponent for InitCmd {
             .block(Block::new().borders(Borders::TOP));
         // [dashboard] -------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Init;
+        dashboard.ty = CommandType::Init;
         dashboard.cost.replace(self.cost.env + self.cost.chain);
         // [render app] ------------------------------------------------------------------------------------------
         let node1 = Timeline::new(InitLogs::Env.t(&self.lang).to_string(), self.lang)

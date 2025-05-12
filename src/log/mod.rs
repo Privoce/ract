@@ -15,7 +15,7 @@ mod wasm;
 
 use std::{
     borrow::Cow,
-    cell::{OnceCell, RefCell},
+    cell::RefCell,
     fmt::Display,
     sync::mpsc::{Receiver, Sender},
 };
@@ -24,7 +24,6 @@ pub use add::AddLogs;
 pub use check::CheckLogs;
 use chrono::{DateTime, Local};
 use colored::Colorize;
-use compiler::CompilerLogs;
 pub use config::ConfigLogs;
 pub use create::CreateLogs;
 use gen_utils::common::string::FixedString;
@@ -34,13 +33,15 @@ pub use level::LogLevel;
 pub use package::PackageLogs;
 use ratatui::{
     style::{Color, Style, Stylize},
-    text::{Line, Span, Text, ToLine},
+    text::{Line, Span, Text},
 };
-pub use run::{ProjectLogs, RunLogs, StudioLogs};
+pub use run::{ProjectLogs, StudioLogs};
 use rust_i18n::t;
 pub use terminal::TerminalLogger;
 pub use uninstall::UninstallLogs;
 pub use wasm::WasmLogs;
+
+use crate::cli::command::Commands;
 
 use super::entry::Language;
 
@@ -52,7 +53,7 @@ pub trait LogExt {
 #[derive(Debug, Clone)]
 pub struct LogItem {
     level: LogLevel,
-    ty: LogType,
+    ty: CommandType,
     msg: String,
     /// The datetime of the log （use `chrono` crate）
     datetime: DateTime<Local>,
@@ -165,7 +166,7 @@ impl LogItem {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub enum LogType {
+pub enum CommandType {
     Init,
     Check,
     Create,
@@ -173,27 +174,56 @@ pub enum LogType {
     Studio,
     Install,
     Wasm,
+    Run,
+    Pkg,
+    Add,
+    Update,
+    Uninstall,
     #[default]
     Unknown,
 }
 
-impl LogType {
+impl CommandType {
     pub fn is_unknown(&self) -> bool {
-        matches!(self, LogType::Unknown)
+        matches!(self, CommandType::Unknown)
     }
 }
 
-impl Display for LogType {
+impl From<&Commands> for CommandType {
+    fn from(value: &Commands) -> Self {
+        match value {
+            Commands::Create(_) => CommandType::Create,
+            Commands::Check => CommandType::Check,
+            Commands::Install => CommandType::Install,
+            Commands::Run => CommandType::Run,
+            Commands::Init => CommandType::Init,
+            Commands::Config => CommandType::Config,
+            Commands::Studio => CommandType::Studio,
+            Commands::Wasm(_) => CommandType::Wasm,
+            Commands::Pkg => CommandType::Pkg,
+            Commands::Add { .. } => CommandType::Add,
+            Commands::Update(_) => CommandType::Update,
+            Commands::Uninstall => CommandType::Uninstall,
+        }
+    }
+}
+
+impl Display for CommandType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            LogType::Init => "INIT",
-            LogType::Check => "CHECK",
-            LogType::Create => "CREATE",
-            LogType::Config => "CONFIG",
-            LogType::Unknown => "UNKNOWN",
-            LogType::Install => "INSTALL",
-            LogType::Studio => "STUDIO",
-            LogType::Wasm => "WASM",
+            CommandType::Init => "INIT",
+            CommandType::Check => "CHECK",
+            CommandType::Create => "CREATE",
+            CommandType::Config => "CONFIG",
+            CommandType::Unknown => "UNKNOWN",
+            CommandType::Install => "INSTALL",
+            CommandType::Studio => "STUDIO",
+            CommandType::Wasm => "WASM",
+            CommandType::Run => "RUN",
+            CommandType::Pkg => "PKG",
+            CommandType::Add => "ADD",
+            CommandType::Update => "UPDATE",
+            CommandType::Uninstall => "UNINSTALL",
         })
     }
 }

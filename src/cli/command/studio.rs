@@ -3,7 +3,7 @@ use crate::{
     common::Result,
     entry::Language,
     log::{
-        Common, ComponentChannel, Help, Log, LogExt, LogItem, LogType, Options, RunChannel,
+        Common, ComponentChannel, Help, Log, LogExt, LogItem, CommandType, Options, RunChannel,
         StudioLogs,
     },
     service::{
@@ -214,7 +214,7 @@ impl AppComponent for StudioCmd {
         let area = frame.area();
         // [dashboard] -----------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Studio;
+        dashboard.ty = CommandType::Studio;
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
         let help_msg = Line::from(Common::Help(Help::Log).t(&self.lang).to_string());

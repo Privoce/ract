@@ -12,14 +12,14 @@ use ratatui::{
 use super::unicode::{CIRCLE_DOT, CIRCLE_FILLED};
 use crate::{
     entry::Language,
-    log::{Common, LogExt, LogType},
+    log::{Common, LogExt, CommandType},
 };
 
 pub struct Dashboard {
     pub os: Os,
     pub title: String,
     pub lang: Language,
-    pub ty: LogType,
+    pub ty: CommandType,
     pub cost: Option<Duration>,
 }
 
@@ -29,7 +29,7 @@ impl Dashboard {
             os: Os::current(),
             title: "Ract Dashboard".to_string(),
             lang,
-            ty: LogType::Unknown,
+            ty: CommandType::Unknown,
             cost: None,
         }
     }

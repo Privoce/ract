@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::exit, str::FromStr};
 
 use crate::{
     entry::{FrameworkType, ProjectInfoType},
-    log::{CreateLogs, TerminalLogger},
+    log::{CreateLogs, LogItem, TerminalLogger},
 };
 
 use clap::Args;
@@ -34,7 +34,8 @@ impl CreateArgs {
         // check state
         match current_states() {
             Ok(tool) => {
-                TerminalLogger::new(&format!("🔸 Current states:\n {}", tool)).info();
+                // TerminalLogger::new(&format!("{}", tool)).info();
+                LogItem::info(format!("{}", tool)).multi().log();
                 let is_ok = tool.is_ok();
                 if !is_ok {
                     TerminalLogger::new("🔸 Current toolchain is not supported! You should use `ract install` to install toolchain or use `ract config` to set env").warning();

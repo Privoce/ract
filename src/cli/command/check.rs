@@ -11,7 +11,7 @@ use crate::{
     app::{self, AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{CheckLogs, Log, LogExt, LogItem, LogType},
+    log::{CheckLogs, Log, LogExt, LogItem, CommandType},
     service::{
         self,
         check::{check_basic, CheckItem},
@@ -77,7 +77,7 @@ impl AppComponent for CheckCmd {
             .block(Block::new().borders(Borders::TOP));
         // [dashboard] ----------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Check;
+        dashboard.ty = CommandType::Check;
         dashboard.cost = self.cost;
         // [render items] ----------------------------------------------------------------------------------------------
         let len = self.items.len();

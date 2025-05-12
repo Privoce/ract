@@ -1,4 +1,4 @@
-use gen_utils::common::fs;
+use gen_utils::common::{fs, stream_terminal};
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
@@ -9,6 +9,7 @@ use ratatui::{
 };
 use std::{
     env::current_dir,
+    io::{BufRead, BufReader},
     path::PathBuf,
     process::{Child, ExitStatus},
     str::FromStr,
@@ -21,7 +22,7 @@ use crate::{
     app::{self, AppComponent, ComponentState, Dashboard, State},
     common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{CheckLogs, ComponentChannel, Log, LogExt, LogItem, LogType, WasmLogs},
+    log::{CheckLogs, ComponentChannel, Log, LogExt, LogItem, CommandType, WasmLogs},
     service::{
         self,
         check::{check_basic, CheckItem},
@@ -76,6 +77,7 @@ impl AppComponent for WasmCmd {
             ComponentState::Run(state) => match state {
                 WasmState::Port => {}
                 WasmState::Running => {
+                    self.before_running();
                     self.handle_running();
                 }
             },
@@ -88,7 +90,11 @@ impl AppComponent for WasmCmd {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         event::KeyCode::Char('q') => {
-                            self.quit();
+                            if self.is_running {
+                                self.stop_process()?;
+                            } else {
+                                self.quit();
+                            }
                         }
                         event::KeyCode::Enter => {
                             if self.is_run_port() {
@@ -139,7 +145,7 @@ impl AppComponent for WasmCmd {
 
         // [dashboard] ----------------------------------------------------------------------------------------------
         let mut dashboard = Dashboard::new(self.lang.clone());
-        dashboard.ty = LogType::Wasm;
+        dashboard.ty = CommandType::Wasm;
         dashboard.cost = self.cost;
         // [render components] ------------------------------------------------------------------------------------
         let main_height = if self.is_run_port() { 4 } else { 0 };
@@ -180,13 +186,13 @@ impl AppComponent for WasmCmd {
 }
 
 impl WasmCmd {
-    fn handle_running(&mut self) -> Result<()> {
+    fn before_running(&mut self) -> () {
         if self.is_running {
-            return Ok(());
+            return;
         }
 
         let path = current_dir().unwrap();
-        let child = if let Some(project) = self.project.as_ref() {
+        let child_res = if let Some(project) = self.project.as_ref() {
             // do makepad run wasm
             service::wasm::makepad::run(path.as_path(), project, self.port).map_err(|e| {
                 crate::log::error::Error::Other {
@@ -210,11 +216,80 @@ impl WasmCmd {
                     }
                 })
             }
-        }?;
+        };
 
+        match child_res {
+            Ok(child) => {
+                self.channel.process = Some(child);
+                self.is_running = true;
+                self.log
+                    .push(LogItem::info(WasmLogs::Start.t(&self.lang).to_string()));
+                let info_sender = self.channel.sender.clone();
+                let warn_sender = self.channel.sender.clone();
+                let _ = stream_terminal(
+                    self.channel.process.as_mut().unwrap(),
+                    move |msg| {
+                        let _ = info_sender.send(LogItem::info(msg));
+                    },
+                    move |msg| {
+                        let _ = warn_sender.send(LogItem::warning(msg));
+                    },
+                )
+                .map_err(|e| {
+                    self.log.push(LogItem::error(e.to_string()));
+                });
 
+                self.log.push(LogItem::success(
+                    WasmLogs::Package.t(&self.lang).to_string(),
+                ));
+            }
+            Err(e) => {
+                self.log.push(LogItem::error(e.to_string()));
+                self.state.to_pause();
+            }
+        }
+    }
 
-        self.state.next();
+    fn handle_running(&mut self) -> () {
+        if self.is_running {
+            if let Ok(log) = self.channel.receiver.try_recv() {
+                self.log.push(log);
+            }
+        }
+    }
+
+    fn stop_process(&mut self) -> Result<()> {
+        if let Some(mut child) = self.channel.process.take() {
+            child.kill().map_err(|e| crate::log::error::Error::Other {
+                ty: Some("Wasm".to_string()),
+                msg: e.to_string(),
+            })?;
+
+            if let Ok(status) = child.wait() {
+                if !status.success() {
+                    let msg = child.stderr.map_or("".to_string(), |s| {
+                        let stderr_reader = BufReader::new(s);
+                        let mut res = vec![];
+                        for line in stderr_reader.lines() {
+                            if let Ok(line) = line {
+                                res.push(line);
+                            }
+                        }
+                        res.join("\n")
+                    });
+
+                    self.log.push(
+                        LogItem::error(WasmLogs::StopUnexpected(msg).t(&self.lang).to_string())
+                            .multi(),
+                    );
+                }
+            }
+
+            self.is_running = false;
+            self.log
+                .push(LogItem::warning(WasmLogs::Stop.t(&self.lang).to_string()));
+            self.state.to_pause();
+        }
         Ok(())
     }
 
