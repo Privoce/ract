@@ -32,7 +32,6 @@ pub struct WasmCmd {
     port: u16,
     cost: Option<Duration>,
     textarea: TextArea<'static>,
-    // channel: ComponentChannel<std::result::Result<ExitStatus, gen_utils::error::Error>>
     channel: RunChannel,
     is_running: bool,
     last_log_time: Option<Instant>,
@@ -69,6 +68,9 @@ impl AppComponent for WasmCmd {
     fn handle_events(&mut self) -> Result<()> {
         match self.state {
             ComponentState::Start => {
+                self.log.push(LogItem::info(
+                    WasmLogs::Desc.t(&self.lang).to_string(),
+                ));
                 self.state.next();
             }
             ComponentState::Run(state) => match state {

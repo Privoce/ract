@@ -48,6 +48,11 @@ use super::entry::Language;
 pub trait LogExt {
     // use i18n to translate the log message
     fn t(&self, lang: &Language) -> Cow<str>;
+    fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
+        TerminalLogger {
+            output: self.t(lang),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -183,11 +188,6 @@ pub enum CommandType {
     Unknown,
 }
 
-impl CommandType {
-    pub fn is_unknown(&self) -> bool {
-        matches!(self, CommandType::Unknown)
-    }
-}
 
 impl From<&Commands> for CommandType {
     fn from(value: &Commands) -> Self {

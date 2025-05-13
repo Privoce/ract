@@ -3,7 +3,6 @@ mod chain_env_toml;
 
 pub use env::*;
 pub use chain_env_toml::*;
-use ratatui::{style::{Color, Modifier, Style}, text::Span};
 
 use std::str::FromStr;
 use gen_utils::error::Error;

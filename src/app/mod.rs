@@ -59,8 +59,7 @@ pub fn run(cmd: Commands, terminal: &mut Option<DefaultTerminal>) -> Result<()> 
                 InitCmd::new(lang).run(terminal, false)?;
             }
             Commands::Check => {
-                let cmd: CheckCmd = CheckCmd::before(&lang, terminal)?.into();
-                cmd.run(terminal, false)?;
+                CheckCmd::new(lang).run(terminal, false)?;
             }
             Commands::Config => {
                 ConfigCmd::new(lang).run(terminal, false)?;

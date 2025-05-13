@@ -9,9 +9,8 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     app::{self, AppComponent, ComponentState, Dashboard, State},
-    common::Result,
     entry::{Checks, Language, Underlayer},
-    log::{CheckLogs, Log, LogExt, LogItem, CommandType},
+    log::{CheckLogs, CommandType, Log, LogExt, LogItem},
     service::{
         self,
         check::{check_basic, CheckItem},
@@ -22,6 +21,7 @@ pub struct CheckCmd {
     state: ComponentState<CheckState>,
     lang: Language,
     option: Checks,
+    selected: usize,
     log: Log,
     items: Vec<CheckItem>,
     cost: Option<Duration>,
@@ -35,6 +35,7 @@ impl AppComponent for CheckCmd {
         Self {
             state: Default::default(),
             lang,
+            selected: 0,
             option: Checks::default(),
             log: Log::new(),
             items: vec![],
@@ -45,6 +46,8 @@ impl AppComponent for CheckCmd {
     fn handle_events(&mut self) -> crate::common::Result<()> {
         match self.state {
             ComponentState::Start => {
+                self.log
+                    .push(LogItem::info(CheckLogs::Desc.t(&self.lang).to_string()).multi());
                 self.state.next();
             }
             ComponentState::Run(r) => self.handle_running(r),
@@ -57,6 +60,27 @@ impl AppComponent for CheckCmd {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         event::KeyCode::Char('q') => self.quit(),
+                        event::KeyCode::Up => {
+                            if self.is_running_select() {
+                                if self.selected > 0 {
+                                    self.selected -= 1;
+                                }
+                            }
+                        }
+                        event::KeyCode::Down => {
+                            if self.is_running_select() {
+                                if self.selected < Checks::options().len() - 1 {
+                                    self.selected += 1;
+                                }
+                            }
+                        }
+                        event::KeyCode::Enter => {
+                            if self.is_running_select() {
+                                let options = Checks::options();
+                                self.option = Checks::from_str(options[self.selected]).unwrap();
+                                self.state.next();
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -68,8 +92,8 @@ impl AppComponent for CheckCmd {
         let area = frame.area();
         let (msg, lines) = self.draw_msg(area.width - 4);
         let mut y = 0;
-        if lines > 7 {
-            y = lines - 7;
+        if lines > 10 {
+            y = lines - 10;
         }
         let msg = Paragraph::new(msg)
             .scroll((y, 0))
@@ -79,30 +103,46 @@ impl AppComponent for CheckCmd {
         let mut dashboard = Dashboard::new(self.lang.clone());
         dashboard.ty = CommandType::Check;
         dashboard.cost = self.cost;
-        // [render items] ----------------------------------------------------------------------------------------------
-        let len = self.items.len();
-        let (items, list_height): (Vec<ListItem>, u16) = self.items.iter().enumerate().fold(
-            (vec![], 0),
-            |(mut items, mut height), (index, item)| {
-                let item = item.draw_list(len == index + 1);
-                height += item.height() as u16;
-                items.push(item);
-
-                (items, height)
-            },
-        );
-        let list = List::new(items);
         // [render components] ------------------------------------------------------------------------------------
-        dashboard.render(
-            frame,
-            area,
-            list_height,
-            8,
-            |frame, [main_area, msg_area]| {
-                frame.render_widget(list, main_area);
+        if self.is_running_select() {
+            dashboard.render(frame, area, 5, 12, |frame, [main_area, msg_area]| {
+                let options = Checks::options();
+                let _ = app::Select::new_with_options(
+                    &CheckLogs::Select.t(&self.lang).to_string(),
+                    self.lang,
+                    &options,
+                    Color::White.into(),
+                    None,
+                )
+                .selected(self.selected)
+                .render_from(main_area, frame);
                 frame.render_widget(msg, msg_area);
-            },
-        );
+            });
+        } else {
+            let len = self.items.len();
+            // [render items] ----------------------------------------------------------------------------------------------
+            let (items, list_height): (Vec<ListItem>, u16) = self.items.iter().enumerate().fold(
+                (vec![], 0),
+                |(mut items, mut height), (index, item)| {
+                    let item = item.draw_list(len == index + 1);
+                    height += item.height() as u16;
+                    items.push(item);
+
+                    (items, height)
+                },
+            );
+            let list = List::new(items);
+            dashboard.render(
+                frame,
+                area,
+                list_height,
+                12,
+                |frame, [main_area, msg_area]| {
+                    frame.render_widget(list, main_area);
+                    frame.render_widget(msg, msg_area);
+                },
+            );
+        }
     }
 
     fn state(&self) -> &ComponentState<Self::State> {
@@ -118,24 +158,12 @@ impl CheckCmd {
     fn draw_msg(&self, w: u16) -> (Text, u16) {
         self.log.draw_text_with_width(w)
     }
-    pub fn before<'a>(
-        lang: &'a Language,
-        terminal: &mut ratatui::DefaultTerminal,
-    ) -> Result<(Checks, &'a Language)> {
-        let options = Checks::options();
-        let select = app::Select::new_with_options(
-            &CheckLogs::Select.t(lang).to_string(),
-            *lang,
-            &options,
-            Color::White.into(),
-            None,
-        )
-        .run(terminal, true)?;
-
-        Ok((Checks::from_str(options[select]).unwrap(), lang))
+    fn is_running_select(&self) -> bool {
+        matches!(self.state, ComponentState::Run(CheckState::Select))
     }
     fn handle_running(&mut self, state: CheckState) {
         match state {
+            CheckState::Select => {}
             CheckState::Basic => match self.option {
                 Checks::Basic => {
                     self.handle_basic();
@@ -201,22 +229,10 @@ impl CheckCmd {
     }
 }
 
-impl From<(Checks, &Language)> for CheckCmd {
-    fn from(value: (Checks, &Language)) -> Self {
-        Self {
-            state: Default::default(),
-            lang: value.1.clone(),
-            option: value.0,
-            log: Log::default(),
-            items: vec![],
-            cost: None,
-        }
-    }
-}
-
 #[derive(Default, Clone, Copy, Debug)]
 pub enum CheckState {
     #[default]
+    Select,
     Basic,
     Underlayer,
 }
@@ -224,6 +240,9 @@ pub enum CheckState {
 impl State for CheckState {
     fn next(&mut self) -> () {
         match self {
+            CheckState::Select => {
+                *self = CheckState::Basic;
+            }
             CheckState::Basic => {
                 *self = CheckState::Underlayer;
             }

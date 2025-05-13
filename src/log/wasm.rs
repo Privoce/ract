@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 
 use rust_i18n::t;
 
-use super::{terminal::TerminalLogger, LogExt};
+use super::LogExt;
 
 #[derive(Debug, Clone)]
 pub enum WasmLogs {
@@ -20,14 +20,6 @@ pub enum WasmLogs {
 impl Display for WasmLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.t(&crate::entry::Language::default()).as_ref())
-    }
-}
-
-impl WasmLogs {
-    pub fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
-        TerminalLogger {
-            output: self.t(lang),
-        }
     }
 }
 

@@ -1,4 +1,8 @@
-use std::{fmt::Display, path::{Path, PathBuf}, str::FromStr};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use gen_utils::{common::fs, error::Error};
 
@@ -13,7 +17,11 @@ pub struct Env(pub PathBuf);
 impl Env {
     /// 检查.env文件是否存在或内容是否正确
     pub fn check() -> bool {
-        Self::read().is_ok()
+        return if let Ok(env) = Self::read() {
+            env.0.exists()
+        } else {
+            false
+        };
     }
 
     /// 读取.env文件
@@ -37,7 +45,10 @@ impl Env {
         Ok(exe_path.join(".env"))
     }
 
-    pub fn set<P>(&mut self, path: P) where P: AsRef<Path>{
+    pub fn set<P>(&mut self, path: P)
+    where
+        P: AsRef<Path>,
+    {
         self.0 = path.as_ref().to_path_buf();
     }
 }
