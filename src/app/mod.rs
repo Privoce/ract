@@ -41,7 +41,6 @@ pub use dashboard::Dashboard;
 pub use select::*;
 pub use tab::*;
 pub use timeline::*;
-
 pub use list::*;
 
 /// # Run app
@@ -71,7 +70,6 @@ pub fn run(cmd: Commands, terminal: &mut Option<DefaultTerminal>) -> Result<()> 
                 StudioCmd::new(lang).run(terminal, false)?;
             }
             Commands::Wasm(wasm_args) => {
-                // wasm_args.run(&lang);
                 WasmCmd::from((wasm_args, lang)).run(terminal, false)?;
             }
             Commands::Install => {

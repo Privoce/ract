@@ -4,7 +4,7 @@ use crate::{
     app::{unicode, AppComponent, ComponentState, Dashboard, InputMode, Select, State, Tab, KV},
     common::Result,
     entry::{ChainEnvToml, Configs, Env, Language},
-    log::{error::Error, Command, Common, ConfigLogs, Fs, Help, Log, LogExt, LogItem, CommandType},
+    log::{error::Error, Command, CommandType, Common, ConfigLogs, Fs, Help, Log, LogExt, LogItem},
 };
 use gen_utils::common::fs;
 use ratatui::{
@@ -96,15 +96,19 @@ impl AppComponent for ConfigCmd {
                         cmp.log.push(write_fail(e.to_string(), &cmp.lang));
                     }
                 },
-                Configs::ChainEnvToml => match data.chain_env.write() {
-                    Ok(_) => {
-                        cmp.log
-                            .push(write_success("env.toml".to_string(), &cmp.lang));
+                Configs::ChainEnvToml => {
+                    match data.chain_env.write_sync_deps(data.is_makepad_widgets) {
+                        Ok(_) => {
+                            cmp.log
+                                .push(write_success("env.toml".to_string(), &cmp.lang));
+                        }
+                        Err(e) => {
+                            cmp.log.push(write_fail(e.to_string(), &cmp.lang));
+                        }
                     }
-                    Err(e) => {
-                        cmp.log.push(write_fail(e.to_string(), &cmp.lang));
-                    }
-                },
+
+                    data.restore();
+                }
             }
 
             if quit {
@@ -114,9 +118,11 @@ impl AppComponent for ConfigCmd {
 
         match self.state {
             ComponentState::Start => {
-                self.log.push(LogItem::success(
-                    ConfigLogs::LoadSuccess.t(&self.lang).to_string(),
-                ));
+                self.log.extend(vec![
+                    LogItem::info(ConfigLogs::Desc.t(&self.lang).to_string()).multi(),
+                    LogItem::success(ConfigLogs::LoadSuccess.t(&self.lang).to_string()),
+                ]);
+
                 if self.kv_length == 0 {
                     if let Some(data) = self.data.as_ref() {
                         self.kv_length = data.chain_env.lines_length();
@@ -127,7 +133,7 @@ impl AppComponent for ConfigCmd {
             _ => {}
         }
 
-        if event::poll(Duration::from_millis(100))? {
+        if event::poll(Duration::from_millis(500))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
@@ -231,9 +237,6 @@ impl AppComponent for ConfigCmd {
                         event::KeyCode::Char('i') => {
                             if self.place.is_pane() && self.mode.is_normal() {
                                 self.mode = InputMode::Edit;
-                            }
-
-                            if let InputMode::Edit = self.mode {
                                 let data = self.data.as_ref().unwrap();
                                 match data.current {
                                     Configs::Env => {
@@ -249,6 +252,10 @@ impl AppComponent for ConfigCmd {
                                         }
                                     }
                                 }
+                            }
+
+                            if let InputMode::Edit = self.mode {
+                                self.textarea.input(key);
                             }
                         }
 
@@ -276,10 +283,11 @@ impl AppComponent for ConfigCmd {
                                                 }
                                             }
                                             Configs::ChainEnvToml => {
-                                                let old_value = data.chain_env.to_lines()
-                                                    [self.kv_index]
-                                                    .1
-                                                    .to_string();
+                                                let kv = &data.chain_env.to_lines()[self.kv_index];
+
+                                                let key = kv.0.to_string();
+                                                let old_value = kv.1.to_string();
+
                                                 let new_value = self.textarea.lines().join("");
                                                 if old_value != new_value {
                                                     data.chain_env.set(self.kv_index, &new_value);
@@ -288,6 +296,9 @@ impl AppComponent for ConfigCmd {
                                                             .t(&self.lang)
                                                             .to_string(),
                                                     ));
+                                                    // check if the key is makepad-widgets
+                                                    data.is_makepad_widgets =
+                                                        key == "makepad-widgets"
                                                 }
                                             }
                                         }
@@ -445,7 +456,6 @@ impl AppComponent for ConfigCmd {
                             );
                         });
                     // [input] ------------------------------------------------------------------------------
-
                     match self.place {
                         Place::Tab => {
                             frame.render_widget(
@@ -481,8 +491,6 @@ impl AppComponent for ConfigCmd {
                 frame.render_widget(msg, msg_area);
             },
         );
-
-        // frame.render_widget(tab, area);
     }
 
     fn state(&self) -> &ComponentState<Self::State> {
@@ -539,6 +547,7 @@ struct ConfigData {
     pub env: Env,
     pub chain_env: ChainEnvToml,
     pub current: Configs,
+    pub is_makepad_widgets: bool,
 }
 
 impl ConfigData {
@@ -554,11 +563,17 @@ impl ConfigData {
                 env,
                 chain_env,
                 current: Configs::Env,
+                is_makepad_widgets: false,
             });
         } else {
             // do init
             InitCmd::new(lang).run(terminal, true)?;
             return Self::new(lang, terminal);
+        }
+    }
+    pub fn restore(&mut self) {
+        if self.is_makepad_widgets {
+            self.is_makepad_widgets = false;
         }
     }
     pub fn current_index(&self) -> usize {

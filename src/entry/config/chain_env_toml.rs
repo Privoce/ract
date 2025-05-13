@@ -47,8 +47,34 @@ impl ChainEnvToml {
     pub fn write(&self) -> Result<(), Error> {
         fs::write(self.path.as_path(), self.to_string().as_str())
     }
-    pub fn options() -> Vec<&'static str> {
-        vec!["makepad-widgets", "gen_components"]
+    /// 如果修改的是makepad-widgets，那么需要更改gen_components中对makepad-widgets的引用
+    pub fn write_sync_deps(&mut self, sync: bool) -> Result<(), Error> {
+        if sync {
+            if let Some(makepad_path) = self.dependencies.get("makepad-widgets") {
+                self.dependencies.get("gen_components").map_or_else(
+                    || {
+                        Err(Error::Env(EnvError::Get {
+                            key: "gen_components".to_string(),
+                        }))
+                    },
+                    |path| {
+                        let path = path.join("Cargo.toml");
+                        let mut cargo_toml = fs::read(path.as_path())?
+                            .parse::<DocumentMut>()
+                            .map_err(|e| e.to_string())?;
+                        // change makepad-widgets from dependencies == dep_path
+                        cargo_toml["dependencies"]["makepad-widgets"] =
+                            toml_edit::value(fs::path_to_str(&makepad_path));
+                        fs::write(path.as_path(), &cargo_toml.to_string())
+                    },
+                )?;
+            } else {
+                return Err(Error::Env(EnvError::Get {
+                    key: "makepad-widgets".to_string(),
+                }));
+            }
+        }
+        self.write()
     }
     pub fn chain_path(&self) -> PathBuf {
         let mut path = self.path.to_path_buf();
@@ -128,6 +154,8 @@ impl ChainEnvToml {
             }
         }
     }
+    /// ## convert to Line component
+    /// (key, value, is_editable)
     pub fn to_lines(&self) -> Vec<(String, String, bool)> {
         let mut res = vec![
             (

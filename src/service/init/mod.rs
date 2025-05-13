@@ -2,7 +2,7 @@ use gen_utils::error::Error;
 
 use crate::{
     entry::{ChainEnvToml, Env},
-    log::{InitLogs, TerminalLogger},
+    log::{InitLogs, LogExt, TerminalLogger},
 };
 
 use super::update::check_auto_update;
@@ -21,10 +21,13 @@ pub fn check() {
 }
 
 pub fn run() -> Result<(), Error> {
-    InitLogs::Init.terminal(&crate::entry::Language::En).info();
+    let lang = crate::entry::Language::En;
+    InitLogs::Init.terminal(&lang).info();
     create_env_file()?;
+    InitLogs::EnvSuccess.terminal(&lang).success();
     create_chain()?;
-    InitLogs::Complete.terminal(&crate::entry::Language::En).success();
+    InitLogs::ChainSuccess.terminal(&lang).success();
+    InitLogs::Complete.terminal(&lang).success();
     Ok(())
 }
 

@@ -29,8 +29,11 @@ impl<'a> TerminalLogger<'a> {
     /// ## ERROR
     /// Prints the error message in red and exits the program with a non-zero status code
     pub fn error(&self) {
-        self.unified_log("ERROR".red().bold());
+        self.error_no_exit();
         exit(1);
+    }
+    pub fn error_no_exit(&self) {
+        self.unified_log("ERROR".red().bold());
     }
     pub fn warning(&self) {
         self.unified_log("WARN".yellow().bold());

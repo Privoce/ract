@@ -1,4 +1,4 @@
-use super::{LogExt, TerminalLogger};
+use super::LogExt;
 use rust_i18n::t;
 use std::{error::Error, fmt::Display};
 
@@ -17,31 +17,7 @@ pub enum InitLogs {
 
 impl Display for InitLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InitLogs::Init => f.write_str("🚀 Start to init ract..."),
-            InitLogs::Complete => f.write_str("🎉 Init ract successfully!"),
-            InitLogs::Chain => f.write_str("Init chain"),
-            InitLogs::EnvDesc => {
-                f.write_str("Ract will help you create an .env file for link chains")
-            }
-            InitLogs::ChainSuccess => f.write_str("✅ Chain init successfully!"),
-            InitLogs::Env => f.write_str("Init env"),
-            InitLogs::EnvSuccess => f.write_str("✅ Env init successfully!"),
-            InitLogs::ChainFailed(reason) => {
-                write!(f, "❌ Chain init failed: {}", reason)
-            }
-            InitLogs::EnvFailed(reason) => {
-                write!(f, "❌ Env init failed: {}", reason)
-            }
-        }
-    }
-}
-
-impl InitLogs {
-    pub fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
-        TerminalLogger {
-            output: self.t(lang),
-        }
+        f.write_str(self.t(&crate::entry::Language::En).as_ref())
     }
 }
 

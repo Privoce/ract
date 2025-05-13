@@ -11,7 +11,7 @@ use ratatui::{
 use crate::{
     app::{AppComponent, ComponentState, Dashboard, State, Timeline, TimelineState},
     entry::Language,
-    log::{InitLogs, Log, LogExt, LogItem, CommandType},
+    log::{CommandType, InitLogs, Log, LogExt, LogItem},
     service,
 };
 
@@ -76,13 +76,11 @@ impl AppComponent for InitCmd {
             ComponentState::Quit => {}
         }
 
-        if event::poll(Duration::from_millis(500))? {
+        if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        event::KeyCode::Esc | event::KeyCode::Char('q') | event::KeyCode::Enter => {
-                            self.quit()
-                        }
+                        event::KeyCode::Char('q') => self.quit(),
                         _ => {}
                     }
                 }
