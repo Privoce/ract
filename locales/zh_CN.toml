@@ -126,7 +126,6 @@ version = "版本"
 arch = "架构"
 language = "语言"
 total = "总耗时"
-doc = "文档"
 tmp_store = "临时存储: %{value}"
 
 [common.command]

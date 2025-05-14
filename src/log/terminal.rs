@@ -4,7 +4,7 @@ use colored::{ColoredString, Colorize};
 use gen_utils::common::time::local_time_format;
 
 /// # TerminalLogger
-/// logging messages to the terminal with different colors and styles which can combine i18n with super impl
+/// logging messages to the terminal with different colors and styles which can combine i18n with super impl (will be deprecated)
 pub struct TerminalLogger<'a> {
     pub output: Cow<'a, str>,
 }

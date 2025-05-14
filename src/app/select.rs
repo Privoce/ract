@@ -347,7 +347,7 @@ impl<'s> MultiSelect<'s> {
             Span::from(title).bold(),
         ]));
         let help_msg = Text::from(Line::styled(
-            format!("[ {} ]", Common::Help(Help::Select).t(&lang)),
+            format!("[ {} ]", Common::Help(Help::MultiSelect).t(&lang)),
             Color::Blue,
         ));
         let select_style = Style::default().fg(Color::Rgb(255, 112, 67));

@@ -1,4 +1,4 @@
-use super::{LogExt, TerminalLogger};
+use super::LogExt;
 use rust_i18n::t;
 use std::{error::Error, fmt::Display};
 
@@ -26,14 +26,6 @@ impl Display for UninstallLogs {
                 name,
                 reason.as_ref().unwrap_or(&"-".to_string())
             )),
-        }
-    }
-}
-
-impl UninstallLogs {
-    pub fn terminal(&self) -> TerminalLogger {
-        TerminalLogger {
-            output: std::borrow::Cow::Owned(self.to_string()),
         }
     }
 }

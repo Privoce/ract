@@ -58,7 +58,6 @@ pub trait LogExt {
 #[derive(Debug, Clone)]
 pub struct LogItem {
     level: LogLevel,
-    ty: CommandType,
     msg: String,
     /// The datetime of the log （use `chrono` crate）
     datetime: DateTime<Local>,
@@ -68,6 +67,16 @@ pub struct LogItem {
 }
 
 impl LogItem {
+    /// ## print log item use format (alias of `log` fn)
+    #[allow(unused)]
+    pub fn print(&self) -> () {
+        self.log();
+    }
+    /// ## print log item
+    /// display as:
+    /// ```
+    /// Ract [${fmt_date_time}]: [${level}] >>> ${msg}
+    /// ```
     pub fn log(&self) -> () {
         println!(
             "{}{}[{}] >>> {}",
@@ -76,9 +85,6 @@ impl LogItem {
             self.level.colorize(),
             self.msg
         );
-    }
-    pub fn msg(&self) -> &str {
-        &self.msg
     }
     /// ## fmt as ratatui text line for colorful display
     /// display as:
@@ -127,7 +133,6 @@ impl LogItem {
     pub fn info(msg: String) -> Self {
         Self {
             level: LogLevel::Info,
-            ty: Default::default(),
             msg,
             datetime: Local::now(),
             is_success: false,
@@ -137,7 +142,6 @@ impl LogItem {
     pub fn success(msg: String) -> Self {
         Self {
             level: LogLevel::Info,
-            ty: Default::default(),
             msg,
             datetime: Local::now(),
             is_success: true,
@@ -147,7 +151,6 @@ impl LogItem {
     pub fn error(msg: String) -> Self {
         Self {
             level: LogLevel::Error,
-            ty: Default::default(),
             msg,
             datetime: Local::now(),
             is_success: false,
@@ -157,7 +160,6 @@ impl LogItem {
     pub fn warning(msg: String) -> Self {
         Self {
             level: LogLevel::Warn,
-            ty: Default::default(),
             msg,
             datetime: Local::now(),
             is_success: false,
@@ -187,7 +189,6 @@ pub enum CommandType {
     #[default]
     Unknown,
 }
-
 
 impl From<&Commands> for CommandType {
     fn from(value: &Commands) -> Self {
@@ -242,6 +243,7 @@ impl Log {
         self.items.push(item);
         self.cache.borrow_mut().take();
     }
+    #[allow(unused)]
     pub fn iter(&self) -> impl Iterator<Item = &LogItem> {
         self.items.iter()
     }
@@ -287,7 +289,6 @@ pub enum Common {
     Version,
     Language,
     Total,
-    Doc,
     Help(Help),
     Command(Command),
     Fs(Fs),
@@ -303,7 +304,6 @@ impl LogExt for Common {
             Common::Version => t!("common.version", locale = lang_str),
             Common::Language => t!("common.language", locale = lang_str),
             Common::Total => t!("common.total", locale = lang_str),
-            Common::Doc => t!("common.doc", locale = lang_str),
             Common::Help(help) => help.t(lang),
             Common::Command(cmd) => cmd.t(lang),
             Common::Fs(fs) => fs.t(lang),
@@ -313,6 +313,8 @@ impl LogExt for Common {
     }
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
 pub enum Options {
     Default,
     Custom,
@@ -332,6 +334,8 @@ impl LogExt for Options {
     }
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
 pub enum Help {
     Select,
     MultiSelect,
@@ -353,6 +357,8 @@ impl LogExt for Help {
     }
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
 pub enum Command {
     Select,
     Q,
@@ -386,6 +392,8 @@ impl LogExt for Command {
     }
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone)]
 pub enum Fs {
     ReadSuccess(String),
     ReadError(String),
@@ -407,6 +415,7 @@ impl LogExt for Fs {
 
 /// # Channel for log item
 /// which will be used to send log item to the main thread in component
+/// may deprecated in the future, (it not design great)
 pub struct ComponentChannel<T> {
     pub sender: Sender<LogItem>,
     pub receiver: Receiver<LogItem>,
@@ -422,12 +431,12 @@ impl<T> ComponentChannel<T> {
             run_channel,
         }
     }
-    pub fn send(&self, item: LogItem) -> () {
-        self.sender.send(item).unwrap();
-    }
-    pub fn recv(&self) -> LogItem {
-        self.receiver.recv().unwrap()
-    }
+    // pub fn send(&self, item: LogItem) -> () {
+    //     self.sender.send(item).unwrap();
+    // }
+    // pub fn recv(&self) -> LogItem {
+    //     self.receiver.recv().unwrap()
+    // }
 }
 
 pub struct RunChannel<T> {

@@ -32,6 +32,7 @@ use which::which;
 
 /// use cargo packager to package the makepad project
 pub fn run() {
+    PackageLogs::Welcome.terminal().info();
     PackageLogs::Desc.terminal().info();
 
     let _ = package().map_err(|e| {

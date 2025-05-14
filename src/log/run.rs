@@ -52,14 +52,6 @@ pub enum StudioLogs {
     Custom(String),
 }
 
-impl StudioLogs {
-    pub fn terminal(&self) -> TerminalLogger {
-        TerminalLogger {
-            output: std::borrow::Cow::Owned(self.to_string()),
-        }
-    }
-}
-
 impl LogExt for StudioLogs {
     fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
         let lang_str = lang.as_str();

@@ -5,7 +5,6 @@ use crate::{
     log::{Log, LogExt, LogItem, UninstallLogs},
     service::uninstall::uninstall_all,
 };
-
 use ratatui::{
     crossterm::event::{self, Event, KeyEventKind},
     Frame,
