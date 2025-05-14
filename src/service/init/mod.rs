@@ -2,23 +2,8 @@ use gen_utils::error::Error;
 
 use crate::{
     entry::{ChainEnvToml, Env},
-    log::{InitLogs, LogExt, TerminalLogger},
+    log::{InitLogs, LogExt},
 };
-
-use super::update::check_auto_update;
-
-pub fn check() {
-    // check env.toml
-    if Env::check() {
-        // check update
-        if let Err(e) = check_auto_update() {
-            TerminalLogger::new(e.to_string().as_str()).error();
-        }
-        return;
-    } else {
-        run();
-    }
-}
 
 pub fn run() -> Result<(), Error> {
     let lang = crate::entry::Language::En;

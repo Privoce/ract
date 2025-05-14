@@ -11,27 +11,33 @@ use app::destroy;
 use clap::Parser;
 use cli::Cli;
 use common::Result;
+use entry::Env;
 use log::TerminalLogger;
 use service::update::check_auto_update;
 rust_i18n::i18n!("locales", fallback = ["en_US", "zh_CN"]);
 
 fn main() -> Result<()> {
-    // [check update] -----------------------------------------------------------------------------------
-    match check_auto_update() {
-        Ok(_) => {
-            run()?;
-        }
-        Err(e) => {
-            TerminalLogger::new(&e.to_string()).error_no_exit();
-            // then do init
-            if let Err(e) = service::init::run() {
-                TerminalLogger::new(&e.to_string()).error();
-            } else {
-                // continue to run
-                run()?;
+    // [check env] ------------------------------------------------------------------------------------------
+    if Env::check() {
+        // [check update] -----------------------------------------------------------------------------------
+        match check_auto_update() {
+            Ok(_) => {
+                return run();
+            }
+            Err(e) => {
+                TerminalLogger::new(&e.to_string()).error_no_exit();
             }
         }
     }
+
+    // [if not init] ----------------------------------------------------------------------------------------
+    if let Err(e) = service::init::run() {
+        TerminalLogger::new(&e.to_string()).error();
+    } else {
+        // continue to run
+        run()?;
+    }
+
     Ok(())
 }
 
