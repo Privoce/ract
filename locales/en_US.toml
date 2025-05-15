@@ -1,6 +1,75 @@
 _version = 1
 
+# [project] -----------------------------------------------------------
+[project]
+desc = """
+∙ Now you can run makepad and gen_ui (coming soon) projects.
+∙ Make sure you have a `.ract` file in your project root to point to the project type.
+∙ If you don't know where the `.ract` file is, run `ract book` to search for it (coming soon).
+"""
+start = "🚀 Start running project ..."
+stop = "🛑 Stop project ..."
+err = "❌ Failed to run project: %{reason}"
 
+# [package] -------------------------------------------------------
+[package]
+desc = """
+∙ Ract will check if `cargo-packager` is installed
+∙ Ract will help you install `cargo-packager`
+∙ Ract does not currently support cross-compilation, if needed, please use our remote service (coming soon)
+∙ Configuration information: https://docs.crabnebula.dev/packager/
+"""
+installed = "✅ cargo-packager has been successfully installed!"
+uninstalled = "❗️cargo-packager has not been installed!"
+install_err = "❌ Failed to install cargo-packager: %{reason}"
+init = """
+∙ init: Ract will help you initialize a simple packaging configuration
+∙ skip: Ract will directly run the package according to the configuration
+∙ If you want to define more details, please modify Cargo.toml yourself
+"""
+start = "📦 Packaging in progress"
+confirm = "🎉 Congratulations! The current project has been packaged!"
+package_resourced = """
+∙ 🎉 Package resources have been generated!
+∙ You can see `Cargo.toml` for packaging settings and `packaging dir` for package resources!
+"""
+err = "❌ Packaging failed! Please check the error message!"
+configing = "📦 Processing packaged resources..."
+
+# [create] --------------------------------------------------------
+[create]
+workspace = "🎉 Your project has been successfully created!"
+git = "🚀 Successfully created a new git project!"
+git_err = "❌ Failed to create a new git project!"
+cargo = "🚀 Successfully created a new Cargo project!"
+cargo_err = "❌ Failed to create a new Cargo project!"
+cancel = "❗️Cancel creating the project!"
+confirm = "🎉 Your project has been successfully created!"
+
+# [compiler] ------------------------------------------------------
+[compiler]
+log_init = "🔧 Log service has been successfully started! `app event::Change` trigger will generate new log entries"
+watcher_init = "🔧 Watcher service has been successfully started! Ract is listening on: `%{path}`"
+compiled = "🎉 Compiled successfully! %{path} has been compiled!"
+write_cache = "✅ Cache service: Cache file written successfully!"
+# [install] ------------------------------------------------------
+[install]
+desc = """
+∙ Rustc: Install the rustc compiler
+∙ Cargo: Install the Cargo package manager
+∙ Git: Install the Git version control system
+∙ All: Install all dependencies (including: [Rustc, Cargo, Git, All Underlayer])
+∙ Default: Install default dependencies (including: [Rustc, Cargo, Git, Makepad, GenUI])
+⚠ Please make sure your network connection is working properly
+"""
+check = "Check: %{current} ░ [ %{num} / %{total} ]"
+check_title = "Check environment dependencies"
+select = "Please select the options you want to install"
+install = "🚀 Start installation: %{name}"
+installed = "✅ %{name} installed successfully!"
+uninstalled = "❌ %{name} not installed!"
+install_err = "❌ %{name} installation failed! Please try to install manually."
+confirm = "🎉 Installation of %{name} completed!"
 makepad_studio = "ℹ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio."
 cargo_makepad_err = "❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad"
 makepad_android = "ℹ You can use `cargo makepad android run -p ${project_name} --release` to run the project"
@@ -13,10 +82,144 @@ For more information, see: https://github.com/syf20020816/makepad/tree/rik?tab=r
 makepad_wasm = "ℹ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project"
 makepad_wait_install = "❗️ Makepad is not installed, now installing Makepad"
 makepad_help = "ℹ You can use `cargo makepad -h` to see the help information"
+
+# [wasm] ----------------------------------------------------------
+[wasm]
+desc = """
+∙ Currently only supports makepad/gen_ui wasm
+∙ You can run directly in the makepad/gen_ui project
+∙ If the project is in a Rust workspace, use -p to point to the target project
+∙ Alternatively, you can run `ract wasm` to build and start
+"""
+package = "📦 wasm has been packaged"
+start = "🚀 Starting wasm for you"
+stop = "⚠ wasm has stopped running"
+port = "Enter the port of wasm"
+port_err = "❌ Port parsing error, reason: %{reason}"
+placeholder = "Port range: [1 ~ 65535], recommended: [8010 ~ 65535], default: 8010"
+no_ract_conf = "Make sure your project root directory has a `.ract` file to point to the project type"
+stop_unexpected = "⚠ wasm stopped unexpectedly, reason: %{reason}"
+
+# [studio] ----------------------------------------------------------
+[studio]
+desc = """
+∙ Currently `studio` only works with Makepad\n
+∙ Supports WASM and GUI\n
+∙ GUI mode enabled by default
+"""
+check = "Checking the required environment for studio..."
+gui = "🚀 Running studio in GUI mode for you"
+stop = "⚠ studio has stopped"
+error = "❌ studio failed to run, reason: %{reason}"
+select = "Use default studio or specify one?"
+placeholder = "Please enter the path to the studio"
+custom = "Specify the path to the studio: %{path}"
+
+# [uninstall] ------------------------------------------------------
+[uninstall]
+select = "Are you sure you want to uninstall %{name}?"
+success = "✅ Uninstall %{name} successfully!"
+failed = "❌ Uninstalling %{name} failed, reason: %{reason}"
+
+# [add] ------------------------------------------------------------
+[add]
+write_in_toml_fail = "❌ Writing %{name} to `gen_ui.toml` file failed!"
+
+complete = "🎉 Adding plugin: %{name} succeeded!"
+
+[add.download]
+success = "🎉 Downloading plugin: %{name} succeeded!"
+failed = "❌ Downloading plugin failed, reason: %{reason}"
+waiting = "🔸 Downloading plugin: %{name} Please wait..."
+
+# [config] ------------------------------------------------------------
+[config]
+desc = """
+• env: `.env` is the file that Ract points to `env.toml`
+• env.toml: `env.toml` is Ract's environment configuration file. Ract can find the environment dependencies when the user develops from the content of this file
+Documentation: https://privoce.github.io/GenUI.github.io/zh/doc/config/env
+"""
+
+[config.load]
+success = "✅ Load configuration successfully!"
 # [check] -------------------------------------------------------------
 [check]
-complete = "🎉 Check complete!"
+desc = """
+Check if the required tools and dependencies are installed. Options include:
+• Basic: [cargo, rustc, git]
+• Underlayer: [makepad (gen_ui, makepad)]
+• All: Contains basic tools and low-level tools.
+"""
+complete = "🎉 Detection completed!"
+unsupported = "∙ The current toolchain is not supported! You should use `ract install` to install the toolchain, or `ract config` to set the environment variables. "
+[check.found]
+success = "✅ Successfully detected %{name}!"
+success_path = "✅ Successfully detected %{name} path: %{path}"
+failed = "❌ %{name} was not detected! You can use the `ract install` command to install it."
 
 [check.select]
-which = "Which option do you want to check?"
-failed = "❌ Invalid option, please reselect!"
+which = "Which option do you need to detect?"
+
+[check.dep]
+success = "✅ %{name} is installed!"
+failed = "❌ %{name} is not installed, please install it and try again!"
+
+# [init] ----------------------------------------------------------------
+[init]
+start = "🚀 Ract is initializing, please wait..."
+complete = "🎉 Ract initialization completed!"
+
+[init.chain]
+title = "Initializing toolchain package"
+success = "✅ Initializing the toolchain package successfully!"
+failed = "❌ Failed to initialize the toolchain package, reason: %{reason}"
+
+[init.env]
+title = "Initialize the environment file"
+desc = "Ract will help you build an environment configuration file."
+success = "✅ Initializing the environment file successfully!"
+failed = "❌ Failed to initialize the environment file, reason: %{reason}"
+
+# [error] ---------------------------------------------------------------
+[error]
+parse = "❌ Parsing: %{ty} failed. \nTarget: %{target}\nReason: %{reason}"
+
+# [common] -------------------------------------------------------------
+[common]
+os = "Operating System"
+version = "Version"
+arch = "Architecture"
+language = "Language"
+total = "Total Time"
+tmp_store = "Temporary Storage: %{value}"
+
+[common.command]
+select = "Select the following options to process"
+quit = ":q Quit"
+write_quit = ":wq Write and Quit"
+write = ":w Write"
+
+[common.help]
+select = "Press ↑/↓ to adjust options, press Enter to confirm selection, press 'q' to exit"
+multi_select = "Press ↑/↓ to adjust options, press space to select, press Enter to confirm, press 'q' to exit"
+log_tab = "Press 'l' to switch modules, and switch log tabs when it is a log module, press 'q' to exit"
+
+[common.help.edit]
+normal = "Press 'i' to enter edit mode"
+complex = "Press ←/→ to adjust the panel, press ↑/↓ to adjust the options, press 'i' to enter edit mode, press ESC to exit editing, press 'q' to exit"
+
+[common.fs]
+
+[common.fs.read]
+success = "✅ Read file %{name} successfully!"
+failed = "❌ Failed to read file, reason: %{reason}"
+
+[common.fs.write]
+success = "✅ Write file %{name} successfully!"
+failed = "❌ Failed to write file, reason: %{reason}"
+
+[common.option]
+default = "Default"
+custom = "Specified"
+yes = "Yes"
+no = "No"
