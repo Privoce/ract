@@ -68,9 +68,8 @@ impl AppComponent for WasmCmd {
     fn handle_events(&mut self) -> Result<()> {
         match self.state {
             ComponentState::Start => {
-                self.log.push(LogItem::info(
-                    WasmLogs::Desc.t(self.lang).to_string(),
-                ));
+                self.log
+                    .push(LogItem::info(WasmLogs::Desc.t(self.lang).to_string()).multi());
                 self.state.next();
             }
             ComponentState::Run(state) => match state {
@@ -270,9 +269,8 @@ impl WasmCmd {
                     }
                 });
 
-                self.log.push(LogItem::success(
-                    WasmLogs::Package.t(self.lang).to_string(),
-                ));
+                self.log
+                    .push(LogItem::success(WasmLogs::Package.t(self.lang).to_string()));
                 self.is_running = true;
             }
             Err(e) => {

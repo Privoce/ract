@@ -144,7 +144,7 @@ where
                             InstallLogs::Confirm("ios_build".to_string())
                                 .success(lang)
                                 .print();
-                            InstallLogs::MakepadIos.success(lang).print();
+                            InstallLogs::MakepadIos.success(lang).multi().print();
                             Ok(())
                         } else {
                             Err(InstallLogs::InstallErr("ios_build".to_string())

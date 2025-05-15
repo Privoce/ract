@@ -1,12 +1,15 @@
 mod item;
 pub use item::*;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use gen_utils::{common::fs, error::Error};
+use gen_utils::error::Error;
 
 use which::which;
 
-use crate::{common::is_empty_dir, entry::{ChainEnvToml, MakepadState, ToolState, Tools, Underlayer, UnderlayerTools}};
+use crate::{
+    common::is_empty_dir,
+    entry::{ChainEnvToml, MakepadState, ToolState, Underlayer},
+};
 
 /// ## Check basic toolchain
 /// 1. rustc
@@ -90,5 +93,3 @@ fn makepad_exist() -> Result<((bool, Option<PathBuf>), (bool, Option<PathBuf>)),
         ),
     ))
 }
-
-

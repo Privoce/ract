@@ -3,6 +3,7 @@ mod check;
 pub mod compiler;
 mod config;
 mod create;
+#[allow(unused)]
 pub mod error;
 mod init;
 mod install;
