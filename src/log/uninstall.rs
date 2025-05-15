@@ -33,7 +33,7 @@ impl Display for UninstallLogs {
 impl Error for UninstallLogs {}
 
 impl LogExt for UninstallLogs {
-    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+    fn t(&self, lang: crate::entry::Language) -> std::borrow::Cow<str> {
         let lang_str = lang.as_str();
         match self {
             UninstallLogs::Select(name) => t!("uninstall.select", locale = lang_str, name = name),

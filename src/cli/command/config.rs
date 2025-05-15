@@ -77,11 +77,11 @@ impl AppComponent for ConfigCmd {
     }
 
     fn handle_events(&mut self) -> crate::common::Result<()> {
-        fn write_success(name: String, lang: &Language) -> LogItem {
+        fn write_success(name: String, lang: Language) -> LogItem {
             LogItem::success(Common::Fs(Fs::WriteSuccess(name)).t(lang).to_string())
         }
 
-        fn write_fail(reason: String, lang: &Language) -> LogItem {
+        fn write_fail(reason: String, lang: Language) -> LogItem {
             LogItem::error(Common::Fs(Fs::WriteError(reason)).t(lang).to_string())
         }
 
@@ -90,20 +90,20 @@ impl AppComponent for ConfigCmd {
             match data.current {
                 Configs::Env => match data.env.write() {
                     Ok(_) => {
-                        cmp.log.push(write_success(".env".to_string(), &cmp.lang));
+                        cmp.log.push(write_success(".env".to_string(), cmp.lang));
                     }
                     Err(e) => {
-                        cmp.log.push(write_fail(e.to_string(), &cmp.lang));
+                        cmp.log.push(write_fail(e.to_string(), cmp.lang));
                     }
                 },
                 Configs::ChainEnvToml => {
                     match data.chain_env.write_sync_deps(data.is_makepad_widgets) {
                         Ok(_) => {
                             cmp.log
-                                .push(write_success("env.toml".to_string(), &cmp.lang));
+                                .push(write_success("env.toml".to_string(), cmp.lang));
                         }
                         Err(e) => {
-                            cmp.log.push(write_fail(e.to_string(), &cmp.lang));
+                            cmp.log.push(write_fail(e.to_string(), cmp.lang));
                         }
                     }
 
@@ -119,8 +119,8 @@ impl AppComponent for ConfigCmd {
         match self.state {
             ComponentState::Start => {
                 self.log.extend(vec![
-                    LogItem::info(ConfigLogs::Desc.t(&self.lang).to_string()).multi(),
-                    LogItem::success(ConfigLogs::LoadSuccess.t(&self.lang).to_string()),
+                    LogItem::info(ConfigLogs::Desc.t(self.lang).to_string()).multi(),
+                    LogItem::success(ConfigLogs::LoadSuccess.t(self.lang).to_string()),
                 ]);
 
                 if self.kv_length == 0 {
@@ -277,7 +277,7 @@ impl AppComponent for ConfigCmd {
                                                     data.env.set(&new_value);
                                                     self.log.push(LogItem::warning(
                                                         Common::TmpStore(new_value)
-                                                            .t(&self.lang)
+                                                            .t(self.lang)
                                                             .to_string(),
                                                     ));
                                                 }
@@ -293,7 +293,7 @@ impl AppComponent for ConfigCmd {
                                                     data.chain_env.set(self.kv_index, &new_value);
                                                     self.log.push(LogItem::warning(
                                                         Common::TmpStore(new_value)
-                                                            .t(&self.lang)
+                                                            .t(self.lang)
                                                             .to_string(),
                                                     ));
                                                     // check if the key is makepad-widgets
@@ -460,7 +460,7 @@ impl AppComponent for ConfigCmd {
                         Place::Tab => {
                             frame.render_widget(
                                 Paragraph::new(
-                                    Common::Help(Help::EditComplex).t(&self.lang).to_string(),
+                                    Common::Help(Help::EditComplex).t(self.lang).to_string(),
                                 )
                                 .wrap(Wrap { trim: true }),
                                 input_area,
@@ -474,7 +474,7 @@ impl AppComponent for ConfigCmd {
                         Place::Select => {
                             Select::new_with_options(
                                 Common::Command(Command::Select)
-                                    .t(&self.lang)
+                                    .t(self.lang)
                                     .to_string()
                                     .as_str(),
                                 self.lang,

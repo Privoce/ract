@@ -53,7 +53,7 @@ impl AppComponent for WasmCmd {
             project: None,
             port: 8010,
             cost: None,
-            textarea: Self::init_textarea(&lang),
+            textarea: Self::init_textarea(lang),
             channel: RunChannel {
                 pid: None,
                 sender,
@@ -69,7 +69,7 @@ impl AppComponent for WasmCmd {
         match self.state {
             ComponentState::Start => {
                 self.log.push(LogItem::info(
-                    WasmLogs::Desc.t(&self.lang).to_string(),
+                    WasmLogs::Desc.t(self.lang).to_string(),
                 ));
                 self.state.next();
             }
@@ -133,14 +133,14 @@ impl AppComponent for WasmCmd {
                                         self.port = port;
                                         self.state = ComponentState::Run(WasmState::Running);
                                         self.log.push(LogItem::info(
-                                            WasmLogs::Start.t(&self.lang).to_string(),
+                                            WasmLogs::Start.t(self.lang).to_string(),
                                         ));
                                     }
                                     Err(e) => {
-                                        self.textarea = Self::init_textarea(&self.lang);
+                                        self.textarea = Self::init_textarea(self.lang);
                                         self.log.push(LogItem::error(
                                             WasmLogs::PortError(e.to_string())
-                                                .t(&self.lang)
+                                                .t(self.lang)
                                                 .to_string(),
                                         ));
                                     }
@@ -186,7 +186,7 @@ impl AppComponent for WasmCmd {
             |frame, [main_area, msg_area]| {
                 if self.is_run_port() {
                     // [ask user for port] ----------------------------------------------------------------------------------------------
-                    let port_text = Line::from(WasmLogs::Port.t(&self.lang).to_string());
+                    let port_text = Line::from(WasmLogs::Port.t(self.lang).to_string());
 
                     let [text_area, input_area] =
                         Layout::vertical([Constraint::Length(1), Constraint::Length(3)])
@@ -234,7 +234,7 @@ impl WasmCmd {
             if !ract_path.exists() {
                 Err(crate::log::error::Error::Other {
                     ty: Some("Wasm".to_string()),
-                    msg: WasmLogs::NoRactConf.t(&self.lang).to_string(),
+                    msg: WasmLogs::NoRactConf.t(self.lang).to_string(),
                 })
             } else {
                 service::wasm::run_wasm(path, ract_path, self.port).map_err(|e| {
@@ -271,7 +271,7 @@ impl WasmCmd {
                 });
 
                 self.log.push(LogItem::success(
-                    WasmLogs::Package.t(&self.lang).to_string(),
+                    WasmLogs::Package.t(self.lang).to_string(),
                 ));
                 self.is_running = true;
             }
@@ -302,7 +302,7 @@ impl WasmCmd {
                 Ok(status) => {
                     if status.success() {
                         self.log
-                            .push(LogItem::warning(WasmLogs::Stop.t(&self.lang).to_string()));
+                            .push(LogItem::warning(WasmLogs::Stop.t(self.lang).to_string()));
                         self.state.to_pause();
                     } else {
                         self.log.push(LogItem::error(
@@ -310,7 +310,7 @@ impl WasmCmd {
                                 "Kill command failed with status: {}",
                                 status
                             ))
-                            .t(&self.lang)
+                            .t(self.lang)
                             .to_string(),
                         ));
                     }
@@ -318,7 +318,7 @@ impl WasmCmd {
                 Err(e) => {
                     self.log.push(LogItem::error(
                         WasmLogs::StopUnexpected(e.to_string())
-                            .t(&self.lang)
+                            .t(self.lang)
                             .to_string(),
                     ));
                 }
@@ -334,7 +334,7 @@ impl WasmCmd {
     fn is_run_port(&self) -> bool {
         matches!(self.state, ComponentState::Run(WasmState::Port))
     }
-    fn init_textarea(lang: &Language) -> TextArea<'static> {
+    fn init_textarea(lang: Language) -> TextArea<'static> {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::bordered().border_type(BorderType::Rounded));
         textarea.set_placeholder_text(WasmLogs::Placeholder.t(lang));
@@ -354,7 +354,7 @@ impl From<(WasmArgs, Language)> for WasmCmd {
             project: value.0.project,
             port: 8010,
             cost: None,
-            textarea: Self::init_textarea(&value.1),
+            textarea: Self::init_textarea(value.1),
             channel: RunChannel {
                 pid: None,
                 sender,

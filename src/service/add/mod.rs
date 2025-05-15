@@ -7,30 +7,26 @@ use gen_utils::{
 
 use crate::{
     entry::{GenUIConf, Language, RactToml},
-    log::{AddLogs, LogExt, TerminalLogger},
+    log::{AddLogs, LogExt, LogItem},
 };
 
 pub fn run(name: &str) {
     let lang = Language::from_conf();
-    match download_and_update(name, &lang) {
+    match download_and_update(name, lang) {
         Ok(_) => {
-            AddLogs::Complete(name.to_string())
-                .terminal(&lang)
-                .success();
+            AddLogs::Complete(name.to_string()).success(lang);
         }
         Err(e) => {
-            AddLogs::DownloadFailed(e.to_string())
-                .terminal(&lang)
-                .error();
+            AddLogs::DownloadFailed(e.to_string()).error(lang);
         }
     }
 }
 
-fn download_and_update(name: &str, lang: &Language) -> Result<(), Error> {
+fn download_and_update(name: &str, lang: Language) -> Result<(), Error> {
     let _ = download_plugins_from_github(name, lang)?;
     AddLogs::DownloadSuccess(name.to_string())
-        .terminal(lang)
-        .success();
+        .success(lang)
+        .print();
     // write use in gen_ui.toml
     return update_plugin_in_toml(name);
 }
@@ -68,7 +64,7 @@ pub fn update_plugin_in_toml(plugin: &str) -> Result<(), Error> {
 /// - repo: https://github.com/Privoce/genui_plugins
 /// - dir: tokens
 /// - branch: main
-pub fn download_plugins_from_github(plugin: &str, lang: &Language) -> Result<(), Error> {
+pub fn download_plugins_from_github(plugin: &str, lang: Language) -> Result<(), Error> {
     let path = current_dir().unwrap();
     let ract_toml: RactToml = (&RactToml::read(path.as_path().join(".ract"))?).try_into()?;
 
@@ -82,16 +78,13 @@ pub fn download_plugins_from_github(plugin: &str, lang: &Language) -> Result<(),
                 let download_path = source_path.join(".plugins");
                 fs::exists_or_create_dir(download_path.as_path())?;
                 // 从github仓库中下载指定的包，例如: ract add gen_makepad_http
-                AddLogs::Downloading(plugin.to_string())
-                    .terminal(lang)
-                    .info();
-
+                AddLogs::Downloading(plugin.to_string()).info(lang).print();
                 return git_download_plugin_from_github(
                     plugin,
                     true,
                     download_path,
-                    |line| TerminalLogger::new(&line).info(),
-                    |line| TerminalLogger::new(&line).warning(),
+                    |line| LogItem::info(line).print(),
+                    |line| LogItem::warning(line).print(),
                 );
             }
         }

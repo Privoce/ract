@@ -1,8 +1,8 @@
 use std::{path::PathBuf, process::exit, str::FromStr};
 
 use crate::{
-    entry::{FrameworkType, ProjectInfoType},
-    log::{CreateLogs, LogItem, TerminalLogger},
+    entry::{FrameworkType, Language, ProjectInfoType},
+    log::{CreateLogs, LogExt, LogItem},
 };
 
 use clap::Args;
@@ -30,7 +30,7 @@ pub struct CreateArgs {
 
 impl CreateArgs {
     /// create a new rust workspace project
-    pub fn run(&self) {
+    pub fn run(&self, lang: Language) {
         // check state
         match current_states() {
             Ok(tool) => {
@@ -38,26 +38,26 @@ impl CreateArgs {
                 LogItem::info(format!("{}", tool)).multi().log();
                 let is_ok = tool.is_ok();
                 if !is_ok {
-                    TerminalLogger::new("🔸 Current toolchain is not supported! You should use `ract install` to install toolchain or use `ract config` to set env").warning();
+                    CreateLogs::Unsupported.error(lang).print();
                     exit(2);
                 }
-                self.create_project().map_or_else(
+                self.create_project(lang).map_or_else(
                     |e| {
-                        TerminalLogger::new(&e.to_string()).error();
+                        LogItem::error(e.to_string()).print();
                         exit(2);
                     },
                     |_| {
-                        CreateLogs::Confirm.terminal().success();
+                        CreateLogs::Confirm.success(lang).print();
                     },
                 )
             }
             Err(e) => {
-                TerminalLogger::new(&e.to_string()).error();
+                LogItem::error(e.to_string()).print();
                 exit(2);
             }
         }
     }
-    fn create_project(&self) -> Result<(), Error> {
+    fn create_project(&self, lang: Language) -> Result<(), Error> {
         match self.path.canonicalize() {
             Ok(path) => {
                 // [select framework] ----------------------------------------------------------------
@@ -79,8 +79,8 @@ impl CreateArgs {
                     // [do create] -------------------------------------------------------------------
                     generator.generate()
                 } else {
-                    CreateLogs::Cancel.terminal().warning();
-                    return self.create_project();
+                    CreateLogs::Cancel.warning(lang).print();
+                    return self.create_project(lang);
                 }
             }
             Err(e) => Err(e.to_string().into()),

@@ -19,12 +19,12 @@ pub enum WasmLogs {
 
 impl Display for WasmLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.t(&crate::entry::Language::default()).as_ref())
+        f.write_str(self.t(crate::entry::Language::default()).as_ref())
     }
 }
 
 impl LogExt for WasmLogs {
-    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+    fn t(&self, lang: crate::entry::Language) -> std::borrow::Cow<str> {
         let lang_str = lang.as_str();
         match self {
             WasmLogs::Desc => t!("wasm.desc", locale = lang_str),

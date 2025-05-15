@@ -11,19 +11,19 @@ use crate::{
         VIEW_MOD_GEN,
     },
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
-    log::{CreateLogs, TerminalLogger},
+    log::{CreateLogs, LogExt, LogItem},
 };
 
 pub fn create<P>(path: P, info: &WorkspaceInfo, ract_toml: &RactToml) -> Result<PathBuf, Error>
 where
     P: AsRef<Path>,
 {
-    TerminalLogger::new(&format!(
+    LogItem::info(format!(
         "🛠️ ract is creating a new GenUI workspace `{}` in: {}",
         &info.name,
         fs::path_to_str(path.as_ref())
     ))
-    .info();
+    .print();
     // [rust workspace path] -------------------------------------------------------
     let path = path.as_ref().join(&info.name);
     // [workspace Cargo.toml] ------------------------------------------------------
@@ -56,7 +56,7 @@ where
             |e| Err(Error::from(e.to_string())),
             |out| {
                 if out.status.success() {
-                    CreateLogs::Cargo.terminal().success();
+                    CreateLogs::Cargo.success(crate::entry::Language::En).print();
                     let ui_dir_path = path.as_ref().join(&info.name);
                     // [clear main.rs] ---------------------------------------------------------------------
                     let _ = fs::write(ui_dir_path.join("src").join("main.rs"), "")?;

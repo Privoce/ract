@@ -9,7 +9,6 @@ mod install;
 mod level;
 mod package;
 mod run;
-mod terminal;
 mod uninstall;
 mod wasm;
 
@@ -37,7 +36,7 @@ use ratatui::{
 };
 pub use run::{ProjectLogs, StudioLogs};
 use rust_i18n::t;
-pub use terminal::TerminalLogger;
+
 pub use uninstall::UninstallLogs;
 pub use wasm::WasmLogs;
 
@@ -47,11 +46,18 @@ use super::entry::Language;
 
 pub trait LogExt {
     // use i18n to translate the log message
-    fn t(&self, lang: &Language) -> Cow<str>;
-    fn terminal(&self, lang: &crate::entry::Language) -> TerminalLogger {
-        TerminalLogger {
-            output: self.t(lang),
-        }
+    fn t(&self, lang: Language) -> Cow<str>;
+    fn info(&self, lang: Language) -> LogItem {
+        LogItem::info(self.t(lang).to_string())
+    }
+    fn success(&self, lang: Language) -> LogItem {
+        LogItem::success(self.t(lang).to_string())
+    }
+    fn error(&self, lang: Language) -> LogItem {
+        LogItem::error(self.t(lang).to_string())
+    }
+    fn warning(&self, lang: Language) -> LogItem {
+        LogItem::warning(self.t(lang).to_string())
     }
 }
 
@@ -297,7 +303,7 @@ pub enum Common {
 }
 
 impl LogExt for Common {
-    fn t(&self, lang: &Language) -> Cow<str> {
+    fn t(&self, lang: Language) -> Cow<str> {
         let lang_str = lang.as_str();
         match self {
             Common::Os => t!("common.os", locale = lang_str),
@@ -323,7 +329,7 @@ pub enum Options {
 }
 
 impl LogExt for Options {
-    fn t(&self, lang: &Language) -> Cow<str> {
+    fn t(&self, lang: Language) -> Cow<str> {
         let lang = lang.as_str();
         match self {
             Options::Default => t!("common.option.default", locale = lang),
@@ -345,7 +351,7 @@ pub enum Help {
 }
 
 impl LogExt for Help {
-    fn t(&self, lang: &Language) -> Cow<str> {
+    fn t(&self, lang: Language) -> Cow<str> {
         let lang = lang.as_str();
         match self {
             Help::Select => t!("common.help.select", locale = lang),
@@ -381,7 +387,7 @@ impl Command {
 }
 
 impl LogExt for Command {
-    fn t(&self, lang: &Language) -> Cow<str> {
+    fn t(&self, lang: Language) -> Cow<str> {
         let lang = lang.as_str();
         match self {
             Command::Select => t!("common.command.select", locale = lang),
@@ -402,7 +408,7 @@ pub enum Fs {
 }
 
 impl LogExt for Fs {
-    fn t(&self, lang: &Language) -> Cow<str> {
+    fn t(&self, lang: Language) -> Cow<str> {
         let lang = lang.as_str();
         match self {
             Fs::ReadSuccess(name) => t!("common.fs.read.success", locale = lang, name = name),

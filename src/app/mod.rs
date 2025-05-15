@@ -38,10 +38,10 @@ use ratatui::{
 };
 
 pub use dashboard::Dashboard;
+pub use list::*;
 pub use select::*;
 pub use tab::*;
 pub use timeline::*;
-pub use list::*;
 
 /// # Run app
 /// ## Return
@@ -76,7 +76,7 @@ pub fn run(cmd: Commands, terminal: &mut Option<DefaultTerminal>) -> Result<()> 
                 let options = InstallCmd::new(lang).run(terminal, false)?;
                 // do destroy before follow up
                 destroy(terminal)?;
-                options.follow_up()?;
+                options.follow_up(lang)?;
                 destroy_before = true;
             }
             _ => {}
@@ -92,13 +92,13 @@ pub fn run(cmd: Commands, terminal: &mut Option<DefaultTerminal>) -> Result<()> 
                 args.run();
             }
             Commands::Pkg => {
-                package::run();
+                package::run(lang);
             }
             Commands::Create(create_args) => {
-                create_args.run();
+                create_args.run(lang);
             }
             Commands::Run => {
-                service::run::run();
+                service::run::run(lang);
             }
             Commands::Add { name } => {
                 service::add::run(&name);

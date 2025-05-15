@@ -47,7 +47,7 @@ impl AppComponent for CheckCmd {
         match self.state {
             ComponentState::Start => {
                 self.log
-                    .push(LogItem::info(CheckLogs::Desc.t(&self.lang).to_string()).multi());
+                    .push(LogItem::info(CheckLogs::Desc.t(self.lang).to_string()).multi());
                 self.state.next();
             }
             ComponentState::Run(r) => self.handle_running(r),
@@ -108,7 +108,7 @@ impl AppComponent for CheckCmd {
             dashboard.render(frame, area, 5, 12, |frame, [main_area, msg_area]| {
                 let options = Checks::options();
                 let _ = app::Select::new_with_options(
-                    &CheckLogs::Select.t(&self.lang).to_string(),
+                    &CheckLogs::Select.t(self.lang).to_string(),
                     self.lang,
                     &options,
                     Color::White.into(),
@@ -168,7 +168,7 @@ impl CheckCmd {
                 Checks::Basic => {
                     self.handle_basic();
                     self.log
-                        .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
+                        .push(LogItem::info(CheckLogs::Complete.t(self.lang).to_string()));
                     self.state = ComponentState::Pause;
                 }
                 Checks::All(_) => {
@@ -191,7 +191,7 @@ impl CheckCmd {
                 }
                 self.state.next();
                 self.log
-                    .push(LogItem::info(CheckLogs::Complete.t(&self.lang).to_string()));
+                    .push(LogItem::info(CheckLogs::Complete.t(self.lang).to_string()));
             }
         }
     }
@@ -202,7 +202,7 @@ impl CheckCmd {
         self.log.extend(
             checks
                 .iter()
-                .map(|item| (item, &self.lang).into())
+                .map(|item| (item, self.lang).into())
                 .collect::<Vec<LogItem>>(),
         );
         self.items.extend(checks);
@@ -217,7 +217,7 @@ impl CheckCmd {
                 self.log.extend(
                     checks
                         .iter()
-                        .map(|item| (item, &self.lang).into())
+                        .map(|item| (item, self.lang).into())
                         .collect::<Vec<LogItem>>(),
                 );
                 self.items.extend(checks);

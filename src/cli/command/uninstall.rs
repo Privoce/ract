@@ -53,7 +53,7 @@ impl AppComponent for UninstallCmd {
                                     Ok(_) => {
                                         self.log.push(LogItem::success(
                                             UninstallLogs::Success("Ract".to_string())
-                                                .t(&self.lang)
+                                                .t(self.lang)
                                                 .to_string(),
                                         ));
                                         self.quit();
@@ -64,7 +64,7 @@ impl AppComponent for UninstallCmd {
                                                 name: "Ract".to_string(),
                                                 reason: Some(e.to_string()),
                                             }
-                                            .t(&self.lang)
+                                            .t(self.lang)
                                             .to_string(),
                                         ));
                                     }
@@ -86,7 +86,7 @@ impl AppComponent for UninstallCmd {
         let area = frame.area();
         let _ = Confirm::new(
             &UninstallLogs::Select("Ract".to_string())
-                .t(&self.lang)
+                .t(self.lang)
                 .to_string(),
             self.lang,
         )

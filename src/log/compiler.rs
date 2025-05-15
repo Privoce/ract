@@ -49,9 +49,10 @@ use colored::Colorize;
 use env_logger::{Builder, WriteStyle};
 use gen_utils::common::time::local_time_default;
 use log::{error, info, warn};
+use rust_i18n::t;
 use std::io::Write;
 
-use super::{LogLevel, TerminalLogger};
+use super::{LogExt, LogLevel};
 
 /// # Init Log
 /// init GenUI log service. It will read the system environment variable `GENUI_LOGO` and `GENUI_LOG_LEVEL` to set the log level and print the logo.
@@ -140,24 +141,37 @@ pub enum CompilerLogs {
 
 impl Display for CompilerLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CompilerLogs::LogInit => f.write_str("🔧 Log Service is starting... Log entries will be available after the `app event::Change` occurs!"),
-            CompilerLogs::Logo => f.write_str(LOGO),
-            CompilerLogs::WatcherInit(p) => f.write_fmt(format_args!("🔧 Watcher Service started successfully! Ract is watching: `{}`", p.display())),
-            CompilerLogs::Compiled(p) => f.write_fmt(format_args!("File `{}` compiled successfully.", p.display())),
-            CompilerLogs::WriteCache => f.write_str("✅ Cache Service: Cache file written successfully!"),
-        }
+         f.write_str(self.t(crate::entry::Language::En).as_ref())
     }
 }
 
 impl CompilerLogs {
-    pub fn terminal(&self) -> TerminalLogger {
-        TerminalLogger {
-            output: std::borrow::Cow::Owned(self.to_string()),
-        }
-    }
+    
     pub fn compiler(&self) -> CompilerLogger {
         self.into()
+    }
+}
+
+impl LogExt for CompilerLogs {
+    fn t(&self, lang: crate::entry::Language) -> std::borrow::Cow<str> {
+        let lang_str = lang.as_str();
+        match self {
+            CompilerLogs::LogInit => t!("compiler.log_init", locale = lang_str),
+            CompilerLogs::Logo => std::borrow::Cow::Borrowed(LOGO),
+            CompilerLogs::WatcherInit(path_buf) => t!(
+                "compiler.watcher_init",
+                locale = lang_str,
+                path = path_buf.display()
+            ),
+            CompilerLogs::Compiled(path_buf) => {
+                t!(
+                    "compiler.compiled",
+                    locale = lang_str,
+                    path = path_buf.display()
+                )
+            },
+            CompilerLogs::WriteCache => t!("compiler.write_cache", locale = lang_str),
+        }
     }
 }
 

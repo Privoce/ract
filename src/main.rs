@@ -12,7 +12,7 @@ use clap::Parser;
 use cli::Cli;
 use common::Result;
 use entry::Env;
-use log::TerminalLogger;
+use log::LogItem;
 use service::update::check_auto_update;
 rust_i18n::i18n!("locales", fallback = ["en_US", "zh_CN"]);
 
@@ -25,14 +25,16 @@ fn main() -> Result<()> {
                 return run();
             }
             Err(e) => {
-                TerminalLogger::new(&e.to_string()).error_no_exit();
+                LogItem::error(e.to_string()).print();
             }
         }
     }
 
     // [if not init] ----------------------------------------------------------------------------------------
     if let Err(e) = service::init::run() {
-        TerminalLogger::new(&e.to_string()).error();
+        LogItem::error(e.to_string()).print();
+        // exit
+        std::process::exit(1);
     } else {
         // continue to run
         run()?;
@@ -53,7 +55,7 @@ fn run() -> Result<()> {
     let res = app::run(cmd, &mut terminal);
     // [error handling] -------------------------------------------------------------------------
     if let Err(e) = res {
-        TerminalLogger::new(&e.to_string()).error_no_exit();
+        LogItem::error(e.to_string()).print();
         if let Some(terminal) = terminal.as_mut() {
             destroy(terminal)?;
         }

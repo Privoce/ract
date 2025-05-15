@@ -1,13 +1,14 @@
+use crate::entry::Language;
 use crate::log::InstallLogs;
 use gen_utils::error::Error;
 
 #[cfg(target_os = "linux")]
-pub fn install_rustc() -> Result<(), Error> {
+pub fn install_rustc(lang: Language) -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    use crate::log::LogItem;
+    use gen_utils::common::stream_terminal;
     use std::process::Command;
     use std::process::Stdio;
-    use gen_utils::common::stream_terminal;
-    use crate::log::TerminalLogger;
 
     let mut child = Command::new("curl")
         .args(&[
@@ -26,14 +27,14 @@ pub fn install_rustc() -> Result<(), Error> {
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
-                InstallLogs::Installed("Rustc".to_string()).terminal().success();
+                InstallLogs::Installed("Rustc".to_string()).success(lang).print();
                 Ok(())
             } else {
                 Err(InstallLogs::InstallErr("rustc".to_string())
@@ -45,12 +46,12 @@ pub fn install_rustc() -> Result<(), Error> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn install_rustc() -> Result<(), Error> {
+pub fn install_rustc(lang: Language) -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    use std::process::{Command, Stdio};
     use gen_utils::common::stream_terminal;
-    use crate::log::TerminalLogger;
-    
+    use std::process::{Command, Stdio};
+    use crate::log::{LogExt, LogItem};
+
     let mut child = Command::new("curl")
         .args(&[
             "--proto",
@@ -68,14 +69,16 @@ pub fn install_rustc() -> Result<(), Error> {
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
-                InstallLogs::Installed("Rustc".to_string()).terminal().success();
+                InstallLogs::Installed("Rustc".to_string())
+                    .success(lang)
+                    .print();
                 Ok(())
             } else {
                 Err(InstallLogs::InstallErr("rustc".to_string())
@@ -87,10 +90,9 @@ pub fn install_rustc() -> Result<(), Error> {
 }
 
 #[cfg(target_os = "windows")]
-pub fn install_rustc() -> Result<(), Error> {
+pub fn install_rustc(lang: Language) -> Result<(), Error> {
     // Powershell: Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
-    use crate::util::exe_path;
-    use crate::log::TerminalLogger;
+    use crate::{log::LogItem, util::exe_path};
     use std::process::Command;
     // create a downloads folder for the rustup-init.exe, after download, move to the exe_path
     let current_dir = exe_path()?.join("downloads");
@@ -106,7 +108,7 @@ pub fn install_rustc() -> Result<(), Error> {
         .map_or_else(
             |e| Err(Error::FromDynError(e.to_string())),
             |_| {
-                TerminalLogger::new("✅ Download rustup-init.exe success").success();
+                LogItem::success("✅ Download rustup-init.exe success".to_string()).print();
                 // run the rustup-init.exe
                 Command::new("rustup-init.exe")
                     .current_dir(current_dir.as_path())
@@ -115,7 +117,7 @@ pub fn install_rustc() -> Result<(), Error> {
                         |e| Err(Error::FromDynError(e.to_string())),
                         |out| {
                             if out.status.success() {
-                                InstallLogs::Installed("Rustc".to_string()).terminal().success();
+                                InstallLogs::Installed("Rustc".to_string()).success(lang).print();
                                 Ok(())
                             } else {
                                 Err(InstallLogs::InstallErr("rustc".to_string())

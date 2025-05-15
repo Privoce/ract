@@ -20,8 +20,8 @@ pub struct CheckItem {
     pub state: bool,
 }
 
-impl From<(&CheckItem, &Language)> for LogItem {
-    fn from(value: (&CheckItem, &Language)) -> Self {
+impl From<(&CheckItem, Language)> for LogItem {
+    fn from(value: (&CheckItem, Language)) -> Self {
         let (item, lang) = value;
         if item.state {
             LogItem::success(

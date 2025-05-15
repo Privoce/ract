@@ -5,7 +5,7 @@ use super::ProjectInfoType;
 use crate::{
     common::DEFAULT_GITIGNORE,
     entry::{FrameworkType, RactToml},
-    log::CreateLogs,
+    log::{CreateLogs, LogExt},
 };
 use gen_utils::{common::fs, error::Error};
 use std::path::{Path, PathBuf};
@@ -91,7 +91,7 @@ impl Generator {
                             path.as_ref().join(".gitignore").as_path(),
                             DEFAULT_GITIGNORE,
                         );
-                        CreateLogs::Git.terminal().success();
+                        CreateLogs::Git.success(crate::entry::Language::En).print();
                         Ok(())
                     } else {
                         Err(CreateLogs::GitErr.to_string().into())

@@ -11,7 +11,7 @@ use gen_utils::{
 use crate::{
     common::{self, MAKEPAD_APP_RS, MAKEPAD_LIB_RS, MAKEPAD_MAIN_RS},
     entry::{ProjectInfo, RactToml, WorkspaceInfo},
-    log::{CreateLogs, TerminalLogger},
+    log::{CreateLogs, LogExt, LogItem},
 };
 
 pub fn create_workspace<P>(
@@ -22,12 +22,11 @@ pub fn create_workspace<P>(
 where
     P: AsRef<Path>,
 {
-    TerminalLogger::new(&format!(
+    LogItem::info(format!(
         "🛠️ ract is creating a new Makepad workspace `{}` in: {}",
         info.name,
         fs::path_to_str(path.as_ref())
-    ))
-    .info();
+    )).print();
     // [rust workspace path] -------------------------------------------------------
     let path = path.as_ref().join(info.name.as_str());
     // [workspace Cargo.toml] ------------------------------------------------------
@@ -47,12 +46,11 @@ pub fn create_project<P>(path: P, info: &ProjectInfo) -> Result<PathBuf, Error>
 where
     P: AsRef<Path>,
 {
-    TerminalLogger::new(&format!(
+    LogItem::info(format!(
         "🛠️ ract is creating a new Makepad project `{}` in: {}",
         info.name,
         fs::path_to_str(path.as_ref())
-    ))
-    .info();
+    )).print(); 
     // [use cargo new --bin to create] --------------------------------------------------------------------
     Command::new("cargo")
         .args(&["new", "--bin", info.name.as_str(), "--vcs", "none"])
@@ -60,12 +58,12 @@ where
         .output()
         .map_or_else(
             |e| {
-                TerminalLogger::new(e.to_string().as_str()).error();
+                LogItem::error(e.to_string()).print();
                 Err(e.to_string().into())
             },
             |out| {
                 if out.status.success() {
-                    CreateLogs::Cargo.terminal().success();
+                    CreateLogs::Cargo.success(crate::entry::Language::En).print();
                     let path = path.as_ref().join(info.name.as_str());
                     // [handle the Cargo.toml] --------------------------------------------------------------------
                     info.write(path.join("Cargo.toml"))?;

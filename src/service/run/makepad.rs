@@ -5,13 +5,13 @@ use std::{
 
 use gen_utils::{common::stream_terminal, error::Error};
 
-use crate::log::{ProjectLogs, TerminalLogger};
+use crate::{entry::Language, log::{LogExt, LogItem, ProjectLogs}};
 
-pub fn run<P>(path: P) -> Result<(), Error>
+pub fn run<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    ProjectLogs::Start.terminal().info();
+    ProjectLogs::Start.info(lang).print();
     // run: cargo run
     let mut child = Command::new("cargo")
         .args(&["run"])
@@ -23,14 +23,14 @@ where
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
-                ProjectLogs::Stop.terminal().success();
+                ProjectLogs::Stop.success(lang).print();
                 Ok(())
             } else {
                 Err(ProjectLogs::Error("-".to_string()).to_string().into())

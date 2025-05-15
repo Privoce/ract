@@ -51,10 +51,10 @@ impl AppComponent for StudioCmd {
     type State = StudioState;
     fn new(lang: Language) -> Self {
         let options = vec![
-            Common::Option(Options::Default).t(&lang).to_string(),
-            Common::Option(Options::Custom).t(&lang).to_string(),
+            Common::Option(Options::Default).t(lang).to_string(),
+            Common::Option(Options::Custom).t(lang).to_string(),
         ];
-        let textarea = Self::init_textarea(&lang);
+        let textarea = Self::init_textarea(lang);
         Self {
             lang,
             state: Default::default(),
@@ -79,8 +79,8 @@ impl AppComponent for StudioCmd {
         match self.state {
             ComponentState::Start => {
                 self.log.extend(vec![
-                    LogItem::info(StudioLogs::Desc.t(&self.lang).to_string()).multi(),
-                    LogItem::info(StudioLogs::Check.t(&self.lang).to_string()),
+                    LogItem::info(StudioLogs::Desc.t(self.lang).to_string()).multi(),
+                    LogItem::info(StudioLogs::Check.t(self.lang).to_string()),
                 ]);
                 self.state.next();
             }
@@ -165,7 +165,7 @@ impl AppComponent for StudioCmd {
                             SelectPlace::UnSelected => {
                                 if self.is_default {
                                     self.log.push(LogItem::info(
-                                        StudioLogs::Gui.t(&self.lang).to_string(),
+                                        StudioLogs::Gui.t(self.lang).to_string(),
                                     ));
                                     self.place.select = SelectPlace::Default;
                                     self.state.next();
@@ -178,7 +178,7 @@ impl AppComponent for StudioCmd {
                                 self.is_default = false;
                                 self.log.push(LogItem::info(
                                     StudioLogs::Custom(self.value.to_string())
-                                        .t(&self.lang)
+                                        .t(self.lang)
                                         .to_string(),
                                 ));
                                 self.state.next();
@@ -217,7 +217,7 @@ impl AppComponent for StudioCmd {
         dashboard.ty = CommandType::Studio;
         dashboard.cost = self.cost.clone();
         // [render] -----------------------------------------------------------
-        let help_msg = Line::from(Common::Help(Help::Log).t(&self.lang).to_string());
+        let help_msg = Line::from(Common::Help(Help::Log).t(self.lang).to_string());
         let help_msg_width = help_msg.width();
         let area_width = area.width as usize - 6;
         let help_msg_height = if help_msg_width >= area_width {
@@ -255,7 +255,7 @@ impl AppComponent for StudioCmd {
                         SelectPlace::UnSelected => {
                             let is_default = if self.is_default { 0 } else { 1 };
                             let _ = Select::new_with_options(
-                                &StudioLogs::Select.t(&self.lang).to_string(),
+                                &StudioLogs::Select.t(self.lang).to_string(),
                                 self.lang,
                                 &self.options,
                                 Default::default(),
@@ -334,7 +334,7 @@ impl StudioCmd {
             self.child_log.push(log);
         }
     }
-    fn init_textarea(lang: &Language) -> TextArea<'static> {
+    fn init_textarea(lang: Language) -> TextArea<'static> {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::bordered().border_type(BorderType::Rounded));
         textarea.set_placeholder_text(StudioLogs::Placeholder.t(lang));
@@ -356,7 +356,7 @@ impl StudioCmd {
                             if !item.state {
                                 err = true;
                             }
-                            (item, &self.lang).into()
+                            (item, self.lang).into()
                         })
                         .collect::<Vec<LogItem>>(),
                 );
@@ -418,7 +418,7 @@ impl StudioCmd {
             }
             Err(e) => {
                 self.log.push(LogItem::error(
-                    StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                    StudioLogs::Error(e.to_string()).t(self.lang).to_string(),
                 ));
                 self.state.to_pause();
             }
@@ -441,13 +441,13 @@ impl StudioCmd {
                     Ok(status) => {
                         if status.success() {
                             self.log
-                                .push(LogItem::warning(StudioLogs::Stop.t(&self.lang).to_string()));
+                                .push(LogItem::warning(StudioLogs::Stop.t(self.lang).to_string()));
                         }
                         self.state.next();
                     }
                     Err(e) => {
                         self.log.push(LogItem::error(
-                            StudioLogs::Error(e.to_string()).t(&self.lang).to_string(),
+                            StudioLogs::Error(e.to_string()).t(self.lang).to_string(),
                         ));
                         self.state.to_pause();
                     }

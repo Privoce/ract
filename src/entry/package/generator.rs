@@ -1,12 +1,11 @@
 use std::path::{Path, PathBuf};
 
+use crate::log::LogItem;
 use gen_utils::{
     common::{fs, git_download_from_github},
     error::Error,
 };
 use toml_edit::DocumentMut;
-
-use crate::log::TerminalLogger;
 
 use super::{MacOsConfig, PackageConf};
 
@@ -49,8 +48,8 @@ impl Generator {
             "main",
             "resources/package/*",
             self.path.as_path(),
-            |line| TerminalLogger::new(&line).info(),
-            |line| TerminalLogger::new(&line).warning(),
+            |line| LogItem::info(line).print(),
+            |line| LogItem::warning(line).print(),
         )?;
         // - [move resources] ----------------------------------------------------------------
         fs::move_to(from_path, to_path)?;

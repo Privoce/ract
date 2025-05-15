@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{entry::ChainEnvToml, log::TerminalLogger, common::exe_path};
+use crate::{common::exe_path, entry::ChainEnvToml, log::LogItem};
 use clap::Args;
 use colored::Colorize;
 use gen_utils::{common::shadow_cmd, error::Error};
@@ -21,7 +21,7 @@ impl UpdateArgs {
         match ask_for_update(self.force) {
             Ok(_) => {}
             Err(e) => {
-                TerminalLogger::new(&format!("❌ Update failed! {}", e)).error();
+                LogItem::error(format!("❌ Update failed! {}", e)).print();
             }
         }
     }
@@ -62,22 +62,22 @@ fn ask_for_update(force: bool) -> Result<(), Error> {
         if is_update {
             return update();
         }
-    }else{
-        TerminalLogger::new("✅ No need to update!").info();
+    } else {
+        LogItem::info("✅ No need to update!".to_string()).print();
     }
 
     Ok(())
 }
 
-pub fn check_auto_update()-> Result<(), Error> {
+pub fn check_auto_update() -> Result<(), Error> {
     let mut chain_env_toml: ChainEnvToml = ChainEnvToml::path()?.try_into()?;
     let (is_update, _version) = chain_env_toml
         .check()
         .map_err(|e| Error::from(e.to_string()))?;
 
-    if is_update{
+    if is_update {
         // 需要进行更新
-        if chain_env_toml.auto_update{
+        if chain_env_toml.auto_update {
             // 自动更新
             return update();
         }

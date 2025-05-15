@@ -218,7 +218,7 @@ impl CompilerImpl for Compiler {
     fn init(&mut self) -> Result<(), Error> {
         // [display LOGO] ------------------------------------------------------------------------------------------------
         if self.conf.compiler.logo {
-            CompilerLogs::Logo.terminal().logo();
+            println!("{}", CompilerLogs::Logo.to_string());
         }
         // [init logger] -------------------------------------------------------------------------------------------------
         let log_level = self.conf.compiler.log_level;

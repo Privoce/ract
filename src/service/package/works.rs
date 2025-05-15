@@ -1,5 +1,5 @@
 use crate::entry::{FrameworkType, PackageFormat};
-use crate::log::TerminalLogger;
+use crate::log::LogItem;
 use gen_utils::common::exec_cmd;
 use gen_utils::error::Error;
 use std::path::Path;
@@ -155,6 +155,8 @@ where
         error::{ParseError, ParseType},
     };
 
+    use crate::log::LogItem;
+
     // use crate::core::util::is_workspace;
 
     // [check invalid package formats] ---------------------------------------------------------
@@ -200,14 +202,14 @@ where
 
     return stream_terminal(
         &mut cmd,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line|  LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
-                TerminalLogger::new("install_name_tool successful").success();
+                LogItem::success("install_name_tool successful".to_string()).print();
                 Ok(())
             } else {
                 Err(Error::from("install_name_tool failed!"))
@@ -225,7 +227,7 @@ where
     let mut args = vec!["build".to_string(), "--release".to_string()];
     args.extend(extra_args);
 
-    TerminalLogger::new("running cargo build, please wait ...").info();
+    LogItem::info("running cargo build, please wait ...".to_string()).print();
 
     exec_cmd("cargo", args, Some(path))
         .envs(extra_envs)
@@ -234,7 +236,7 @@ where
             |e| Err(Error::from(e.to_string())),
             |status| {
                 if status.success() {
-                    TerminalLogger::new("cargo build successful").success();
+                    LogItem::success("cargo build successful".to_string()).print();
                     Ok(())
                 } else {
                     Err(Error::from("cargo build failed!"))
@@ -288,8 +290,7 @@ where
     // sort and de-duplicate dependencies
     dpkgs.sort();
     dpkgs.dedup();
-    TerminalLogger::new(format!("Sorted and de-duplicated dependencies: {:#?}", dpkgs).as_str())
-        .info();
+    LogItem::info(format!("Sorted and de-duplicated dependencies: {:#?}", dpkgs)).print();
     // 写入文件
     let deb_path = dist_path.as_ref().join("depends_deb.txt");
     let mut file = File::create(deb_path).map_err(|e| e.to_string())?;

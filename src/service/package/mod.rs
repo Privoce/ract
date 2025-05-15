@@ -11,10 +11,13 @@ use std::{
 };
 use works::*;
 
-use crate::entry::PackageFormat;
 use crate::{
     entry::{FrameworkType, PackageConf, RactToml},
-    log::{PackageLogs, TerminalLogger},
+    log::PackageLogs,
+};
+use crate::{
+    entry::{Language, PackageFormat},
+    log::{LogExt, LogItem},
 };
 use cargo_metadata::MetadataCommand;
 use gen_utils::{
@@ -31,26 +34,25 @@ use toml_edit::DocumentMut;
 use which::which;
 
 /// use cargo packager to package the makepad project
-pub fn run() {
-    PackageLogs::Welcome.terminal().info();
-    PackageLogs::Desc.terminal().info();
+pub fn run(lang: Language) {
+    PackageLogs::Desc.info(lang).multi().print();
 
-    let _ = package().map_err(|e| {
-        TerminalLogger::new(&e.to_string()).error();
+    let _ = package(lang).map_err(|e| {
+        LogItem::error(e.to_string()).print();
         exit(2);
     });
 }
 
-fn package() -> Result<(), Error> {
+fn package(lang: Language) -> Result<(), Error> {
     // [check cargo-packager is installed] -----------------------------------------------
-    let _ = check_or_install_packager()?;
+    let _ = check_or_install_packager(lang)?;
     // [init cargo-packager] -------------------------------------------------------------
-    let _ = init_or_package()?;
+    let _ = init_or_package(lang)?;
     Ok(())
 }
 
-fn init_or_package() -> Result<(), Error> {
-    PackageLogs::Init.terminal().info();
+fn init_or_package(lang: Language) -> Result<(), Error> {
+    PackageLogs::Init.info(lang).print();
     // ask user need to init or not
     Select::new("Select how to package the project", vec!["init", "skip"])
         .prompt()
@@ -60,13 +62,13 @@ fn init_or_package() -> Result<(), Error> {
                 match option {
                     "init" => {
                         // generate a Packager.toml
-                        let info = generate_packager_toml()?;
+                        let info = generate_packager_toml(lang)?;
                         // run cargo-packager
-                        run_cargo_packager(info)
+                        run_cargo_packager(info, lang)
                     }
                     "skip" => {
                         let info = get_target_and_dist()?;
-                        run_cargo_packager(info)
+                        run_cargo_packager(info, lang)
                     }
                     _ => Err("Invalid option".into()),
                 }
@@ -74,13 +76,13 @@ fn init_or_package() -> Result<(), Error> {
         )
 }
 
-pub fn check_or_install_packager() -> Result<(), Error> {
+pub fn check_or_install_packager(lang: Language) -> Result<(), Error> {
     // check if cargo-packager is installed
     if which("cargo-packager").is_ok() {
         Ok(())
     } else {
         // cargo install cargo-packager --locked
-        PackageLogs::UnInstalled.terminal().warning();
+        PackageLogs::UnInstalled.warning(lang).print();
         exec_cmd(
             "cargo",
             ["install", "cargo-packager", "--locked"],
@@ -91,7 +93,7 @@ pub fn check_or_install_packager() -> Result<(), Error> {
             |e| Err(Error::from(e.to_string())),
             |status| {
                 if status.success() {
-                    PackageLogs::Installed.terminal().success();
+                    PackageLogs::Installed.success(lang).print();
                     Ok(())
                 } else {
                     Err(
@@ -107,7 +109,7 @@ pub fn check_or_install_packager() -> Result<(), Error> {
 
 /// generate a Packager.toml
 /// return (path_to_package, dist_path)
-fn generate_packager_toml() -> Result<PackageInfo, Error> {
+fn generate_packager_toml(lang: Language) -> Result<PackageInfo, Error> {
     // [get ract.toml] -----------------------------------------------------------------------------
     let ract_path = RactToml::path();
 
@@ -130,17 +132,18 @@ fn generate_packager_toml() -> Result<PackageInfo, Error> {
         )
     };
     // [get package configuration] ----------------------------------------------------------------
-    let mut conf = generate_package_conf(path.as_path(), framework.as_ref())?;
+    let mut conf = generate_package_conf(path.as_path(), framework.as_ref(), lang)?;
     // [write to Cargo.toml] -----------------------------------------------------------------------
     let generator = conf.generator(path.as_path(), framework);
     let _ = generator.generate(&conf)?;
-    PackageLogs::PackageResourced.terminal().success();
+    PackageLogs::PackageResourced.success(lang).print();
     Ok(PackageInfo::new(path, conf, framework, resources))
 }
 
 fn generate_package_conf<P>(
     path: P,
     framework: Option<&FrameworkType>,
+    lang: Language,
 ) -> Result<PackageConf, Error>
 where
     P: AsRef<Path>,
@@ -201,7 +204,7 @@ where
         .with_placeholder("you can enter to skip")
         .prompt_skippable()
         .unwrap();
-    PackageLogs::Configing.terminal().info();
+    PackageLogs::Configing.info(lang).print();
     let mut pack_conf = PackageConf::new(
         name,
         version,
@@ -219,7 +222,7 @@ where
     Ok(pack_conf)
 }
 
-fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
+fn run_cargo_packager(info: PackageInfo, lang: Language) -> Result<(), Error> {
     // ask user need to pack or stop
     let confirm = Confirm::new("Do you want to package the project now?")
         .with_help_message(
@@ -232,7 +235,7 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
     if !confirm {
         return Ok(());
     }
-    PackageLogs::Start.terminal().info();
+    PackageLogs::Start.info(lang).print();
     let resources = info.zip_resources();
     let PackageInfo {
         path,
@@ -249,7 +252,7 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
         path.join("resources"),
         dist_resources_path.join(&conf.name).join("resources"),
     )?;
-    TerminalLogger::new("copy all resources to dist resources successful").success();
+    LogItem::success("copy all resources to dist resources successful".to_string()).print();
     // [specify platform and do some works] -------------------------------------------------------
     let formats = conf
         .formats
@@ -268,14 +271,14 @@ fn run_cargo_packager(info: PackageInfo) -> Result<(), Error> {
         stream_cmd("cargo", ["packager", "--release"], Some(path)).map_err(|e| e.to_string())?;
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
-                PackageLogs::Confirm.terminal().success();
+                PackageLogs::Confirm.success(lang).print();
                 Ok(())
             } else {
                 Err(PackageLogs::Error.to_string().into())
@@ -300,12 +303,12 @@ fn copy_resources(
                     }
                     .join("resources");
                     let from_path = path.join("resources");
-                    TerminalLogger::new(&format!(
+                    LogItem::info(format!(
                         "copy resources from {} to {}",
                         path_to_str(from_path.as_path()),
                         path_to_str(to_path.as_path())
                     ))
-                    .info();
+                    .print();
                     // do copy, from_path -> to_path
                     let _ = fs::copy(from_path, to_path);
                 })

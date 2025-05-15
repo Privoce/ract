@@ -107,9 +107,9 @@ impl Dashboard {
         let left = Block::new();
 
         let left_left = Text::from(vec![
-            Line::from(Common::Os.t(&self.lang)),
+            Line::from(Common::Os.t(self.lang)),
             Line::from(""),
-            Line::from(Common::Version.t(&self.lang)),
+            Line::from(Common::Version.t(self.lang)),
         ]);
 
         let left_right = Text::from(vec![
@@ -121,9 +121,9 @@ impl Dashboard {
         let right = Block::new();
 
         let right_left = Text::from(vec![
-            Line::from(Common::Language.t(&self.lang)),
+            Line::from(Common::Language.t(self.lang)),
             Line::from(""),
-            Line::from(Common::Total.t(&self.lang)),
+            Line::from(Common::Total.t(self.lang)),
         ]);
 
         let right_right = Text::from(vec![

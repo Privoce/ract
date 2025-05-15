@@ -85,7 +85,7 @@ impl AppComponent for InstallCmd {
         match self.state {
             ComponentState::Start => {
                 self.log
-                    .push(LogItem::info(InstallLogs::Desc.t(&self.lang).to_string()).multi());
+                    .push(LogItem::info(InstallLogs::Desc.t(self.lang).to_string()).multi());
                 self.state.next();
             }
             ComponentState::Run(state) => match state {
@@ -156,10 +156,10 @@ impl AppComponent for InstallCmd {
             .scroll((y as u16, 0))
             .wrap(Wrap { trim: true });
         // [multi check] ------------------------------------------------------------
-        let timeline = Timeline::new(InstallLogs::CheckTitle.t(&self.lang).to_string(), self.lang)
+        let timeline = Timeline::new(InstallLogs::CheckTitle.t(self.lang).to_string(), self.lang)
             .progress(self.check.progress)
             .cost(self.cost.unwrap_or_default())
-            .description(self.check.to_log().t(&self.lang).to_string())
+            .description(self.check.to_log().t(self.lang).to_string())
             .state(self.check.state)
             .draw();
         // [dashboard] -----------------------------------------------------------
@@ -178,7 +178,7 @@ impl AppComponent for InstallCmd {
                     ),
                     InstallState::Select => {
                         let multi_select = MultiSelect::new(
-                            InstallLogs::Select.t(&self.lang).to_string(),
+                            InstallLogs::Select.t(self.lang).to_string(),
                             self.lang,
                             &Tools::options(),
                             Default::default(),
@@ -283,7 +283,7 @@ impl InstallCmd {
                                 self.check.items.push(item.clone());
                                 self.check.progress += 20;
                             }
-                            (item, &self.lang).into()
+                            (item, self.lang).into()
                         })
                         .collect::<Vec<LogItem>>(),
                 );
@@ -394,17 +394,17 @@ impl Check {
 /// After install command app quit, it will return `InstallOptions`
 /// this trait is used to follow up the install command, analyze the result and then do install
 pub trait InstallCmdFollowUp {
-    fn follow_up(self) -> crate::common::Result<()>
+    fn follow_up(self, lang: Language) -> crate::common::Result<()>
     where
         Self: Sized;
 }
 
 impl InstallCmdFollowUp for InstallOptions {
-    fn follow_up(self) -> crate::common::Result<()>
+    fn follow_up(self, lang: Language) -> crate::common::Result<()>
     where
         Self: Sized,
     {
-        service::install::run(self).map_err(|e| crate::log::error::Error::other(e.to_string()))?;
+        service::install::run(self, lang).map_err(|e| crate::log::error::Error::other(e.to_string()))?;
 
         Ok(())
     }

@@ -1,5 +1,18 @@
 _version = 1
 
+
+makepad_studio = "ℹ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio."
+cargo_makepad_err = "❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad"
+makepad_android = "ℹ You can use `cargo makepad android run -p ${project_name} --release` to run the project"
+xcode_conf_err = "❗️ Xcode command line tools are installed but not properly configured. Please run 'xcode-select --install' to complete setup."
+xcode_select_err = "❗️ xcode-select is not installed, please install it first!"
+makepad_ios = """
+ℹ You can use `cargo makepad apple ios --org=my.test --app=${project_name} run-sim -p ${project_name} --release` to run the project
+For more information, see: https://github.com/syf20020816/makepad/tree/rik?tab=readme-ov-file#5-ios-setup--install
+"""
+makepad_wasm = "ℹ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project"
+makepad_wait_install = "❗️ Makepad is not installed, now installing Makepad"
+makepad_help = "ℹ You can use `cargo makepad -h` to see the help information"
 # [check] -------------------------------------------------------------
 [check]
 complete = "🎉 Check complete!"

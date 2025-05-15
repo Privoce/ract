@@ -40,7 +40,7 @@ impl AppComponent for InitCmd {
         match self.state {
             ComponentState::Start => {
                 self.log
-                    .push(LogItem::info(InitLogs::Init.t(&self.lang).to_string()));
+                    .push(LogItem::info(InitLogs::Init.t(self.lang).to_string()));
                 self.cost.env_state = TimelineState::Running;
                 self.state.next();
             }
@@ -67,7 +67,7 @@ impl AppComponent for InitCmd {
                     );
                     if self.cost.chain_state.is_success() {
                         self.log
-                            .push(LogItem::info(InitLogs::Complete.t(&self.lang).to_string()));
+                            .push(LogItem::info(InitLogs::Complete.t(self.lang).to_string()));
                         self.state.next();
                     }
                 }
@@ -101,14 +101,14 @@ impl AppComponent for InitCmd {
         dashboard.ty = CommandType::Init;
         dashboard.cost.replace(self.cost.env + self.cost.chain);
         // [render app] ------------------------------------------------------------------------------------------
-        let node1 = Timeline::new(InitLogs::Env.t(&self.lang).to_string(), self.lang)
+        let node1 = Timeline::new(InitLogs::Env.t(self.lang).to_string(), self.lang)
             .progress(self.env_progress())
             .cost(self.cost.env)
-            .description(InitLogs::EnvDesc.t(&self.lang).to_string())
+            .description(InitLogs::EnvDesc.t(self.lang).to_string())
             .state(self.cost.env_state)
             .draw();
 
-        let node2 = Timeline::new(InitLogs::Chain.t(&self.lang).to_string(), self.lang)
+        let node2 = Timeline::new(InitLogs::Chain.t(self.lang).to_string(), self.lang)
             .progress(self.chain_progress())
             .cost(self.cost.chain)
             .state(self.cost.chain_state)
@@ -169,13 +169,13 @@ impl InitCmd {
                     let (state, log) = success(&mut self.cost);
                     *state = TimelineState::Success;
                     self.log
-                        .push(LogItem::success(log.t(&self.lang).to_string()));
+                        .push(LogItem::success(log.t(self.lang).to_string()));
                 }
                 Err(e) => {
                     *progress = 96;
                     let (state, log) = failed(&mut self.cost, e.to_string());
                     *state = TimelineState::Failed;
-                    self.log.push(LogItem::error(log.t(&self.lang).to_string()));
+                    self.log.push(LogItem::error(log.t(self.lang).to_string()));
                 }
             }
         }

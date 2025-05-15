@@ -17,14 +17,14 @@ pub enum InitLogs {
 
 impl Display for InitLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.t(&crate::entry::Language::En).as_ref())
+        f.write_str(self.t(crate::entry::Language::En).as_ref())
     }
 }
 
 impl Error for InitLogs {}
 
 impl LogExt for InitLogs {
-    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+    fn t(&self, lang: crate::entry::Language) -> std::borrow::Cow<str> {
         match self {
             InitLogs::Init => t!("init.start", locale = lang.as_str()),
             InitLogs::Complete => t!("init.complete", locale = lang.as_str()),

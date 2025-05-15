@@ -14,14 +14,14 @@ pub enum CheckLogs {
 
 impl Display for CheckLogs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.t(&crate::entry::Language::En).as_ref())
+        f.write_str(self.t(crate::entry::Language::En).as_ref())
     }
 }
 
 impl Error for CheckLogs {}
 
 impl LogExt for CheckLogs {
-    fn t(&self, lang: &crate::entry::Language) -> std::borrow::Cow<str> {
+    fn t(&self, lang: crate::entry::Language) -> std::borrow::Cow<str> {
         let lang = lang.as_str();
         match self {
             CheckLogs::Desc => t!("check.desc", locale = lang),

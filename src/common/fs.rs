@@ -1,4 +1,6 @@
 
+use crate::entry::Language;
+use crate::log::LogExt;
 use crate::{entry::RactToml, log::CreateLogs};
 use gen_utils::common::{fs, ToToml};
 use gen_utils::error::Error;
@@ -27,7 +29,7 @@ where
             let _ = fs::write(path.as_ref().join("Cargo.toml"), cargo_toml)?;
             // [write .ract] -------------------------------------------------------------------------
             ract_toml.write(path.as_ref().join(".ract"))?;
-            CreateLogs::Workspace.terminal().success();
+            CreateLogs::Workspace.success(Language::En).print();
             Ok(())
         }
         Err(e) => Err(e.to_string().into()),

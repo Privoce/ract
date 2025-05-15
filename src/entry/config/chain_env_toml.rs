@@ -8,7 +8,7 @@ use gen_utils::{
 
 use toml_edit::{value, DocumentMut, Formatted, InlineTable, Item, Table, Value};
 
-use crate::{common::exe_path, log::TerminalLogger};
+use crate::{common::exe_path, log::LogItem};
 
 use super::env::Env;
 
@@ -340,7 +340,7 @@ impl DefaultChain {
             .join("gen_components")
     }
     pub fn version(&self) -> Version {
-        Version::new(0, 1, 8)
+        Version::new(0, 2, 0)
     }
     pub fn dependencies(&self) -> HashMap<String, PathBuf> {
         let chain = DefaultChain;
@@ -465,7 +465,7 @@ impl From<&str> for Language {
 
 /// 使用reqwest查询crate.io上的最新版本
 fn search_latest_version() -> Result<Version, Box<dyn std::error::Error>> {
-    TerminalLogger::new("🔍 Searching for the latest version...").info();
+    LogItem::info("🔍 Searching for the latest version...".to_string()).print();
     let url = "https://crates.io/api/v1/crates/ract";
     // 增加header(user-agent)
     let response = reqwest::blocking::Client::new()

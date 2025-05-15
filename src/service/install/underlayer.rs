@@ -11,39 +11,44 @@ use inquire::Confirm;
 use which::which;
 
 use crate::{
-    entry::MakepadTools,
-    log::{InstallLogs, TerminalLogger},
+    entry::{Language, MakepadTools},
+    log::{InstallLogs, LogExt, LogItem},
 };
 
-pub fn install<P>(path: P, makepad_is_ok: bool, makepad_tools: MakepadTools) -> Result<(), Error>
+pub fn install<P>(
+    path: P,
+    makepad_is_ok: bool,
+    makepad_tools: MakepadTools,
+    lang: Language,
+) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    update_makepad(makepad_is_ok, path.as_ref())?;
+    update_makepad(makepad_is_ok, path.as_ref(), lang)?;
 
     match makepad_tools {
         crate::entry::MakepadTools::Makepad => {}
         crate::entry::MakepadTools::GenUi => {
-            clone_gen_ui_components(path)?;
+            clone_gen_ui_components(path, lang)?;
         }
         crate::entry::MakepadTools::Android => {
-            install_android_build(path)?;
+            install_android_build(path, lang)?;
         }
         crate::entry::MakepadTools::Ios => {
-            install_ios_build(path)?;
+            install_ios_build(path, lang)?;
         }
         crate::entry::MakepadTools::Wasm => {
-            install_wasm_build(path)?;
+            install_wasm_build(path, lang)?;
         }
         crate::entry::MakepadTools::Studio => {
-            install_makepad_studio(path)?;
+            install_makepad_studio(path, lang)?;
         }
     }
 
     Ok(())
 }
 
-fn install_makepad_studio<P>(path: P) -> Result<(), Error>
+fn install_makepad_studio<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -58,10 +63,9 @@ where
                 |out| {
                     if out.status.success() {
                         InstallLogs::Confirm("makepad_studio".to_string())
-                            .terminal()
-                            .success();
-                        TerminalLogger::new("ℹ You can cd to makepad dir and use `cargo run -p makepad-studio --release` to open the makepad studio. Or you can use `ract run` to open the makepad studio")
-                            .info();
+                            .success(lang)
+                            .print();
+                        LogItem::info("".to_string()).print();
                         Ok(())
                     } else {
                         Err(InstallLogs::InstallErr("makepad_studio".to_string())
@@ -71,12 +75,12 @@ where
                 },
             );
     } else {
-        TerminalLogger::new("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad").error();
+        InstallLogs::CargoMakepadErr.error(lang).print();
         exit(2);
     }
 }
 
-fn install_android_build<P>(path: P) -> Result<(), Error>
+fn install_android_build<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -91,10 +95,9 @@ where
                 |out| {
                     if out.status.success() {
                         InstallLogs::Confirm("android_build".to_string())
-                            .terminal()
-                            .success();
-                        TerminalLogger::new("ℹ You can use `cargo makepad android run -p ${project_name} --release` to run the project")
-                            .info();
+                            .success(lang)
+                            .print();
+                        LogItem::info("".to_string()).print();
                         Ok(())
                     } else {
                         Err(InstallLogs::InstallErr("android_build".to_string())
@@ -105,12 +108,12 @@ where
             );
     } else {
         // means cargo makepad is not installed or has some error, return Err
-        TerminalLogger::new("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad").error();
+        InstallLogs::CargoMakepadErr.error(lang).print();
         exit(2);
     }
 }
 
-fn install_ios_build<P>(path: P) -> Result<(), Error>
+fn install_ios_build<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -125,43 +128,42 @@ where
             .map_or(false, |out| out.status.success());
 
         if !xcode_path_check {
-            TerminalLogger::new("❗️ Xcode command line tools are installed but not properly configured. Please run 'xcode-select --install' to complete setup.").warning();
+            InstallLogs::XCodeConfErr.error(lang).print();
             exit(2);
         }
 
         if check_cargo_makepad() {
             return Command::new("cargo")
-            .args(&["makepad", "apple", "ios", "install-toolchain"])
-            .current_dir(path)
-            .output()
-            .map_or_else(
-                |e| Err(e.to_string().into()),
-                |out| {
-                    if out.status.success() {
-                        InstallLogs::Confirm("ios_build".to_string())
-                            .terminal()
-                            .success();
-                        TerminalLogger::new("ℹ You can use `cargo makepad apple ios --org=my.test --app=${project_name} run-sim -p ${project_name} --release` to run the project\nFor more information, see: https://github.com/syf20020816/makepad/tree/rik?tab=readme-ov-file#5-ios-setup--install")
-                            .info();
-                        Ok(())
-                    } else {
-                        Err(InstallLogs::InstallErr("ios_build".to_string())
-                            .to_string()
-                            .into())
-                    }
-                },
-            );
+                .args(&["makepad", "apple", "ios", "install-toolchain"])
+                .current_dir(path)
+                .output()
+                .map_or_else(
+                    |e| Err(e.to_string().into()),
+                    |out| {
+                        if out.status.success() {
+                            InstallLogs::Confirm("ios_build".to_string())
+                                .success(lang)
+                                .print();
+                            InstallLogs::MakepadIos.success(lang).print();
+                            Ok(())
+                        } else {
+                            Err(InstallLogs::InstallErr("ios_build".to_string())
+                                .to_string()
+                                .into())
+                        }
+                    },
+                );
         } else {
-            TerminalLogger::new("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad").error();
+            InstallLogs::CargoMakepadErr.error(lang).print();
             exit(2);
         }
     } else {
-        TerminalLogger::new("❗️ xcode-select is not installed, please install it first!").error();
+        InstallLogs::XCodeSelectErr.error(lang).print();
         exit(2);
     }
 }
 
-fn install_wasm_build<P>(path: P) -> Result<(), Error>
+fn install_wasm_build<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -177,22 +179,22 @@ where
 
         return stream_terminal(
             &mut child,
-            |line| TerminalLogger::new(&line).info(),
-            |line| TerminalLogger::new(&line).warning(),
-        ).map_or_else(
+            |line| LogItem::info(line).print(),
+            |line| LogItem::warning(line).print(),
+        )
+        .map_or_else(
             |e| Err(e),
             |status| {
                 if status.success() {
                     InstallLogs::Confirm("wasm_build".to_string())
-                    .terminal()
-                    .success();
-                TerminalLogger::new("ℹ You can use `cargo makepad wasm run -p ${project_name} --release` to run the project")
-                    .info();
+                        .success(lang)
+                        .print();
+                    InstallLogs::MakepadWasm.success(lang).print();
                     Ok(())
                 } else {
                     Err(InstallLogs::InstallErr("wasm_build".to_string())
-                    .to_string()
-                    .into())
+                        .to_string()
+                        .into())
                 }
             },
         );
@@ -205,14 +207,14 @@ fn check_cargo_makepad() -> bool {
     which("cargo-makepad").is_ok()
 }
 
-fn install_cargo_makepad<P>(path: P) -> Result<(), Error>
+fn install_cargo_makepad<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
     // cargo install --path ./tools/cargo_makepad
     InstallLogs::Install("cargo_makepad".to_string())
-        .terminal()
-        .info();
+        .info(lang)
+        .print();
     let mut child = Command::new("cargo")
         .args(&["install", "--path", "./makepad/tools/cargo_makepad"])
         .current_dir(path)
@@ -223,18 +225,17 @@ where
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
                 InstallLogs::Confirm("cargo_makepad".to_string())
-                    .terminal()
-                    .success();
-                TerminalLogger::new("ℹ You can use `cargo makepad -h` to see the help information")
-                    .info();
+                    .success(lang)
+                    .print();
+                InstallLogs::MakepadHelp.success(lang).print();
                 Ok(())
             } else {
                 Err(InstallLogs::InstallErr("cargo_makepad".to_string())
@@ -245,7 +246,7 @@ where
     )
 }
 
-fn update_makepad<P>(install: bool, path: P) -> Result<(), Error>
+fn update_makepad<P>(install: bool, path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
@@ -260,33 +261,33 @@ where
                     |e| Err(e.to_string().into()),
                     |res| {
                         if res {
-                            clone_makepad(path.as_ref())?;
-                            install_cargo_makepad(path)
+                            clone_makepad(path.as_ref(), lang)?;
+                            install_cargo_makepad(path, lang)
                         } else {
                             Ok(())
                         }
                     },
                 );
         } else {
-            TerminalLogger::new("❗️ cargo makepad is not installed, please install it first! If you get this error, do update makepad").error();
+            InstallLogs::CargoMakepadErr.error(lang).print();
             exit(2);
         }
     } else {
-        TerminalLogger::new("❗️ Makepad is not installed, now installing Makepad").warning();
-        clone_makepad(path.as_ref())?;
-        install_cargo_makepad(path)
+        InstallLogs::MakepadWaitInstall.warning(lang).print();
+        clone_makepad(path.as_ref(), lang)?;
+        install_cargo_makepad(path, lang)
     }
 }
 
-fn clone_makepad<P>(path: P) -> Result<(), Error>
+fn clone_makepad<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
     fs::delete_dir(path.as_ref().join("makepad"))?;
 
     InstallLogs::Install("makepad".to_string())
-        .terminal()
-        .info();
+        .info(lang)
+        .print();
     // use git clone makepad: git clone --branch gen_ui --depth 1 https://github.com/syf20020816/makepad.git makepad
     let mut child = Command::new("git")
         .args(&[
@@ -306,17 +307,16 @@ where
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
                 InstallLogs::Confirm("makepad".to_string())
-                    .terminal()
-                    .success();
-
+                    .success(lang)
+                    .print();
                 Ok(())
             } else {
                 Err("❌ makepad install failed".to_string().into())
@@ -325,13 +325,13 @@ where
     )
 }
 
-fn clone_gen_ui_components<P>(path: P) -> Result<(), Error>
+fn clone_gen_ui_components<P>(path: P, lang: Language) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
     InstallLogs::Install("gen_components".to_string())
-        .terminal()
-        .info();
+        .info(lang)
+        .print();
     // https://github.com/Privoce/GenUI-Builtin-Component.git gen_components
     let mut child = Command::new("git")
         .args(&[
@@ -351,16 +351,17 @@ where
 
     stream_terminal(
         &mut child,
-        |line| TerminalLogger::new(&line).info(),
-        |line| TerminalLogger::new(&line).warning(),
+        |line| LogItem::info(line).print(),
+        |line| LogItem::warning(line).print(),
     )
     .map_or_else(
         |e| Err(e),
         |status| {
             if status.success() {
                 InstallLogs::Confirm("gen_components".to_string())
-                    .terminal()
-                    .success();
+                    .success(lang)
+                    .print();
+
                 Ok(())
             } else {
                 Err("❌ gen_components install failed".to_string().into())

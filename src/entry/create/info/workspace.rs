@@ -1,10 +1,8 @@
+use super::ProjectInfo;
+use colored::Colorize;
 use gen_utils::error::Error;
 use inquire::{Confirm, Text};
 use toml_edit::{value, Array, DocumentMut, Item, Table};
-
-use crate::log::TerminalLogger;
-
-use super::ProjectInfo;
 
 /// WorkspaceInfo
 /// help ract create a rust workspace project
@@ -17,7 +15,7 @@ pub struct WorkspaceInfo {
 }
 
 impl WorkspaceInfo {
-    pub fn new(is_gen_ui: bool) -> Result<WorkspaceInfo , Error>{
+    pub fn new(is_gen_ui: bool) -> Result<WorkspaceInfo, Error> {
         // [workspace name] ---------------------------------------------------------
         let name = Text::new("Input the name of the workspace:")
             .prompt()
@@ -30,10 +28,10 @@ impl WorkspaceInfo {
         // [members] ----------------------------------------------------------------
         let mut index = 1;
         loop {
-            TerminalLogger::new(
-                format!("============ Project{} ======================", index).as_str(),
-            )
-            .warning();
+            println!(
+                "{}",
+                format!("============ Project{} ======================", index).yellow()
+            );
             let project = ProjectInfo::new(is_gen_ui)?;
             workspace.members.push(project);
             index += 1;

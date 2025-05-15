@@ -7,12 +7,12 @@ use crate::{
 
 pub fn run() -> Result<(), Error> {
     let lang = crate::entry::Language::En;
-    InitLogs::Init.terminal(&lang).info();
+    InitLogs::Init.info(lang).print();
     create_env_file()?;
-    InitLogs::EnvSuccess.terminal(&lang).success();
+    InitLogs::EnvSuccess.success(lang).print();
     create_chain()?;
-    InitLogs::ChainSuccess.terminal(&lang).success();
-    InitLogs::Complete.terminal(&lang).success();
+    InitLogs::ChainSuccess.success(lang).print();
+    InitLogs::Complete.success(lang).print();
     Ok(())
 }
 
