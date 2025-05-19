@@ -5,6 +5,16 @@
 ### General
 
 - Update UI (ratatui)
+  - init
+  - check
+  - config
+  - uninstall
+  - studio
+  - wasm
+  - install
+- New config for Ract
+- Better logger
+- i18n
 
 ### Fixes
 

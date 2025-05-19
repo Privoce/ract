@@ -3,6 +3,9 @@
 
   <img src="https://img.shields.io/badge/Ract-0.2.0-orange?style=flat-square&logo=rust&logoColor=%23fff&labelColor=%23DEA584&color=%23DEA584"> 
   <img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square&logoColor=%23fff&labelColor=%2323B898&color=%2323B898">
+  <div>
+    <img src="./README/ract_init.gif" width="66%"/>
+  </div>
 </div>
 
 **Ract** is a conversational CLI tool written in Rust, designed to simplify the development process by providing an all-in-one solution for:  
@@ -91,12 +94,12 @@ You can choose the following documents for usage
 - **Logger**: Advanced logging system for debugging.  
 - **Uninstall**: Clear resources when use `ract uninstall`.
 - **Auto Update**: Automatic updates to new versions.
-
-### Future Features  
-
 - **Better Terminal UI**: Use ratatui to optimize terminal ui.
+- **Documentation**: Include a comprehensive book for learning Makepad and GenUI. 
+- 
+### Future Features  
+ 
 - **Cross-platform Packaging**: Simplify builds for multiple platforms.  
-- **Documentation**: Include a comprehensive book for learning Makepad and GenUI.  
 - **Remote Services**: Enable Ract to call some remote services.
 
 ---

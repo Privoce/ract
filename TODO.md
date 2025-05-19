@@ -1,4 +1,3 @@
-- [ ] i18n
 - [ ] A better way for packaging settings (visualization)
 - [ ] Cross Platforms Packaging
 - [ ] Multi Compiler threads
