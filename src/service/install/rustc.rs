@@ -5,7 +5,7 @@ use gen_utils::error::Error;
 #[cfg(target_os = "linux")]
 pub fn install_rustc(lang: Language) -> Result<(), Error> {
     // curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    use crate::log::LogItem;
+    use crate::log::{LogItem, LogExt};
     use gen_utils::common::stream_terminal;
     use std::process::Command;
     use std::process::Stdio;
@@ -92,7 +92,7 @@ pub fn install_rustc(lang: Language) -> Result<(), Error> {
 #[cfg(target_os = "windows")]
 pub fn install_rustc(lang: Language) -> Result<(), Error> {
     // Powershell: Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
-    use crate::{log::LogItem, util::exe_path};
+    use crate::{log::{LogItem, LogExt}, common::exe_path};
     use std::process::Command;
     // create a downloads folder for the rustup-init.exe, after download, move to the exe_path
     let current_dir = exe_path()?.join("downloads");

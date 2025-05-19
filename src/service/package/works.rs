@@ -44,7 +44,7 @@ pub fn specify_platform_with_works<P>(
 where
     P: AsRef<Path>,
 {
-    use crate::core::util::is_workspace;
+    use crate::common::is_workspace;
     use gen_utils::common::exec_cmd;
 
     fn strip<P>(path: P, binary_path: &str) -> Result<(), Error>

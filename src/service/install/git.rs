@@ -1,7 +1,7 @@
 use crate::entry::Language;
 use gen_utils::error::Error;
 #[cfg(target_os = "linux")]
-pub fn install_git() -> Result<(), Error> {
+pub fn install_git(_lang: Language) -> Result<(), Error> {
     Err("Not support yet, in different Linux/Unix has multi ways to install git, please install git yourself".to_string().into())
 }
 
@@ -61,8 +61,9 @@ pub fn install_git(lang: Language) -> Result<(), Error> {
 pub fn install_git(lang: Language) -> Result<(), Error> {
     // https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe
     use crate::log::InstallLogs;
-    use crate::{log::LogItem, util::exe_path};
+    use crate::{log::{LogItem, LogExt}, common::exe_path};
     use std::process::Command;
+    
     let current_dir = exe_path()?.join("downloads");
     let res = Command::new("Invoke-WebRequest")
         .args(&[
