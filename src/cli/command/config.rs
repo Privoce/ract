@@ -252,9 +252,7 @@ impl AppComponent for ConfigCmd {
                                         }
                                     }
                                 }
-                            }
-
-                            if let InputMode::Edit = self.mode {
+                            } else if let InputMode::Edit = self.mode {
                                 self.textarea.input(key);
                             }
                         }

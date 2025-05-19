@@ -36,6 +36,7 @@ pub struct WasmCmd {
     is_running: bool,
     last_log_time: Option<Instant>,
     scroll_y: u16,
+    control: bool,
 }
 
 impl AppComponent for WasmCmd {
@@ -62,6 +63,7 @@ impl AppComponent for WasmCmd {
             is_running: false,
             last_log_time: None,
             scroll_y: 0,
+            control: false,
         }
     }
 
@@ -112,6 +114,7 @@ impl AppComponent for WasmCmd {
                             if self.is_run_port() {
                                 self.textarea.input(key);
                             } else {
+                                self.control = true;
                                 if self.scroll_y > 0 {
                                     self.scroll_y -= 1;
                                 }
@@ -121,6 +124,7 @@ impl AppComponent for WasmCmd {
                             if self.is_run_port() {
                                 self.textarea.input(key);
                             } else {
+                                self.control = true;
                                 self.scroll_y += 1;
                             }
                         }
@@ -162,11 +166,14 @@ impl AppComponent for WasmCmd {
     fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         let (msg, lines) = self.log.draw_text_with_width(area.width - 4);
-        if lines > 12 {
-            self.scroll_y = lines - 12;
+        if !self.control {
+            if lines > 12 {
+                // + 2 is for top offset
+                self.scroll_y = lines - 12 + 2;
+            }
         }
         let msg = Paragraph::new(msg)
-            .scroll((self.scroll_y, 0))
+            .scroll((self.scroll_y as u16, 0))
             .wrap(Wrap { trim: true })
             .block(Block::new().borders(Borders::TOP));
 
@@ -175,7 +182,7 @@ impl AppComponent for WasmCmd {
         dashboard.ty = CommandType::Wasm;
         dashboard.cost = self.cost;
         // [render components] ------------------------------------------------------------------------------------
-        let main_height = if self.is_run_port() { 4 } else { 0 };
+        let main_height = if self.is_run_port() { 4 } else { 1 };
 
         dashboard.render(
             frame,
@@ -193,6 +200,9 @@ impl AppComponent for WasmCmd {
 
                     frame.render_widget(port_text, text_area);
                     frame.render_widget(&self.textarea, input_area);
+                } else {
+                    frame
+                        .render_widget(Line::from(format!("• localhost:{}", self.port)), main_area);
                 }
 
                 frame.render_widget(msg, msg_area);
@@ -361,6 +371,7 @@ impl From<(WasmArgs, Language)> for WasmCmd {
             is_running: false,
             last_log_time: None,
             scroll_y: 0,
+            control: false,
         }
     }
 }

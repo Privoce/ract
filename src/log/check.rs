@@ -29,13 +29,13 @@ impl LogExt for CheckLogs {
             CheckLogs::Found { name, path } => {
                 if let Some(path) = path {
                     t!(
-                        "check.success_path",
+                        "check.found.success_path",
                         locale = lang,
                         name = name,
                         path = fs::path_to_str(path)
                     )
                 } else {
-                    t!("check.success", locale = lang, name = name)
+                    t!("check.found.success", locale = lang, name = name)
                 }
             }
             CheckLogs::NotFound(name) => t!("check.found.failed", locale = lang, name = name),

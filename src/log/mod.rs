@@ -273,7 +273,8 @@ impl Log {
                         if item.width() < w as usize {
                             line_length += 1;
                         } else {
-                            line_length += (item.width() / (w as usize)) as u16;
+                            let actual_lines = (item.width() as f32 / (w as f32)).ceil() as u16;
+                            line_length += actual_lines;
                         }
                     }
 
